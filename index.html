@@ -555,8 +555,12 @@
         }
 
         async function fetchGeminiResponse(prompt, schema) {
-            const activeApiKey = customApiKey || apiKey;
-            
+            const activeApiKey = (customApiKey || apiKey).trim();
+            if (!activeApiKey) {
+                showNotice("Falta la API Key. Revisá la Configuración Cloud.");
+                openSettingsModal();
+                throw new Error("API Key ausente.");
+            }
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
@@ -565,22 +569,30 @@
             };
             
             let retryDelay = 1000;
+            let lastErrorMsg = "";
             for (let i = 0; i < 5; i++) {
                 try { 
                     const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
                     if (!res.ok) {
-                        console.error("API Error Status:", res.status);
-                        throw new Error("HTTP " + res.status);
+                        const errData = await res.json().catch(() => ({}));
+                        lastErrorMsg = errData.error?.message || `HTTP ${res.status}`;
+                        console.error("API Error Status:", res.status, errData);
+                        if (res.status === 400 || res.status === 403) throw new Error(lastErrorMsg);
+                        throw new Error(lastErrorMsg);
                     }
                     const jsonRes = await res.json();
                     const textResult = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!textResult) throw new Error("Respuesta bloqueada o nula.");
+                    if (!textResult) {
+                        const reason = jsonRes.candidates?.[0]?.finishReason;
+                        throw new Error(reason ? `Bloqueo de seguridad: ${reason}` : "Respuesta nula del modelo.");
+                    }
                     
                     return JSON.parse(textResult); 
                 } 
                 catch (error) { 
                     console.error(`Fallo en el intento IA ${i + 1}:`, error);
-                    if (i === 4) throw error; 
+                    lastErrorMsg = error.message;
+                    if (i === 4 || error.message.includes("API key not valid") || error.message.includes("403")) throw new Error(lastErrorMsg); 
                     await new Promise(r => setTimeout(r, retryDelay)); 
                     retryDelay *= 2; 
                 }
@@ -613,7 +625,7 @@
                 await saveData(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea generada vía IA"); inputEl.value = '';
             } catch (err) { 
                 console.error(err); 
-                showNotice("Error al procesar el comando con IA."); 
+                showNotice(`Error IA: ${err.message.substring(0, 70)}...`); 
             } finally { 
                 inputEl.disabled = false; inputEl.classList.remove('ai-loading-gradient'); resetMicUI(); 
                 document.querySelector('#omnibarBtn svg').outerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`; 
@@ -650,12 +662,11 @@
                 }
             } catch (err) { 
                 console.error(err); 
-                showNotice("Error al intentar generar el desglose."); 
+                showNotice(`Error IA: ${err.message.substring(0, 70)}...`); 
             } finally { 
                 btn.disabled = false; btn.innerHTML = originalText; 
             }
         }
-
 
         window.onload = async () => { 
             populateTimeSelects(); 
