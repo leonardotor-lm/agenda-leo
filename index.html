@@ -556,11 +556,7 @@
 
         async function fetchGeminiResponse(prompt, schema) {
             const activeApiKey = customApiKey || apiKey;
-            if (!activeApiKey) {
-                showNotice("Por favor, ingresá tu Gemini API Key en Configuración Cloud.");
-                openSettingsModal();
-                throw new Error("API Key ausente.");
-            }
+            
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
