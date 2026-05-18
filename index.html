@@ -89,13 +89,13 @@
         select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238A9DB5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; }
         
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1 / 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; }
-        .calendar-day:hover { background-color: theme('colors.navy.600'); border-color: theme('colors.navy.500'); }
+        .calendar-day { aspect-ratio: 1 / 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; }
+        .calendar-day:hover { background-color: theme('colors.navy.700'); border-color: theme('colors.navy.600'); }
         .calendar-day.today { background-color: theme('colors.brand.500'); color: theme('colors.navy.900'); font-weight: 600; }
         
         .modal-overlay { background-color: rgba(10, 19, 24, 0.7); backdrop-filter: blur(4px); }
-        .slide-up { animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .slide-up { animation: slideUp 0.2s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(5px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
         @keyframes pulse-ring { 0%, 100% { background-color: rgba(246, 114, 58, 0.1); } 50% { background-color: rgba(246, 114, 58, 0.3); } }
         .highlight-focus { animation: pulse-ring 0.8s ease-in-out 3; transition: background-color 0.3s ease-in-out; }
@@ -110,13 +110,13 @@
 
     <div id="mobile-overlay" class="fixed inset-0 bg-navy-900 bg-opacity-70 z-30 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
     
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-navy-700 border-r border-navy-600 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-navy-800 border-r border-navy-700 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col">
         <div class="p-6 pb-2 flex flex-col">
             <h2 class="text-xl font-bold tracking-tight text-navy-50">Mi Agenda</h2>
             <p id="current-date-display" class="text-[10px] text-green-400 mt-1 uppercase tracking-[0.15em] font-bold"></p>
             
             <!-- Cloud Status Indicator -->
-            <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center space-x-1.5 mt-3 px-2.5 py-1 bg-navy-800/60 border border-navy-600 rounded-full text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-600/80 select-none w-max">
+            <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center space-x-1.5 mt-3 px-2.5 py-1 bg-navy-900 border border-navy-700 rounded-md text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-700 select-none w-max">
                 <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
                 <span id="sync-status-text" class="text-navy-300">Nube Desconectada</span>
             </div>
@@ -124,27 +124,27 @@
         
         <nav class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
             <div class="space-y-1">
-                <button onclick="navigate('today')" id="nav-today" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors focus:outline-none hover:bg-navy-600">
+                <button onclick="navigate('today')" id="nav-today" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-semibold transition-colors focus:outline-none hover:bg-navy-700">
                     <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     <span>Hoy y atrasadas</span>
                 </button>
-                <button onclick="navigate('tomorrow')" id="nav-tomorrow" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                <button onclick="navigate('tomorrow')" id="nav-tomorrow" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
                     <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     <span>Mañana</span>
                 </button>
-                <button onclick="navigate('week')" id="nav-week" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                <button onclick="navigate('week')" id="nav-week" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
                     <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>Esta semana</span>
                 </button>
-                <button onclick="navigate('fortnight')" id="nav-fortnight" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                <button onclick="navigate('fortnight')" id="nav-fortnight" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
                     <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>Próximos 15 días</span>
                 </button>
-                <button onclick="navigate('all')" id="nav-all" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                <button onclick="navigate('all')" id="nav-all" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
                     <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     <span>Todas las tareas</span>
                 </button>
-                <button onclick="navigate('calendar')" id="nav-calendar" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                <button onclick="navigate('calendar')" id="nav-calendar" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
                     <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>Calendario</span>
                 </button>
@@ -161,18 +161,18 @@
             </div>
         </nav>
 
-        <div class="p-4 border-t border-navy-600 bg-navy-800/30 space-y-1 shrink-0">
-            <button onclick="exportData()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+        <div class="p-4 border-t border-navy-700 bg-navy-900/30 space-y-1 shrink-0">
+            <button onclick="exportData()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 <span>Exportar Datos (.json)</span>
             </button>
-            <button onclick="document.getElementById('importFile').click()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+            <button onclick="document.getElementById('importFile').click()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                 <span>Importar Respaldo</span>
             </button>
             <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
             
-            <button onclick="openSettingsModal()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+            <button onclick="openSettingsModal()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span>Configuración Cloud</span>
             </button>
@@ -180,7 +180,7 @@
     </aside>
 
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header class="bg-navy-700 border-b border-navy-600 p-4 md:px-10 md:py-6 flex flex-col md:flex-row md:items-center justify-between z-20 shrink-0 gap-4">
+        <header class="bg-navy-800 border-b border-navy-700 p-4 md:px-10 md:py-6 flex flex-col md:flex-row md:items-center justify-between z-20 shrink-0 gap-4">
             <div class="flex items-center space-x-3 min-w-0">
                 <button onclick="toggleSidebar()" class="md:hidden text-brand-500 hover:text-brand-400 focus:outline-none p-1 shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -198,21 +198,21 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="w-3.5 h-3.5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="text-xs bg-navy-800 border border-navy-600 focus:bg-navy-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-2 pl-9 pr-3 w-28 sm:w-36 lg:w-56 transition-all outline-none text-navy-50 placeholder-navy-400">
+                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="text-xs bg-navy-900 border border-navy-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-md py-2 pl-9 pr-3 w-28 sm:w-36 lg:w-56 transition-all outline-none text-navy-50 placeholder-navy-500">
                 </div>
-                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-2 sm:px-3 py-2 rounded-xl focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
+                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-2 sm:px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
                     <option value="pending" selected>Pendientes / En Progreso</option><option value="in_progress">Solo En Progreso</option><option value="completed">Completadas</option><option value="all">Todas</option>
                 </select>
-                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-3 py-2 rounded-xl focus:ring-0 cursor-pointer hidden lg:block transition-colors">
+                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden lg:block transition-colors">
                     <option value="all">Prioridad</option><option value="urgente">Urgentes</option><option value="alta">Altas</option><option value="media">Medias</option><option value="baja">Bajas</option>
                 </select>
-                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-3 py-2 rounded-xl focus:ring-0 cursor-pointer hidden xl:block transition-colors">
+                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden xl:block transition-colors">
                     <option value="all">Contexto</option>
                 </select>
-                <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-800 border border-navy-600 rounded-xl transition-colors focus:outline-none" title="Selección múltiple">
+                <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Selección múltiple">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                 </button>
-                <button onclick="resetFilters()" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-800 border border-navy-600 rounded-xl transition-colors focus:outline-none" title="Limpiar filtros secundarios">
+                <button onclick="resetFilters()" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Limpiar filtros secundarios">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -220,16 +220,17 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-32" id="main-scroll-area">
             <div class="max-w-5xl mx-auto space-y-6">
+                <!-- Omnibar Flat Design -->
                 <div id="omnibar-container" class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <input type="text" id="omnibarInput" placeholder="Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-700 border border-navy-600 rounded-2xl shadow-lg text-sm text-navy-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-navy-400" onkeydown="handleOmnibarKeydown(event)">
+                    <input type="text" id="omnibarInput" placeholder="Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-900 border border-navy-700 rounded-md text-sm text-navy-50 focus:outline-none focus:border-brand-500 transition-all placeholder:text-navy-500" onkeydown="handleOmnibarKeydown(event)">
                     <div class="absolute inset-y-0 right-2 flex items-center gap-1">
-                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Dictar búsqueda">
+                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Dictar búsqueda">
                             <svg id="micIcon" class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                         </button>
-                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Filtrar y Ordenar">
+                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Filtrar y Ordenar">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
                     </div>
@@ -237,18 +238,18 @@
 
                 <div id="view-list" class="slide-up">
                     <div id="taskList"></div>
-                    <div id="emptyState" class="hidden text-center py-20 bg-navy-700 border border-navy-600 rounded-3xl text-navy-400 text-sm shadow-sm">
+                    <div id="emptyState" class="hidden text-center py-20 border border-navy-700 rounded-md text-navy-400 text-sm">
                         No se encontraron tareas bajo los criterios actuales.
                     </div>
                 </div>
 
                 <div id="view-calendar" class="hidden slide-up">
-                    <div class="bg-navy-700 border border-navy-600 rounded-3xl p-8 shadow-sm">
+                    <div class="bg-navy-800 border border-navy-700 rounded-md p-8">
                         <div class="flex justify-between items-center mb-8">
                             <h2 id="calendar-month" class="font-light text-2xl capitalize text-navy-50"></h2>
                             <div class="flex space-x-2">
-                                <button onclick="changeMonth(-1)" class="p-2 hover:bg-navy-600 rounded-lg text-navy-300 transition-all border border-navy-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
-                                <button onclick="changeMonth(1)" class="p-2 hover:bg-navy-600 rounded-lg text-navy-300 transition-all border border-navy-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                                <button onclick="changeMonth(-1)" class="p-2 hover:bg-navy-700 rounded-md text-navy-300 transition-all border border-navy-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                                <button onclick="changeMonth(1)" class="p-2 hover:bg-navy-700 rounded-md text-navy-300 transition-all border border-navy-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
                             </div>
                         </div>
                         <div class="grid grid-cols-7 mb-4 text-center">
@@ -260,177 +261,175 @@
             </div>
         </div>
 
-        <!-- Bulk Action Bar Flotante -->
-        <div id="bulkActionBar" class="fixed bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 bg-navy-700 border border-brand-500/50 shadow-[0_0_30px_rgba(246,114,58,0.15)] rounded-2xl px-5 py-3 flex items-center gap-3 md:gap-4 z-40 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
+        <!-- Bulk Action Bar Flotante - Flat Style -->
+        <div id="bulkActionBar" class="fixed bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 bg-navy-800 border border-brand-500 rounded-md px-5 py-3 flex items-center gap-3 md:gap-4 z-40 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
             <span class="text-xs md:text-sm font-bold text-brand-500 whitespace-nowrap"><span id="bulkCount">0</span> sel.</span>
-            <div class="h-5 w-px bg-navy-600"></div>
-            <button onclick="bulkComplete()" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Completar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>
-            <button onclick="openBulkMoveModal()" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Reubicar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
-            <button onclick="openPostponeModal('bulk')" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Posponer"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-            <button onclick="bulkDelete()" class="p-2 text-navy-300 hover:text-danger-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Eliminar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-            <div class="h-5 w-px bg-navy-600"></div>
-            <button onclick="toggleBulkMode()" class="p-2 text-navy-400 hover:text-navy-50 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Cancelar Múltiple"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            <div class="h-5 w-px bg-navy-700"></div>
+            <button onclick="bulkComplete()" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Completar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>
+            <button onclick="openBulkMoveModal()" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Reubicar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
+            <button onclick="openPostponeModal('bulk')" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Posponer"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+            <button onclick="bulkDelete()" class="p-2 text-navy-300 hover:text-danger-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Eliminar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            <div class="h-5 w-px bg-navy-700"></div>
+            <button onclick="toggleBulkMode()" class="p-2 text-navy-400 hover:text-navy-50 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Cancelar Múltiple"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
 
-        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 hover:bg-brand-400 transition-all focus:outline-none border-none">
+        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-md flex items-center justify-center hover:bg-brand-400 transition-colors focus:outline-none">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
     </main>
 
-    <!-- Modal: Nueva Tarea Refactorizado -->
+    <!-- Modal: Nueva Tarea (Flat Design) -->
     <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-navy-700 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
-            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+        <div class="bg-navy-800 w-full max-w-2xl rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
                 <h3 class="font-semibold text-lg text-navy-50">Nueva Tarea</h3>
                 <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-6 md:p-8 space-y-6 max-h-[80vh] overflow-y-auto">
-                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-xl focus:outline-none border-b border-navy-600 pb-3 bg-transparent placeholder:text-navy-500 text-navy-50">
+            <div class="p-5 md:p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-xl focus:outline-none border-b border-navy-700 pb-3 bg-transparent placeholder:text-navy-500 text-navy-50">
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div class="space-y-1">
                         <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div>
-                        <select id="areaInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select>
+                        <select id="areaInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
                         <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div>
-                        <select id="contextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select>
+                        <select id="contextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">Prioridad</label>
-                        <select id="priorityInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja" selected>Baja</option></select>
+                        <select id="priorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja" selected>Baja</option></select>
                     </div>
                 </div>
 
-                <!-- Bloque de Programación Consolidado -->
-                <div class="pt-4 border-t border-navy-600 space-y-4">
+                <div class="pt-4 border-t border-navy-700 space-y-4">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="timeInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="timeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
                     <div id="recurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        <div id="businessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">¿Qué día hábil?</label><select id="businessDayInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5" selected>5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
-                        <div id="completionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-full"><input type="checkbox" id="completionBasedInput" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                        <div id="businessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">¿Qué día hábil?</label><select id="businessDayInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5" selected>5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="completionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-full"><input type="checkbox" id="completionBasedInput" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
                     </div>
 
                     <div class="pt-2">
-                        <label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                        <label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
                 </div>
 
-                <div class="flex justify-end pt-4 border-t border-navy-600">
-                    <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-10 py-4 rounded-2xl text-sm font-bold hover:bg-brand-400 transition-all shadow-lg shadow-black/20 focus:outline-none">Guardar Tarea</button>
+                <div class="flex justify-end pt-4 border-t border-navy-700">
+                    <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-10 py-3 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Tarea</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <div id="dayDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="modalDateTitle" class="font-semibold text-lg text-navy-50">Detalle del día</h3><button onclick="closeModal()" class="text-navy-400 hover:text-navy-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-3"></div></div></div>
+    <div id="dayDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="modalDateTitle" class="font-semibold text-lg text-navy-50">Detalle del día</h3><button onclick="closeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="modalContent" class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-3"></div></div></div>
     
-    <div id="categoryModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="categoryModalTitle" class="font-semibold text-lg text-navy-50">Nueva categoría</h3><button onclick="closeCategoryModal()" class="text-navy-400 hover:text-navy-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 space-y-4"><input type="text" id="categoryModalInput" placeholder="Nombre..." class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500"><div id="categoryColorPickerContainer" class="hidden space-y-2"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Color del Contexto</label><div class="flex space-x-2 justify-center py-2" id="newContextColorOptions"><button onclick="selectNewContextColor('blue')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-blue"></button><button onclick="selectNewContextColor('purple')" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-purple"></button><button onclick="selectNewContextColor('green')" class="w-6 h-6 rounded-full bg-green-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-green"></button><button onclick="selectNewContextColor('red')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-red"></button><button onclick="selectNewContextColor('orange')" class="w-6 h-6 rounded-full bg-orange-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-orange"></button><button onclick="selectNewContextColor('gray')" class="w-6 h-6 rounded-full bg-gray-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-gray"></button><button onclick="selectNewContextColor('pink')" class="w-6 h-6 rounded-full bg-pink-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-pink"></button><button onclick="selectNewContextColor('teal')" class="w-6 h-6 rounded-full bg-teal-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-teal"></button></div></div><div class="flex space-x-3"><button onclick="closeCategoryModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent">Cancelar</button><button onclick="saveCustomCategory()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors">Guardar</button></div></div></div></div>
+    <div id="categoryModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="categoryModalTitle" class="font-semibold text-lg text-navy-50">Nueva categoría</h3><button onclick="closeCategoryModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><input type="text" id="categoryModalInput" placeholder="Nombre..." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500"><div id="categoryColorPickerContainer" class="hidden space-y-2"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Color del Contexto</label><div class="flex space-x-2 justify-center py-2" id="newContextColorOptions"><button onclick="selectNewContextColor('blue')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-blue"></button><button onclick="selectNewContextColor('purple')" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-purple"></button><button onclick="selectNewContextColor('green')" class="w-6 h-6 rounded-full bg-green-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-green"></button><button onclick="selectNewContextColor('red')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-red"></button><button onclick="selectNewContextColor('orange')" class="w-6 h-6 rounded-full bg-orange-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-orange"></button><button onclick="selectNewContextColor('gray')" class="w-6 h-6 rounded-full bg-gray-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-gray"></button><button onclick="selectNewContextColor('pink')" class="w-6 h-6 rounded-full bg-pink-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-pink"></button><button onclick="selectNewContextColor('teal')" class="w-6 h-6 rounded-full bg-teal-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-teal"></button></div></div><div class="flex space-x-3"><button onclick="closeCategoryModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="saveCustomCategory()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar</button></div></div></div></div>
     
-    <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
+    <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
     
-    <!-- Modal: Edición de Tarea Refactorizado -->
+    <!-- Modal: Edición de Tarea -->
     <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-navy-700 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden slide-up flex flex-col max-h-[90vh] border border-navy-600">
-            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800 shrink-0">
+        <div class="bg-navy-800 w-full max-w-lg rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center shrink-0">
                 <div class="flex items-center space-x-3">
                     <h3 id="editModalTitle" class="font-semibold text-lg text-navy-50">Editar Tarea</h3>
-                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-3 py-1 bg-navy-600 border border-navy-500 hover:bg-navy-500 text-brand-400 rounded-lg text-xs font-semibold transition-colors focus:outline-none">
+                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-3 py-1 bg-navy-700 border border-navy-600 hover:bg-navy-600 text-brand-400 rounded-md text-xs font-semibold transition-colors focus:outline-none">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                         <span>Desglosar con IA</span>
                     </button>
                 </div>
                 <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-6 overflow-y-auto space-y-6 flex-1">
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nombre</label><input type="text" id="editNameInput" class="w-full text-base bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500"></div>
+            <div class="p-5 md:p-6 overflow-y-auto space-y-6 flex-1">
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nombre</label><input type="text" id="editNameInput" class="w-full text-base bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500"></div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Área</label><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Contexto</label><select id="editContextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label><select id="editPriorityInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Área</label><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Contexto</label><select id="editContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label><select id="editPriorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
                 </div>
                 
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
 
-                <!-- Bloque de Programación Consolidado -->
-                <div class="pt-4 border-t border-navy-600 space-y-4">
+                <div class="pt-4 border-t border-navy-700 space-y-4">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="editTimeInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="editTimeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
                     <div id="editRecurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        <div id="editBusinessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">¿Qué día hábil?</label><select id="editBusinessDayInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5">5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
-                        <div id="editCompletionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3 rounded-2xl cursor-pointer w-full"><input type="checkbox" id="editCompletionBasedInput" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                        <div id="editBusinessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">¿Qué día hábil?</label><select id="editBusinessDayInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5">5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="editCompletionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-full"><input type="checkbox" id="editCompletionBasedInput" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
                     </div>
                     
                     <div class="pt-2">
-                        <label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                        <label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-navy-600 flex space-x-3 shrink-0">
-                <button onclick="closeEditModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent">Cancelar</button>
-                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors">Guardar Cambios</button>
+            <div class="p-5 md:p-6 border-t border-navy-700 flex space-x-3 shrink-0">
+                <button onclick="closeEditModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Cambios</button>
             </div>
         </div>
     </div>
 
     <!-- Modal Reubicación Múltiple -->
     <div id="bulkMoveModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
-            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+        <div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
                 <h3 class="font-semibold text-lg text-navy-50">Reubicar Tareas</h3>
                 <button onclick="closeBulkMoveModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-6 space-y-5">
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nueva Área</label><select id="bulkAreaInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nuevo Contexto</label><select id="bulkContextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+            <div class="p-5 md:p-6 space-y-5">
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nueva Área</label><select id="bulkAreaInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nuevo Contexto</label><select id="bulkContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
                 <div class="flex space-x-3 pt-2">
-                    <button onclick="closeBulkMoveModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent focus:outline-none">Cancelar</button>
-                    <button onclick="applyBulkMove()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Aplicar</button>
+                    <button onclick="closeBulkMoveModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                    <button onclick="applyBulkMove()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Aplicar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modal Posponer -->
-    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-800 border border-navy-600 hover:bg-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-800 border border-navy-600 hover:bg-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-600 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="postponeCustomTime" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-2 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer" style="color-scheme: dark;"></select></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors focus:outline-none border border-transparent">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
+    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-700 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="postponeCustomTime" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-2 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></select></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
 
     <!-- Modal: Configuración Cloud -->
     <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
-            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+        <div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
                 <h3 class="font-semibold text-lg text-navy-50">Configuración Cloud</h3>
                 <button onclick="closeSettingsModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-6 space-y-4">
+            <div class="p-5 md:p-6 space-y-4">
                 <p class="text-xs text-navy-300 leading-relaxed">
                     Vinculá tu agenda con Google Sheets para mantener sincronizados tus datos entre la PC y tu celular. Tus datos viajan cifrados y directamente a tu cuenta de Google, sin pasar por servidores ajenos.
                 </p>
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">URL de Google Apps Script (Web App)</label>
-                    <input type="text" id="settingsDbUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <input type="text" id="settingsDbUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500">
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between items-center px-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Gemini API Key (Opcional)</label>
                         <a href="https://aistudio.google.com/" target="_blank" class="text-[9px] text-brand-500 hover:underline">Obtener clave gratis</a>
                     </div>
-                    <input type="password" id="settingsApiKeyInput" placeholder="Clave API para procesamiento con Inteligencia Artificial" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <input type="password" id="settingsApiKeyInput" placeholder="Clave API para procesamiento con Inteligencia Artificial" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500">
                 </div>
                 <div class="pt-2 flex space-x-3">
-                    <button onclick="closeSettingsModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-xs font-semibold hover:bg-navy-500 transition-colors border border-transparent focus:outline-none">Cerrar</button>
-                    <button onclick="saveSettings()" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-xs font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar y Sincronizar</button>
+                    <button onclick="closeSettingsModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-xs font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cerrar</button>
+                    <button onclick="saveSettings()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-xs font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar y Sincronizar</button>
                 </div>
             </div>
         </div>
@@ -470,7 +469,7 @@
         let isBulkMode = false;
         let selectedTaskIds = new Set();
 
-        const priorityColors = { urgente: 'text-danger-500 border border-danger-500/30 bg-danger-500/10', alta: 'text-brand-500 border border-brand-500/30 bg-brand-500/10', media: 'text-yellow-500 border border-yellow-500/30 bg-yellow-500/10', baja: 'text-navy-400 border border-navy-600 bg-navy-800' };
+        const priorityColors = { urgente: 'text-danger-500 border border-danger-500/30 bg-danger-500/10', alta: 'text-brand-500 border border-brand-500/30 bg-brand-500/10', media: 'text-yellow-500 border border-yellow-500/30 bg-yellow-500/10', baja: 'text-navy-400 border border-navy-700 bg-navy-800' };
         const contextColorMap = { blue: { dot: 'bg-blue-500' }, purple: { dot: 'bg-purple-500' }, green: { dot: 'bg-green-500' }, red: { dot: 'bg-red-500' }, orange: { dot: 'bg-orange-500' }, gray: { dot: 'bg-gray-500' }, pink: { dot: 'bg-pink-500' }, teal: { dot: 'bg-teal-500' } };
         let currentPromptType = ''; let selectedNewColor = 'blue'; let isCategoryForEditModal = false; let manageType = 'area'; 
         let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
@@ -478,7 +477,6 @@
         let speechRecognition = null;
         let isListening = false;
 
-        // --- Manejo del Estado de Sincronización en Header ---
         function showSyncStatus(status) {
             const dot = document.getElementById('sync-status-dot');
             const text = document.getElementById('sync-status-text');
@@ -521,7 +519,6 @@
             }
         }
 
-        // --- Generación dinámica del Dropdown de Horas ---
         function populateTimeSelects() {
             let optionsHtml = '<option value="">Sin hora</option>';
             for(let i=0; i<24; i++) {
@@ -563,7 +560,6 @@
                 throw new Error("API Key ausente.");
             }
             
-            // Migración arquitectónica: Actualización a la iteración estable más reciente del modelo
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
@@ -716,7 +712,6 @@
             migrateAndNormalizeTasks(); 
             updateDateDisplay(); 
 
-            // Carga inicial de inputs de configuración
             document.getElementById('settingsDbUrlInput').value = dbUrl;
             document.getElementById('settingsApiKeyInput').value = customApiKey;
 
@@ -759,11 +754,8 @@
             }
         }
 
-        // --- Motores de Persistencia Nube + Local ---
         async function saveData() {
-            // Persistencia inmediata local para prevenir pérdidas
             localStorage.setItem('leo_agenda_v10', JSON.stringify(tasks));
-            
             if (dbUrl) {
                 showSyncStatus('saving');
                 const payload = { tasks, customAreas, customContexts, expandedStates };
@@ -802,7 +794,6 @@
                     showSyncStatus('synced');
                     showNotice("Sincronizado con Google Sheets");
                 } else {
-                    // Si el servidor devolvió un objeto vacío pero tenemos datos locales, los migramos a la nube automáticamente
                     if (tasks && tasks.length > 0) {
                         await saveData();
                     } else {
@@ -819,7 +810,6 @@
             updateUI(); 
         }
 
-        // --- Modales de Configuración Cloud ---
         function openSettingsModal() {
             document.getElementById('settingsDbUrlInput').value = dbUrl;
             document.getElementById('settingsApiKeyInput').value = customApiKey;
@@ -867,19 +857,19 @@
             ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar'].forEach(id => { 
                 const el = document.getElementById(id); 
                 if (id === `nav-${currentState.view}`) { 
-                    el.classList.add('bg-navy-800', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+                    el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
                     el.classList.remove('text-navy-300', 'border-transparent'); 
                 } else { 
-                    el.classList.remove('bg-navy-800', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+                    el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
                     el.classList.add('text-navy-300', 'border-transparent'); 
                 } 
             });
             document.querySelectorAll('.sidebar-area-item').forEach(el => { 
                 if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { 
-                    el.classList.add('border-brand-500', 'bg-navy-800', 'text-brand-500'); 
+                    el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
                     el.classList.remove('border-transparent', 'text-navy-300'); 
                 } else { 
-                    el.classList.remove('border-brand-500', 'bg-navy-800', 'text-brand-500'); 
+                    el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
                     el.classList.add('border-transparent', 'text-navy-300'); 
                 } 
             });
@@ -887,16 +877,14 @@
             document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('omnibar-container').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
             
             if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
-            
             if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
         }
 
         function toggleSidebar(force) { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobile-overlay'); const isOpen = !sidebar.classList.contains('-translate-x-full'); if (force === false || isOpen) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); } else { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } }
-        function renderSidebarAreas() { const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-600 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+        function renderSidebarAreas() { const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
         
         function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
 
-        // --- Sincronización de Componentes de Selección ---
         function refreshAllDropdowns() { 
             const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
             const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
@@ -918,7 +906,6 @@
         function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
         function getLocalDateString(dateObj) { const year = dateObj.getFullYear(); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const day = String(dateObj.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
-        // --- Motor de Ordenamiento (Sorting) ---
         function sortTasks(taskList) {
             if (currentSort.by === 'none') return taskList;
             const priorityWeight = { urgente: 4, alta: 3, media: 2, baja: 1 };
@@ -929,7 +916,7 @@
                     valA = priorityWeight[a.priority] || 0;
                     valB = priorityWeight[b.priority] || 0;
                 } else if (currentSort.by === 'date') {
-                    valA = a.date || '9999-12-31'; // Fechas vacías al final
+                    valA = a.date || '9999-12-31'; 
                     valB = b.date || '9999-12-31';
                 } else if (currentSort.by === 'name') {
                     valA = (a.name || '').toLowerCase();
@@ -944,7 +931,6 @@
             });
         }
 
-        // --- Selección Múltiple y Operaciones Masivas (Lote) ---
         function toggleBulkMode() {
             isBulkMode = !isBulkMode;
             selectedTaskIds.clear();
@@ -953,13 +939,13 @@
             const fab = document.getElementById('mainFab');
 
             if (isBulkMode) {
-                btn.classList.add('text-brand-500', 'bg-navy-600');
+                btn.classList.add('text-brand-500', 'bg-navy-700');
                 btn.classList.remove('text-navy-400');
                 bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
                 bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
                 fab.classList.add('translate-y-24', 'opacity-0');
             } else {
-                btn.classList.remove('text-brand-500', 'bg-navy-600');
+                btn.classList.remove('text-brand-500', 'bg-navy-700');
                 btn.classList.add('text-navy-400');
                 bar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
                 bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
@@ -1024,7 +1010,6 @@
             await saveData(); refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada");
         }
 
-        // --- Filtrado y Recorte del Árbol de Jerarquías (Pruning) ---
         function pruneTree(nodeList, parentMatched = false) {
             if (!Array.isArray(nodeList)) return [];
             const todayStr = getLocalDateString(new Date());
@@ -1063,7 +1048,6 @@
             return sortTasks(filtered);
         }
 
-        // --- Mutaciones de Grafo de Tareas ---
         function findAndMutateTask(taskId, mutationFn) {
             function traverse(nodes) {
                 for (let i = 0; i < nodes.length; i++) {
@@ -1211,11 +1195,9 @@
             renderTasks();
         }
 
-        // --- Renderizadores HTML Dinámicos ---
         function buildTaskRows(nodes, path = []) {
             if (!nodes || nodes.length === 0) return '';
             
-            // Refactorización: Diseño plano sin fondos superpuestos
             const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
 
             return nodes.map(task => {
@@ -1225,7 +1207,7 @@
                 const isExpanded = (currentState.view === 'focus' || currentFilters.search !== '') ? true : (expandedStates[task.id] || false);
                 const logicalDepth = path.length + 1;
 
-                const indentClass = indentMap[logicalDepth] || 'pl-20 bg-navy-800/90';
+                const indentClass = indentMap[logicalDepth] || 'pl-20 md:pl-22';
 
                 let dateDisplayHTML = `<span class="text-brand-500/80 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-brand-500/80 inline-block"></span> Sin fecha</span>`;
                 if (task.date) {
@@ -1245,7 +1227,7 @@
                     <button onclick="event.stopPropagation(); toggleInlineAdd(${task.id})" id="btn-inline-add-${task.id}" class="text-navy-400 hover:text-brand-500 transition-colors focus:outline-none flex items-center justify-center shrink-0" title="Añadir subtarea">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     </button>
-                    <input type="text" id="inline-input-${task.id}" class="hidden ml-1 bg-navy-900 border border-navy-600 text-[10px] text-navy-50 px-1.5 py-0.5 rounded focus:outline-none focus:border-brand-500 w-24 md:w-32 placeholder-navy-500 shrink-0" placeholder="Subtarea..." onkeydown="if(event.key === 'Enter') { event.stopPropagation(); submitInlineAdd(${task.id}); }" onclick="event.stopPropagation()" onblur="hideInlineAdd(${task.id})">
+                    <input type="text" id="inline-input-${task.id}" class="hidden ml-1 bg-navy-900 border border-navy-700 text-[10px] text-navy-50 px-1.5 py-0.5 rounded focus:outline-none focus:border-brand-500 w-24 md:w-32 placeholder-navy-500 shrink-0" placeholder="Subtarea..." onkeydown="if(event.key === 'Enter') { event.stopPropagation(); submitInlineAdd(${task.id}); }" onclick="event.stopPropagation()" onblur="hideInlineAdd(${task.id})">
                 ` : '';
 
                 let subtasksHtml = isExpanded ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
@@ -1255,7 +1237,7 @@
                 
                 const bulkCheckboxHTML = isBulkMode ? `
                     <div class="shrink-0 mr-2 flex items-center justify-center cursor-pointer py-1 pr-1" onclick="toggleBulkSelect(${task.id}, event)">
-                        <input type="checkbox" class="w-[18px] h-[18px] rounded border border-navy-500 text-brand-500 bg-navy-800 focus:ring-0 cursor-pointer pointer-events-none transition-colors" ${selectedTaskIds.has(task.id) ? 'checked' : ''}>
+                        <input type="checkbox" class="w-[18px] h-[18px] rounded-sm border border-navy-500 text-brand-500 bg-navy-800 focus:ring-0 cursor-pointer pointer-events-none transition-colors" ${selectedTaskIds.has(task.id) ? 'checked' : ''}>
                     </div>
                 ` : '';
 
@@ -1266,9 +1248,9 @@
                 let statusActionHtml = '';
                 if (!isBulkMode) {
                     if (isInProgress) {
-                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar (Volver a pendiente)" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar (Volver a pendiente)" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
                     } else if (!isCompleted) {
-                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
                     }
                 }
 
@@ -1296,12 +1278,12 @@
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0 relative">
                                     ${!isBulkMode ? `
-                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-700/0 via-navy-700 to-transparent pl-6">
-                                        ${isRecurring ? `<button onclick="event.stopPropagation(); skipTask(${task.id})" title="Saltar Ocurrencia" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>` : ''}
+                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">
+                                        ${isRecurring ? `<button onclick="event.stopPropagation(); skipTask(${task.id})" title="Saltar Ocurrencia" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>` : ''}
                                         ${statusActionHtml}
-                                        <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                                        <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                                        <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                        <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                                        <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                                        <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                                     </div>
                                     ` : ''}
                                     <div class="w-24 flex justify-end items-center text-xs">
@@ -1322,7 +1304,6 @@
             if (prunedTasks.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden');
             
-            // Refactorización: Eliminación del contenedor redondeado y sombra
             const html = `
                 <div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">
                     ${buildTaskRows(prunedTasks)}
@@ -1420,7 +1401,6 @@
         function calculateNthBusinessDay(year, month, n) { let count = 0; let date = new Date(year, month, 1); while (date.getMonth() === month) { const dayOfWeek = date.getDay(); if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; if (count === n) return date; } date.setDate(date.getDate() + 1); } let fallbackDate = new Date(year, month + 1, 0); while (fallbackDate.getDay() === 0 || fallbackDate.getDay() === 6) fallbackDate.setDate(fallbackDate.getDate() - 1); return fallbackDate; }
         function getNextOccurrenceDate(dateStr, recurrence, baseFromCompletion = false, businessDayNum = 5) { let baseDate = baseFromCompletion ? new Date() : new Date(dateStr + "T00:00:00"); if (isNaN(baseDate.getTime())) baseDate = new Date(); let nextDate = new Date(baseDate); if (recurrence === 'diario') nextDate.setDate(nextDate.getDate() + 1); else if (recurrence === 'semanal') nextDate.setDate(nextDate.getDate() + 7); else if (recurrence === 'mensual') nextDate.setMonth(nextDate.getMonth() + 1); else if (recurrence === 'dia_habil') { let nextMonth = baseDate.getMonth() + 1; let nextYear = baseDate.getFullYear(); if (nextMonth > 11) { nextMonth = 0; nextYear += 1; } nextDate = calculateNthBusinessDay(nextYear, nextMonth, businessDayNum); } return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`; }
         
-        // --- Handlers de Campos Dinámicos en Modales ---
         function toggleRecurrenceFields() { const r = document.getElementById('recurrenceInput').value; document.getElementById('recurrenceOptionsContainer').classList.toggle('hidden', r === 'none'); document.getElementById('businessDayContainer').classList.toggle('hidden', r !== 'dia_habil'); document.getElementById('completionBasedContainer').classList.toggle('hidden', r === 'dia_habil'); }
         function toggleEditRecurrenceFields() { const r = document.getElementById('editRecurrenceInput').value; document.getElementById('editRecurrenceOptionsContainer').classList.toggle('hidden', r === 'none'); document.getElementById('editBusinessDayContainer').classList.toggle('hidden', r !== 'dia_habil'); document.getElementById('editCompletionBasedContainer').classList.toggle('hidden', r === 'dia_habil'); }
         function openCategoryModal(type, isEdit = false) { currentPromptType = type; isCategoryForEditModal = isEdit; document.getElementById('categoryModalTitle').innerText = type === 'area' ? 'Nueva Área' : 'Nuevo Contexto'; document.getElementById('categoryModalInput').placeholder = type === 'area' ? 'Ej. Trabajo Científico' : 'Ej. @oficina'; document.getElementById('categoryModalInput').value = ''; const picker = document.getElementById('categoryColorPickerContainer'); if (type === 'context') { picker.classList.remove('hidden'); selectNewContextColor('blue'); } else { picker.classList.add('hidden'); } document.getElementById('categoryModal').classList.remove('hidden'); setTimeout(() => document.getElementById('categoryModalInput').focus(), 100); }
@@ -1429,7 +1409,6 @@
         
         function saveCustomCategory() { const newVal = document.getElementById('categoryModalInput').value.trim(); if (newVal !== "") { if (currentPromptType === 'area') { if (!customAreas.includes(newVal)) { customAreas.push(newVal); saveCategories(); } refreshAllDropdowns(); if (isCategoryForEditModal) document.getElementById('editAreaInput').value = newVal; else document.getElementById('areaInput').value = newVal; } else { const finalVal = newVal.startsWith('@') ? newVal : '@' + newVal; if (!customContexts.some(c => c.name === finalVal)) { customContexts.push({ name: finalVal, color: selectedNewColor }); saveCategories(); } refreshAllDropdowns(); if (isCategoryForEditModal) document.getElementById('editContextInput').value = finalVal; else document.getElementById('contextInput').value = finalVal; } showNotice(`${currentPromptType === 'area' ? 'Área' : 'Contexto'} agregada`); } closeCategoryModal(); }
         
-        // --- Gestión y Modificación de Metadatos ---
         function openManageModal(type) { manageType = type; document.getElementById('manageModalTitle').innerText = type === 'area' ? 'Gestionar Áreas y Proyectos' : 'Gestionar Contextos'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
         function addAreaFromManage() { const input = document.getElementById('new-manage-area-input'); const val = input.value.trim(); if (val && !customAreas.includes(val)) { customAreas.push(val); saveCategories(); refreshAllDropdowns(); renderManageItems(); showNotice("Área agregada"); } }
@@ -1437,12 +1416,12 @@
         function renderManageItems() { 
             const container = document.getElementById('manageModalContent'); container.innerHTML = ''; 
             if (manageType === 'area') { 
-                container.innerHTML = `<div class="flex items-center gap-2 mb-4"><input type="text" id="new-manage-area-input" placeholder="Crear nueva área..." class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500"><button onclick="addAreaFromManage()" class="bg-brand-500 text-navy-900 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">+</button></div>`;
+                container.innerHTML = `<div class="flex items-center gap-2 mb-4"><input type="text" id="new-manage-area-input" placeholder="Crear nueva área..." class="w-full text-sm border border-navy-700 bg-navy-900 text-navy-50 px-3 py-2.5 rounded-md focus:outline-none focus:border-brand-500"><button onclick="addAreaFromManage()" class="bg-brand-500 text-navy-900 px-4 py-2.5 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">+</button></div>`;
                 if (customAreas.length === 0) return container.innerHTML += '<p class="text-sm text-navy-400 italic text-center py-6">No hay áreas.</p>'; 
-                customAreas.forEach((area, i) => { const isInbox = area === 'Inbox'; container.innerHTML += `<div class="flex items-center justify-between p-3.5 bg-navy-800 rounded-2xl border border-navy-600 transition-all"><div class="flex-grow mr-2" id="area-display-${i}"><span class="text-sm font-semibold text-navy-50">${area}</span></div><div class="hidden flex-grow mr-2" id="area-edit-${i}"><input type="text" id="area-input-${i}" value="${area}" class="w-full text-sm border border-navy-500 bg-navy-900 text-navy-50 px-3 py-1 rounded"></div><div class="flex space-x-1">${!isInbox ? `<button onclick="toggleEditArea(${i})" id="area-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditArea(${i})" id="area-btn-save-${i}" class="hidden text-brand-500 hover:text-brand-400 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteArea(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>` : `<span class="text-[10px] text-brand-500 font-bold uppercase">Base</span>`}</div></div>`; }); 
+                customAreas.forEach((area, i) => { const isInbox = area === 'Inbox'; container.innerHTML += `<div class="flex items-center justify-between p-3.5 bg-navy-900 rounded-md border border-navy-700 transition-all"><div class="flex-grow mr-2" id="area-display-${i}"><span class="text-sm font-semibold text-navy-50">${area}</span></div><div class="hidden flex-grow mr-2" id="area-edit-${i}"><input type="text" id="area-input-${i}" value="${area}" class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-1 rounded-md"></div><div class="flex space-x-1">${!isInbox ? `<button onclick="toggleEditArea(${i})" id="area-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditArea(${i})" id="area-btn-save-${i}" class="hidden text-brand-500 hover:text-brand-400 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteArea(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>` : `<span class="text-[10px] text-brand-500 font-bold uppercase">Base</span>`}</div></div>`; }); 
             } else { 
                 if (customContexts.length === 0) return container.innerHTML = '<p class="text-sm text-navy-400 italic text-center py-6">No hay contextos.</p>'; 
-                customContexts.forEach((ctx, i) => { const st = getContextStyles(ctx.name); container.innerHTML += `<div class="flex flex-col p-3.5 bg-navy-800 rounded-2xl border border-navy-600 space-y-3 transition-all"><div class="flex items-center justify-between"><div class="flex items-center space-x-2 flex-grow mr-2" id="ctx-display-${i}"><span class="w-3 h-3 rounded-full ${st.dot}"></span><span class="text-xs font-semibold ${st.text} ${st.bg} px-2.5 py-0.5 rounded-full border ${st.border}">${ctx.name}</span></div><div class="hidden flex-grow mr-2" id="ctx-edit-${i}"><input type="text" id="ctx-input-${i}" value="${ctx.name}" class="w-full text-sm border border-navy-500 bg-navy-900 text-navy-50 px-3 py-1 rounded"></div><div class="flex space-x-1"><button onclick="toggleEditCtx(${i})" id="ctx-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditCtx(${i})" id="ctx-btn-save-${i}" class="hidden text-brand-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteCtx(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button></div></div><div class="hidden pt-1" id="ctx-color-selector-${i}"><div class="text-[9px] font-bold text-navy-400 uppercase mb-2">Color:</div><div class="flex space-x-2">${Object.keys(contextColorMap).map(color => `<button onclick="setCtxColor(${i}, '${color}')" class="w-5 h-5 rounded-full ${contextColorMap[color].dot} border-2 ${ctx.color === color ? 'border-navy-50' : 'border-navy-700'} hover:scale-110"></button>`).join('')}</div></div></div>`; }); 
+                customContexts.forEach((ctx, i) => { const st = getContextStyles(ctx.name); container.innerHTML += `<div class="flex flex-col p-3.5 bg-navy-900 rounded-md border border-navy-700 space-y-3 transition-all"><div class="flex items-center justify-between"><div class="flex items-center space-x-2 flex-grow mr-2" id="ctx-display-${i}"><span class="w-3 h-3 rounded-full ${st.dot}"></span><span class="text-xs font-semibold ${st.text} ${st.bg} px-2.5 py-0.5 rounded-full border ${st.border}">${ctx.name}</span></div><div class="hidden flex-grow mr-2" id="ctx-edit-${i}"><input type="text" id="ctx-input-${i}" value="${ctx.name}" class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-1 rounded-md"></div><div class="flex space-x-1"><button onclick="toggleEditCtx(${i})" id="ctx-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditCtx(${i})" id="ctx-btn-save-${i}" class="hidden text-brand-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteCtx(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button></div></div><div class="hidden pt-1" id="ctx-color-selector-${i}"><div class="text-[9px] font-bold text-navy-400 uppercase mb-2">Color:</div><div class="flex space-x-2">${Object.keys(contextColorMap).map(color => `<button onclick="setCtxColor(${i}, '${color}')" class="w-5 h-5 rounded-full ${contextColorMap[color].dot} border-2 ${ctx.color === color ? 'border-navy-50' : 'border-navy-700'} hover:scale-110"></button>`).join('')}</div></div></div>`; }); 
             } 
         }
         function toggleEditArea(i) { document.getElementById(`area-display-${i}`).classList.toggle('hidden'); document.getElementById(`area-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-save-${i}`).classList.toggle('hidden'); }
@@ -1453,7 +1432,6 @@
         function deleteArea(i) { const o = customAreas[i]; if(o === 'Inbox') return; customAreas.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.area === o) n.area = "Inbox"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
         function deleteCtx(i) { const o = customContexts[i].name; customContexts.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.context === o) n.context = "Global"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
         
-        // --- Formulario de Edición Detallada ---
         function openEditModal(id) { 
             editState = { id, parentId: getParentId(id) }; let target = null;
             function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } }
@@ -1515,7 +1493,6 @@
             }
         }
 
-        // --- Gestión de Pospuestos ---
         function openPostponeModal(id, event) { 
             if (event) event.stopPropagation(); 
             if (id === 'bulk' && selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
@@ -1548,13 +1525,12 @@
             showNotice(postponeState.id === 'bulk' ? `Tareas pospuestas a ${formatDateAR(finalDate, finalTime)}` : `Pospuesto a ${formatDateAR(finalDate, finalTime)}`); 
         }
 
-        // --- Módulo Calendario Mensual ---
         function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
         function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
-        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-800 border border-navy-600 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-navy-600 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded ${priorityColors[t.priority]}">${t.priority}</span>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
+        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-sm ${priorityColors[t.priority]}">${t.priority}</span>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
         function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
-        function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-2xl text-xs font-bold shadow-2xl animate-in select-none pointer-events-auto"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
+        function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
     </script>
 </body>
 </html>
