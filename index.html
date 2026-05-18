@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Tareas - Leo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#FDFDFD',
+                            100: '#FADAC1',
+                            200: '#B0C4DF',
+                            300: '#8A9DB5',
+                            400: '#667A90',
+                            500: '#4A5B6D',
+                            600: '#324252',
+                            700: '#1D313C',
+                            800: '#122028',
+                            900: '#0A1318',
+                        },
+                        brand: {
+                            400: '#F88D5D',
+                            500: '#F6723A',
+                            600: '#DF5E28',
+                        },
+                        danger: {
+                            500: '#C43B39',
+                            600: '#A6302E',
+                        },
+                        info: {
+                            500: '#50A3AB',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: theme('colors.navy.800'); color: theme('colors.navy.50'); -webkit-font-smoothing: antialiased; }
+        
+        /* Checkbox Multi-Estado - Contraste Mejorado */
+        input[type="checkbox"].task-cb {
+            appearance: none; background-color: transparent; margin: 0;
+            border: 2px solid theme('colors.navy.300'); border-radius: 4px;
+            width: 1.1rem; height: 1.1rem; display: grid; place-content: center;
+            cursor: pointer; transition: all 0.2s ease-in-out;
+        }
+        
+        /* Estado Pendiente (Base) */
+        input[type="checkbox"].task-cb::before {
+            content: ""; width: 0.65em; height: 0.65em; transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em theme('colors.navy.800');
+            background-color: theme('colors.navy.800');
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        /* Estado En Progreso */
+        input[type="checkbox"].task-cb.is-in-progress {
+            border-color: theme('colors.info.500');
+            background-color: rgba(80, 163, 171, 0.1);
+        }
+        input[type="checkbox"].task-cb.is-in-progress::before {
+            content: ""; width: 0.4em; height: 0.4em; transform: scale(1);
+            background-color: theme('colors.info.500');
+            box-shadow: none; clip-path: none; border-radius: 1px;
+        }
+        
+        /* Estado Completada */
+        input[type="checkbox"].task-cb:checked { 
+            background-color: theme('colors.navy.600'); 
+            border-color: theme('colors.navy.600');
+        }
+        input[type="checkbox"].task-cb:checked::before { 
+            transform: scale(1); 
+            box-shadow: inset 1em 1em theme('colors.navy.800');
+            background-color: theme('colors.navy.800');
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+            border-radius: 0;
+        }
+
+        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238A9DB5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day { aspect-ratio: 1 / 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; }
+        .calendar-day:hover { background-color: theme('colors.navy.600'); border-color: theme('colors.navy.500'); }
+        .calendar-day.today { background-color: theme('colors.brand.500'); color: theme('colors.navy.900'); font-weight: 600; }
+        
+        .modal-overlay { background-color: rgba(10, 19, 24, 0.7); backdrop-filter: blur(4px); }
+        .slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        @keyframes pulse-ring { 0%, 100% { background-color: rgba(246, 114, 58, 0.1); } 50% { background-color: rgba(246, 114, 58, 0.3); } }
+        .highlight-focus { animation: pulse-ring 0.8s ease-in-out 3; transition: background-color 0.3s ease-in-out; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .ai-loading-gradient { background: linear-gradient(90deg, theme('colors.navy.800') 0%, theme('colors.navy.700') 50%, theme('colors.navy.800') 100%); background-size: 200% 100%; animation: aiGradientMove 2s infinite linear; }
+        @keyframes aiGradientMove { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-navy-50 bg-navy-800 relative">
+
+    <div id="mobile-overlay" class="fixed inset-0 bg-navy-900 bg-opacity-70 z-30 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-navy-700 border-r border-navy-600 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none">
+        <div class="p-6 pb-2">
+            <h2 class="text-xl font-bold tracking-tight text-navy-50">Mi Agenda</h2>
+            <p id="current-date-display" class="text-[10px] text-green-400 mt-1 uppercase tracking-[0.15em] font-bold"></p>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
+            <div class="space-y-1">
+                <button onclick="navigate('today')" id="nav-today" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors focus:outline-none hover:bg-navy-600">
+                    <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <span>Hoy y atrasadas</span>
+                </button>
+                <button onclick="navigate('tomorrow')" id="nav-tomorrow" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Mañana</span>
+                </button>
+                <button onclick="navigate('week')" id="nav-week" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Esta semana</span>
+                </button>
+                <button onclick="navigate('fortnight')" id="nav-fortnight" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Próximos 15 días</span>
+                </button>
+                <button onclick="navigate('all')" id="nav-all" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    <span>Todas las tareas</span>
+                </button>
+                <button onclick="navigate('calendar')" id="nav-calendar" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-600 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Calendario</span>
+                </button>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between px-3 mb-2">
+                    <span class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Áreas y Proyectos</span>
+                    <button onclick="openManageModal('area')" class="text-navy-400 hover:text-navy-100 transition-colors focus:outline-none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
+                </div>
+                <div id="sidebar-areas-list" class="space-y-0.5"></div>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-navy-600 bg-navy-800/30 space-y-1 shrink-0">
+            <button onclick="exportData()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>Exportar Datos (.json)</span>
+            </button>
+            <button onclick="document.getElementById('importFile').click()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <span>Importar Respaldo</span>
+            </button>
+            <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+            
+            <button onclick="openSettingsModal()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-[11px] font-semibold text-navy-400 hover:bg-navy-600 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span>Configuración Cloud</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header class="bg-navy-700 border-b border-navy-600 p-4 md:px-10 md:py-6 flex flex-col md:flex-row md:items-center justify-between z-20 shrink-0 gap-4">
+            <div class="flex items-center space-x-3 min-w-0">
+                <button onclick="toggleSidebar()" class="md:hidden text-brand-500 hover:text-brand-400 focus:outline-none p-1 shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="flex items-center space-x-2 min-w-0">
+                    <button id="btnBack" onclick="goBack()" class="hidden text-navy-400 hover:text-navy-50 transition-colors focus:outline-none shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <h1 id="view-title" class="text-base sm:text-lg lg:text-2xl font-bold text-navy-50 tracking-tight whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">Hoy y atrasadas</h1>
+                </div>
+                
+                <!-- Cloud Status Indicator -->
+                <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer flex items-center space-x-1.5 px-2.5 py-1 bg-navy-800 border border-navy-600 rounded-full text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-600/50 shrink-0 select-none">
+                    <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
+                    <span id="sync-status-text" class="text-navy-300">Nube Desconectada</span>
+                </div>
+            </div>
+
+            <div id="filters-container" class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <div class="relative mr-1 sm:mr-2">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-3.5 h-3.5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="text-xs bg-navy-800 border border-navy-600 focus:bg-navy-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-xl py-2 pl-9 pr-3 w-28 sm:w-36 lg:w-56 transition-all outline-none text-navy-50 placeholder-navy-400">
+                </div>
+                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-2 sm:px-3 py-2 rounded-xl focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
+                    <option value="pending" selected>Pendientes / En Progreso</option><option value="in_progress">Solo En Progreso</option><option value="completed">Completadas</option><option value="all">Todas</option>
+                </select>
+                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-3 py-2 rounded-xl focus:ring-0 cursor-pointer hidden lg:block transition-colors">
+                    <option value="all">Prioridad</option><option value="urgente">Urgentes</option><option value="alta">Altas</option><option value="media">Medias</option><option value="baja">Bajas</option>
+                </select>
+                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-800 text-navy-50 border border-navy-600 hover:border-navy-500 px-3 py-2 rounded-xl focus:ring-0 cursor-pointer hidden xl:block transition-colors">
+                    <option value="all">Contexto</option>
+                </select>
+                <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-800 border border-navy-600 rounded-xl transition-colors focus:outline-none" title="Selección múltiple">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </button>
+                <button onclick="resetFilters()" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-800 border border-navy-600 rounded-xl transition-colors focus:outline-none" title="Limpiar filtros secundarios">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-32" id="main-scroll-area">
+            <div class="max-w-5xl mx-auto space-y-6">
+                <div id="omnibar-container" class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <input type="text" id="omnibarInput" placeholder="Añadir tarea con IA (ej. 'Revisar apuntes mañana a las 10:00 con prioridad alta @casa')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-700 border border-navy-600 rounded-2xl shadow-lg text-sm text-navy-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-navy-400" onkeydown="handleOmnibarKeydown(event)">
+                    <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Dictar tarea">
+                            <svg id="micIcon" class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                        </button>
+                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Procesar comando">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="view-list" class="slide-up">
+                    <div id="taskList"></div>
+                    <div id="emptyState" class="hidden text-center py-20 bg-navy-700 border border-navy-600 rounded-3xl text-navy-400 text-sm shadow-sm">
+                        No se encontraron tareas bajo los criterios actuales.
+                    </div>
+                </div>
+
+                <div id="view-calendar" class="hidden slide-up">
+                    <div class="bg-navy-700 border border-navy-600 rounded-3xl p-8 shadow-sm">
+                        <div class="flex justify-between items-center mb-8">
+                            <h2 id="calendar-month" class="font-light text-2xl capitalize text-navy-50"></h2>
+                            <div class="flex space-x-2">
+                                <button onclick="changeMonth(-1)" class="p-2 hover:bg-navy-600 rounded-lg text-navy-300 transition-all border border-navy-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                                <button onclick="changeMonth(1)" class="p-2 hover:bg-navy-600 rounded-lg text-navy-300 transition-all border border-navy-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 mb-4 text-center">
+                            <span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Dom</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Lun</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Mar</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Mie</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Jue</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Vie</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Sab</span>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Action Bar Flotante -->
+        <div id="bulkActionBar" class="fixed bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 bg-navy-700 border border-brand-500/50 shadow-[0_0_30px_rgba(246,114,58,0.15)] rounded-2xl px-5 py-3 flex items-center gap-3 md:gap-4 z-40 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
+            <span class="text-xs md:text-sm font-bold text-brand-500 whitespace-nowrap"><span id="bulkCount">0</span> sel.</span>
+            <div class="h-5 w-px bg-navy-600"></div>
+            <button onclick="bulkComplete()" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Completar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>
+            <button onclick="openBulkMoveModal()" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Reubicar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
+            <button onclick="openPostponeModal('bulk')" class="p-2 text-navy-300 hover:text-brand-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Posponer"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+            <button onclick="bulkDelete()" class="p-2 text-navy-300 hover:text-danger-500 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Eliminar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            <div class="h-5 w-px bg-navy-600"></div>
+            <button onclick="toggleBulkMode()" class="p-2 text-navy-400 hover:text-navy-50 rounded-xl hover:bg-navy-600 transition-colors focus:outline-none" title="Cancelar Múltiple"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+
+        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-2xl shadow-lg flex items-center justify-center hover:scale-105 hover:bg-brand-400 transition-all focus:outline-none border-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+    </main>
+
+    <!-- Modal: Nueva Tarea Refactorizado -->
+    <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-700 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
+            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+                <h3 class="font-semibold text-lg text-navy-50">Nueva Tarea</h3>
+                <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6 md:p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-xl focus:outline-none border-b border-navy-600 pb-3 bg-transparent placeholder:text-navy-500 text-navy-50">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div>
+                        <select id="areaInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div>
+                        <select id="contextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">Prioridad</label>
+                        <select id="priorityInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja" selected>Baja</option></select>
+                    </div>
+                </div>
+
+                <!-- Bloque de Programación Consolidado -->
+                <div class="pt-4 border-t border-navy-600 space-y-4">
+                    <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="timeInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                    </div>
+                    
+                    <div id="recurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        <div id="businessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">¿Qué día hábil?</label><select id="businessDayInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5" selected>5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="completionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-full"><input type="checkbox" id="completionBasedInput" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                    </div>
+
+                    <div class="pt-2">
+                        <label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-4 border-t border-navy-600">
+                    <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-10 py-4 rounded-2xl text-sm font-bold hover:bg-brand-400 transition-all shadow-lg shadow-black/20 focus:outline-none">Guardar Tarea</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="dayDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="modalDateTitle" class="font-semibold text-lg text-navy-50">Detalle del día</h3><button onclick="closeModal()" class="text-navy-400 hover:text-navy-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="modalContent" class="p-6 max-h-[60vh] overflow-y-auto space-y-3"></div></div></div>
+    
+    <div id="categoryModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="categoryModalTitle" class="font-semibold text-lg text-navy-50">Nueva categoría</h3><button onclick="closeCategoryModal()" class="text-navy-400 hover:text-navy-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 space-y-4"><input type="text" id="categoryModalInput" placeholder="Nombre..." class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500"><div id="categoryColorPickerContainer" class="hidden space-y-2"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Color del Contexto</label><div class="flex space-x-2 justify-center py-2" id="newContextColorOptions"><button onclick="selectNewContextColor('blue')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-blue"></button><button onclick="selectNewContextColor('purple')" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-purple"></button><button onclick="selectNewContextColor('green')" class="w-6 h-6 rounded-full bg-green-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-green"></button><button onclick="selectNewContextColor('red')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-red"></button><button onclick="selectNewContextColor('orange')" class="w-6 h-6 rounded-full bg-orange-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-orange"></button><button onclick="selectNewContextColor('gray')" class="w-6 h-6 rounded-full bg-gray-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-gray"></button><button onclick="selectNewContextColor('pink')" class="w-6 h-6 rounded-full bg-pink-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-pink"></button><button onclick="selectNewContextColor('teal')" class="w-6 h-6 rounded-full bg-teal-500 border-2 border-navy-700 ring-2 ring-transparent" id="btn-color-teal"></button></div></div><div class="flex space-x-3"><button onclick="closeCategoryModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent">Cancelar</button><button onclick="saveCustomCategory()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors">Guardar</button></div></div></div></div>
+    
+    <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
+    
+    <!-- Modal: Edición de Tarea Refactorizado -->
+    <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-700 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden slide-up flex flex-col max-h-[90vh] border border-navy-600">
+            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <h3 id="editModalTitle" class="font-semibold text-lg text-navy-50">Editar Tarea</h3>
+                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-3 py-1 bg-navy-600 border border-navy-500 hover:bg-navy-500 text-brand-400 rounded-lg text-xs font-semibold transition-colors focus:outline-none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        <span>Desglosar con IA</span>
+                    </button>
+                </div>
+                <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nombre</label><input type="text" id="editNameInput" class="w-full text-base bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500"></div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Área</label><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Contexto</label><select id="editContextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label><select id="editPriorityInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
+                </div>
+                
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+
+                <!-- Bloque de Programación Consolidado -->
+                <div class="pt-4 border-t border-navy-600 space-y-4">
+                    <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="editTimeInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                    </div>
+                    
+                    <div id="editRecurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        <div id="editBusinessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">¿Qué día hábil?</label><select id="editBusinessDayInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5">5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="editCompletionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3 rounded-2xl cursor-pointer w-full"><input type="checkbox" id="editCompletionBasedInput" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <label class="flex items-center space-x-3 bg-navy-800 border border-navy-600 px-4 py-3.5 rounded-2xl cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-4 h-4 rounded border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-navy-600 flex space-x-3 shrink-0">
+                <button onclick="closeEditModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent">Cancelar</button>
+                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reubicación Múltiple -->
+    <div id="bulkMoveModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
+            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+                <h3 class="font-semibold text-lg text-navy-50">Reubicar Tareas</h3>
+                <button onclick="closeBulkMoveModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nueva Área</label><select id="bulkAreaInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nuevo Contexto</label><select id="bulkContextInput" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"></select></div>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeBulkMoveModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors border border-transparent focus:outline-none">Cancelar</button>
+                    <button onclick="applyBulkMove()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Posponer -->
+    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-700 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600"><div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-800 border border-navy-600 hover:bg-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-800 border border-navy-600 hover:bg-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-600 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="postponeCustomTime" class="w-full text-sm bg-navy-800 border border-navy-600 text-navy-50 px-2 py-3.5 rounded-2xl focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer" style="color-scheme: dark;"></select></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-sm font-semibold hover:bg-navy-500 transition-colors focus:outline-none border border-transparent">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
+
+    <!-- Modal: Configuración Cloud -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-700 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden slide-up border border-navy-600">
+            <div class="p-6 border-b border-navy-600 flex justify-between items-center bg-navy-800">
+                <h3 class="font-semibold text-lg text-navy-50">Configuración Cloud</h3>
+                <button onclick="closeSettingsModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-navy-300 leading-relaxed">
+                    Vinculá tu agenda con Google Sheets para mantener sincronizados tus datos entre la PC y tu celular. Tus datos viajan cifrados y directamente a tu cuenta de Google, sin pasar por servidores ajenos.
+                </p>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">URL de Google Apps Script (Web App)</label>
+                    <input type="text" id="settingsDbUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center px-1">
+                        <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Gemini API Key (Opcional)</label>
+                        <a href="https://aistudio.google.com/" target="_blank" class="text-[9px] text-brand-500 hover:underline">Obtener clave gratis</a>
+                    </div>
+                    <input type="password" id="settingsApiKeyInput" placeholder="Clave API para procesamiento con Inteligencia Artificial" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-4 py-3.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+                <div class="pt-2 flex space-x-3">
+                    <button onclick="closeSettingsModal()" class="w-1/2 bg-navy-600 text-navy-50 py-3.5 rounded-2xl text-xs font-semibold hover:bg-navy-500 transition-colors border border-transparent focus:outline-none">Cerrar</button>
+                    <button onclick="saveSettings()" class="w-1/2 bg-brand-500 text-navy-900 py-3.5 rounded-2xl text-xs font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar y Sincronizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-box" class="fixed bottom-8 right-24 z-[70] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const apiKey = ""; // Llave hardcodeada nula por seguridad
+        const DB_URL_KEY = 'leo_agenda_db_url';
+        const API_KEY_STORAGE_KEY = 'leo_gemini_api_key';
+
+        let dbUrl = localStorage.getItem(DB_URL_KEY) || "";
+        let customApiKey = localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+
+        function safeParse(key, fallback) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : fallback;
+            } catch (e) {
+                console.warn(`Error leyendo ${key} de localStorage:`, e);
+                return fallback;
+            }
+        }
+
+        let tasks = safeParse('leo_agenda_v10', []);
+        let calendarDate = new Date();
+        let customAreas = safeParse('leo_custom_areas', ["Inbox", "Trabajo", "Personal", "Estudios"]);
+        let customContexts = safeParse('leo_custom_contexts', [{ name: "@casa", color: "purple" }, { name: "@oficina", color: "blue" }, { name: "@online", color: "teal" }]);
+        let expandedStates = safeParse('leo_expanded_states', {});
+
+        let currentState = { view: 'today', selectedArea: null, focusTargetId: null };
+        let currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
+        let navHistory = [];
+
+        let isBulkMode = false;
+        let selectedTaskIds = new Set();
+
+        const priorityColors = { urgente: 'text-danger-500 border border-danger-500/30 bg-danger-500/10', alta: 'text-brand-500 border border-brand-500/30 bg-brand-500/10', media: 'text-yellow-500 border border-yellow-500/30 bg-yellow-500/10', baja: 'text-navy-400 border border-navy-600 bg-navy-800' };
+        const contextColorMap = { blue: { dot: 'bg-blue-500' }, purple: { dot: 'bg-purple-500' }, green: { dot: 'bg-green-500' }, red: { dot: 'bg-red-500' }, orange: { dot: 'bg-orange-500' }, gray: { dot: 'bg-gray-500' }, pink: { dot: 'bg-pink-500' }, teal: { dot: 'bg-teal-500' } };
+        let currentPromptType = ''; let selectedNewColor = 'blue'; let isCategoryForEditModal = false; let manageType = 'area'; 
+        let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
+
+        let speechRecognition = null;
+        let isListening = false;
+
+        // --- Manejo del Estado de Sincronización en Header ---
+        function showSyncStatus(status) {
+            const dot = document.getElementById('sync-status-dot');
+            const text = document.getElementById('sync-status-text');
+            if (!dot || !text) return;
+
+            dot.className = "w-1.5 h-1.5 rounded-full transition-all";
+            
+            switch(status) {
+                case 'saving':
+                    dot.classList.add('bg-blue-500', 'animate-pulse');
+                    text.innerText = "Guardando...";
+                    text.className = "text-blue-400";
+                    break;
+                case 'synced':
+                    dot.classList.add('bg-emerald-500');
+                    text.innerText = "Sincronizado";
+                    text.className = "text-emerald-400";
+                    break;
+                case 'loading':
+                    dot.classList.add('bg-brand-500', 'animate-pulse');
+                    text.innerText = "Cargando...";
+                    text.className = "text-brand-400";
+                    break;
+                case 'offline':
+                    dot.classList.add('bg-yellow-500');
+                    text.innerText = "Modo Offline";
+                    text.className = "text-yellow-400";
+                    break;
+                case 'error':
+                    dot.classList.add('bg-red-500');
+                    text.innerText = "Fallo de Red";
+                    text.className = "text-red-400";
+                    break;
+                case 'none':
+                default:
+                    dot.classList.add('bg-navy-500');
+                    text.innerText = "Nube Desconectada";
+                    text.className = "text-navy-400";
+                    break;
+            }
+        }
+
+        // --- Generación dinámica del Dropdown de Horas ---
+        function populateTimeSelects() {
+            let optionsHtml = '<option value="">Sin hora</option>';
+            for(let i=0; i<24; i++) {
+                let h = i.toString().padStart(2, '0');
+                optionsHtml += `<option value="${h}:00">${h}:00</option>`;
+                optionsHtml += `<option value="${h}:30">${h}:30</option>`;
+            }
+            document.getElementById('timeInput').innerHTML = optionsHtml;
+            document.getElementById('editTimeInput').innerHTML = optionsHtml;
+            document.getElementById('postponeCustomTime').innerHTML = optionsHtml;
+        }
+
+        function initSpeechRecognition() {
+            const SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechAPI) return document.getElementById('micBtn')?.classList.add('hidden');
+            speechRecognition = new SpeechAPI(); speechRecognition.lang = 'es-AR'; speechRecognition.interimResults = false; speechRecognition.maxAlternatives = 1;
+            speechRecognition.onstart = function() { isListening = true; const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput'); micIcon.classList.add('text-danger-500', 'animate-pulse'); micIcon.classList.remove('text-navy-400'); if(!inputEl.disabled) inputEl.placeholder = "Escuchando... Hablá ahora."; };
+            speechRecognition.onresult = function(event) { document.getElementById('omnibarInput').value = event.results[0][0].transcript; processOmnibarCommand(); };
+            speechRecognition.onerror = function(event) { showNotice(event.error === 'not-allowed' ? "Permiso denegado." : "Error de voz."); resetMicUI(); };
+            speechRecognition.onend = function() { isListening = false; resetMicUI(); };
+        }
+
+        function resetMicUI() {
+            const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput');
+            micIcon.classList.remove('text-danger-500', 'animate-pulse'); micIcon.classList.add('text-navy-400');
+            if (!inputEl.disabled) inputEl.placeholder = "Añadir tarea con IA (ej. 'Revisar apuntes mañana a las 10:00 con prioridad alta @casa')";
+        }
+
+        function toggleVoiceCapture() {
+            if (!speechRecognition) return showNotice("Tu navegador no soporta captura de voz.");
+            if (isListening) speechRecognition.stop(); else try { speechRecognition.start(); } catch (e) { }
+        }
+
+        async function fetchGeminiResponse(prompt, schema) {
+            const activeApiKey = customApiKey || apiKey;
+            if (!activeApiKey) {
+                showNotice("Por favor, ingresá tu Gemini API Key en Configuración Cloud.");
+                openSettingsModal();
+                throw new Error("API Key ausente.");
+            }
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeApiKey}`;
+            const payload = { 
+                contents: [{ parts: [{ text: prompt }] }], 
+                systemInstruction: { parts: [{ text: "Sos un asistente de productividad. Extraé los datos solicitados. Fecha de hoy: " + getLocalDateString(new Date()) + ". Usá siempre el formato YYYY-MM-DD para las fechas. Si especifican hora ajustala al intervalo de 30 mins más cercano." }] }, 
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema } 
+            };
+            
+            let retryDelay = 1000;
+            for (let i = 0; i < 5; i++) {
+                try { 
+                    const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+                    if (!res.ok) {
+                        console.error("API Error Status:", res.status);
+                        throw new Error("HTTP " + res.status);
+                    }
+                    const jsonRes = await res.json();
+                    const textResult = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!textResult) throw new Error("Respuesta bloqueada o nula.");
+                    
+                    return JSON.parse(textResult); 
+                } 
+                catch (error) { 
+                    console.error(`Fallo en el intento IA ${i + 1}:`, error);
+                    if (i === 4) throw error; 
+                    await new Promise(r => setTimeout(r, retryDelay)); 
+                    retryDelay *= 2; 
+                }
+            }
+        }
+
+        function handleOmnibarKeydown(e) { if (e.key === 'Enter') processOmnibarCommand(); }
+        
+        async function processOmnibarCommand() {
+            const inputEl = document.getElementById('omnibarInput'); const prompt = inputEl.value.trim(); if (!prompt) return;
+            inputEl.disabled = true; inputEl.classList.add('ai-loading-gradient'); inputEl.placeholder = "Procesando...";
+            const btnIcon = document.querySelector('#omnibarBtn svg'); btnIcon.outerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+            const schema = { type: "OBJECT", properties: { name: { type: "STRING" }, date: { type: "STRING", description: "Formato YYYY-MM-DD" }, time: { type: "STRING" }, priority: { type: "STRING", description: "baja, media, alta o urgente" }, area: { type: "STRING" }, context: { type: "STRING" } }, required: ["name", "date", "priority", "area", "context"] };
+
+            try {
+                const aiResult = await fetchGeminiResponse(prompt, schema);
+                
+                const aiName = aiResult.name || "Nueva tarea generada por IA";
+                const aiArea = aiResult.area || "Inbox";
+                const aiContextStr = aiResult.context || "@Global";
+                const aiPriority = (aiResult.priority && ["urgente", "alta", "media", "baja"].includes(aiResult.priority.toLowerCase())) ? aiResult.priority.toLowerCase() : "baja";
+                const aiDate = aiResult.date || getLocalDateString(new Date());
+
+                if (!customAreas.includes(aiArea)) { customAreas.push(aiArea); saveCategories(); }
+                let finalCtx = aiContextStr.startsWith('@') ? aiContextStr : '@' + aiContextStr;
+                if (!customContexts.some(c => c.name === finalCtx)) { customContexts.push({ name: finalCtx, color: 'gray' }); saveCategories(); }
+
+                tasks.unshift({ id: Date.now(), name: aiName, area: aiArea, context: finalCtx, priority: aiPriority, recurrence: 'none', date: aiDate, time: aiResult.time || '', reminder: false, status: 'pending', subtasks: [] });
+                await saveData(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea generada vía IA"); inputEl.value = '';
+            } catch (err) { 
+                console.error(err); 
+                showNotice("Error al procesar el comando con IA."); 
+            } finally { 
+                inputEl.disabled = false; inputEl.classList.remove('ai-loading-gradient'); resetMicUI(); 
+                document.querySelector('#omnibarBtn svg').outerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`; 
+                inputEl.focus(); 
+            }
+        }
+
+        async function breakdownTaskWithAI() {
+            const btn = document.getElementById('btnBreakdownAI'); const originalText = btn.innerHTML;
+            const taskName = document.getElementById('editNameInput').value; const taskDate = document.getElementById('editDateInput').value || getLocalDateString(new Date());
+            if (!taskName) return;
+
+            btn.disabled = true; btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Procesando...</span>`;
+
+            const schema = { type: "OBJECT", properties: { subtasks: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, offsetDays: { type: "INTEGER", description: "Días a sumar a la fecha base" } }, required: ["name", "offsetDays"] } } }, required: ["subtasks"] };
+
+            try {
+                const aiResult = await fetchGeminiResponse(`Desglosá la siguiente tarea en pasos lógicos secuenciales. Tarea: "${taskName}". Fecha base: ${taskDate}.`, schema);
+                const { id } = editState;
+                const baseDateObj = new Date(taskDate + "T00:00:00");
+                
+                const subtasksArray = aiResult.subtasks || [];
+                const newSubtasks = subtasksArray.map(st => {
+                    const stDate = new Date(baseDateObj); stDate.setDate(stDate.getDate() + (st.offsetDays || 0));
+                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', subtasks: [] };
+                });
+
+                if (newSubtasks.length > 0) {
+                    findAndMutateTask(id, (nodes, i) => { nodes[i].subtasks = [...(nodes[i].subtasks || []), ...newSubtasks]; });
+                    expandedStates[id] = true; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates));
+                    await saveData(); renderTasks(); closeEditModal(); showNotice("Tarea desglosada exitosamente.");
+                } else {
+                    showNotice("La IA no ha retornado datos estructurados.");
+                }
+            } catch (err) { 
+                console.error(err); 
+                showNotice("Error al intentar generar el desglose."); 
+            } finally { 
+                btn.disabled = false; btn.innerHTML = originalText; 
+            }
+        }
+
+
+        window.onload = async () => { 
+            populateTimeSelects(); 
+            initSpeechRecognition(); 
+            migrateAndNormalizeTasks(); 
+            updateDateDisplay(); 
+
+            // Carga inicial de inputs de configuración
+            document.getElementById('settingsDbUrlInput').value = dbUrl;
+            document.getElementById('settingsApiKeyInput').value = customApiKey;
+
+            if (dbUrl) {
+                await loadDataFromCloud();
+            } else {
+                showSyncStatus('none');
+                refreshAllDropdowns(); 
+                renderSidebarAreas(); 
+                updateUI(); 
+            }
+        };
+
+        function formatDateAR(dateStr, timeStr) { if (!dateStr) return ''; const parts = dateStr.split('-'); if (parts.length !== 3) return dateStr; const formattedDate = `${parts[2]}/${parts[1]}`; return timeStr ? `${formattedDate}` : formattedDate; }
+
+        function migrateAndNormalizeTasks() { 
+            if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); }
+            let changed = false;
+            function walk(nodes, parentArea) {
+                if (!Array.isArray(nodes)) return;
+                nodes.forEach(n => {
+                    if (n.status === undefined) {
+                        n.status = n.completed ? 'completed' : 'pending';
+                        delete n.completed;
+                        changed = true;
+                    }
+                    if(!n.priority) { n.priority = 'baja'; changed = true; }
+                    if(!n.subtasks) { n.subtasks = []; changed = true; }
+                    if(!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
+                    if(!n.context) { n.context = '@Global'; changed = true; }
+                    if(n.time === undefined) { n.time = ''; changed = true; }
+                    if(n.subtasks) walk(n.subtasks, n.area);
+                });
+            }
+            if (Array.isArray(tasks)) {
+                walk(tasks, null);
+                if (changed) saveData();
+            } else {
+                tasks = [];
+            }
+        }
+
+        // --- Motores de Persistencia Nube + Local ---
+        async function saveData() {
+            // Persistencia inmediata local para prevenir pérdidas
+            localStorage.setItem('leo_agenda_v10', JSON.stringify(tasks));
+            
+            if (dbUrl) {
+                showSyncStatus('saving');
+                const payload = { tasks, customAreas, customContexts, expandedStates };
+                try {
+                    await fetch(dbUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(payload)
+                    });
+                    showSyncStatus('synced');
+                } catch (e) {
+                    console.error("Fallo de guardado remoto, operando en caché local:", e);
+                    showSyncStatus('offline');
+                }
+            }
+        }
+
+        async function loadDataFromCloud() {
+            if (!dbUrl) return;
+            showSyncStatus('loading');
+            try {
+                const res = await fetch(dbUrl);
+                if (!res.ok) throw new Error("Fallo HTTP: " + res.status);
+                const data = await res.json();
+                if (data && data.tasks) {
+                    tasks = data.tasks;
+                    customAreas = data.customAreas || ["Inbox", "Trabajo", "Personal", "Estudios"];
+                    customContexts = data.customContexts || [];
+                    expandedStates = data.expandedStates || {};
+
+                    migrateAndNormalizeTasks();
+                    saveCategories();
+                    localStorage.setItem('leo_agenda_v10', JSON.stringify(tasks));
+                    
+                    showSyncStatus('synced');
+                    showNotice("Sincronizado con Google Sheets");
+                } else {
+                    // Si el servidor devolvió un objeto vacío pero tenemos datos locales, los migramos a la nube automáticamente
+                    if (tasks && tasks.length > 0) {
+                        await saveData();
+                    } else {
+                        showSyncStatus('synced');
+                    }
+                }
+            } catch (e) {
+                console.error("Fallo de descarga, activando respaldo local:", e);
+                showSyncStatus('offline');
+                showNotice("Sin conexión. Usando respaldo local.");
+            }
+            refreshAllDropdowns(); 
+            renderSidebarAreas(); 
+            updateUI(); 
+        }
+
+        // --- Modales de Configuración Cloud ---
+        function openSettingsModal() {
+            document.getElementById('settingsDbUrlInput').value = dbUrl;
+            document.getElementById('settingsApiKeyInput').value = customApiKey;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        async function saveSettings() {
+            const inputUrl = document.getElementById('settingsDbUrlInput').value.trim();
+            const inputKey = document.getElementById('settingsApiKeyInput').value.trim();
+
+            dbUrl = inputUrl;
+            customApiKey = inputKey;
+
+            if (dbUrl) localStorage.setItem(DB_URL_KEY, dbUrl); else localStorage.removeItem(DB_URL_KEY);
+            if (customApiKey) localStorage.setItem(API_KEY_STORAGE_KEY, customApiKey); else localStorage.removeItem(API_KEY_STORAGE_KEY);
+
+            closeSettingsModal();
+            showNotice("Configuración actualizada.");
+            
+            if (dbUrl) {
+                await loadDataFromCloud();
+            } else {
+                showSyncStatus('none');
+                updateUI();
+            }
+        }
+
+        function exportData() { const blob = new Blob([JSON.stringify({ tasks, customAreas, customContexts, expandedStates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `agenda_backup_leo.json`; a.click(); URL.revokeObjectURL(url); }
+        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if (data.tasks) tasks = data.tasks; if (data.customAreas) customAreas = data.customAreas; if (data.customContexts) customContexts = data.customContexts; if (data.expandedStates) expandedStates = data.expandedStates; saveCategories(); await saveData(); refreshAllDropdowns(); updateUI(); showNotice("Respaldo restaurado."); } catch (err) { showNotice("Error de archivo."); } }; reader.readAsText(file); event.target.value = ''; }
+
+        function navigate(view, areaName = null, pushHistory = true) { if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); currentState.view = view; currentState.selectedArea = areaName; currentState.focusTargetId = null; if (window.innerWidth < 768) toggleSidebar(false); updateUI(); }
+        function goBack() { if (navHistory.length > 0) { currentState = navHistory.pop(); updateUI(); } }
+        function focusTaskTree(targetId) { navHistory.push(JSON.parse(JSON.stringify(currentState))); currentState.view = 'focus'; currentState.focusTargetId = targetId; updateUI(); setTimeout(() => { const el = document.querySelector(`[data-id="${targetId}"] > div`); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('highlight-focus'); setTimeout(() => el.classList.remove('highlight-focus'), 3000); } }, 150); }
+
+        function updateUI() {
+            const btnBack = document.getElementById('btnBack'); if (navHistory.length > 0) btnBack.classList.remove('hidden'); else btnBack.classList.add('hidden');
+            const titleEl = document.getElementById('view-title');
+            const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica' };
+            titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+
+            ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar'].forEach(id => { 
+                const el = document.getElementById(id); 
+                if (id === `nav-${currentState.view}`) { 
+                    el.classList.add('bg-navy-800', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+                    el.classList.remove('text-navy-300', 'border-transparent'); 
+                } else { 
+                    el.classList.remove('bg-navy-800', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+                    el.classList.add('text-navy-300', 'border-transparent'); 
+                } 
+            });
+            document.querySelectorAll('.sidebar-area-item').forEach(el => { 
+                if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { 
+                    el.classList.add('border-brand-500', 'bg-navy-800', 'text-brand-500'); 
+                    el.classList.remove('border-transparent', 'text-navy-300'); 
+                } else { 
+                    el.classList.remove('border-brand-500', 'bg-navy-800', 'text-brand-500'); 
+                    el.classList.add('border-transparent', 'text-navy-300'); 
+                } 
+            });
+
+            document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('omnibar-container').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
+            
+            if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
+            
+            if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
+        }
+
+        function toggleSidebar(force) { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobile-overlay'); const isOpen = !sidebar.classList.contains('-translate-x-full'); if (force === false || isOpen) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); } else { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } }
+        function renderSidebarAreas() { const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-600 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+        
+        function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
+
+        // --- Sincronización de Componentes de Selección ---
+        function refreshAllDropdowns() { 
+            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            populateSelect('areaInput', allAreas); 
+            populateSelect('contextInput', allContexts); 
+            populateSelect('filterContext', allContexts, "Contexto (Todos)"); 
+            renderSidebarAreas(); 
+        }
+        function refreshEditDropdowns() { 
+            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            populateSelect('editAreaInput', allAreas); 
+            populateSelect('editContextInput', allContexts); 
+        }
+        function populateSelect(id, items, defaultLabel = null) { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel ? `<option value="all">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal && Array.from(el.options).some(o => o.value === currentVal)) el.value = currentVal; }
+        function updateDateDisplay() { document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
+        function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
+        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; updateFilters(); }
+        function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
+        function getLocalDateString(dateObj) { const year = dateObj.getFullYear(); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const day = String(dateObj.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
+
+        // --- Selección Múltiple y Operaciones Masivas (Lote) ---
+        function toggleBulkMode() {
+            isBulkMode = !isBulkMode;
+            selectedTaskIds.clear();
+            const btn = document.getElementById('btnBulkMode');
+            const bar = document.getElementById('bulkActionBar');
+            const fab = document.getElementById('mainFab');
+
+            if (isBulkMode) {
+                btn.classList.add('text-brand-500', 'bg-navy-600');
+                btn.classList.remove('text-navy-400');
+                bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+                bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                fab.classList.add('translate-y-24', 'opacity-0');
+            } else {
+                btn.classList.remove('text-brand-500', 'bg-navy-600');
+                btn.classList.add('text-navy-400');
+                bar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+                bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+                fab.classList.remove('translate-y-24', 'opacity-0');
+            }
+            updateBulkCount();
+            renderTasks();
+        }
+
+        function toggleBulkSelect(id, event) {
+            if (event) event.stopPropagation();
+            if (selectedTaskIds.has(id)) selectedTaskIds.delete(id);
+            else selectedTaskIds.add(id);
+            updateBulkCount();
+            renderTasks();
+        }
+
+        function updateBulkCount() { document.getElementById('bulkCount').innerText = selectedTaskIds.size; }
+
+        async function bulkDelete() {
+            if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
+            if (!confirm(`¿Eliminar las ${selectedTaskIds.size} tareas seleccionadas?`)) return;
+            const idsToDelete = new Set(selectedTaskIds);
+            idsToDelete.forEach(id => { findAndMutateTask(id, (nodes, i) => { nodes.splice(i, 1); }); });
+            toggleBulkMode(); await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas eliminadas en lote");
+        }
+
+        async function bulkComplete() {
+            if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
+            selectedTaskIds.forEach(id => { findAndMutateTask(id, (nodes, i) => { nodes[i].status = 'completed'; }); });
+            toggleBulkMode(); await saveData(); renderTasks(); renderCalendar(); showNotice("Estado actualizado");
+        }
+
+        function openBulkMoveModal() {
+            if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
+            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            let areaHtml = '<option value="">-- No cambiar --</option>' + allAreas.map(item => `<option value="${item}">${item}</option>`).join('');
+            let ctxHtml = '<option value="">-- No cambiar --</option>' + allContexts.map(item => `<option value="${item}">${item}</option>`).join('');
+            document.getElementById('bulkAreaInput').innerHTML = areaHtml;
+            document.getElementById('bulkContextInput').innerHTML = ctxHtml;
+            document.getElementById('bulkMoveModal').classList.remove('hidden');
+        }
+
+        function closeBulkMoveModal() { document.getElementById('bulkMoveModal').classList.add('hidden'); }
+
+        async function applyBulkMove() {
+            const newArea = document.getElementById('bulkAreaInput').value;
+            const newCtx = document.getElementById('bulkContextInput').value;
+            if (!newArea && !newCtx) return closeBulkMoveModal();
+            selectedTaskIds.forEach(id => {
+                findAndMutateTask(id, (nodes, i) => {
+                    if (newArea) nodes[i].area = newArea;
+                    if (newCtx) nodes[i].context = newCtx;
+                    function propagateDown(subnodes) {
+                        if (!subnodes) return;
+                        subnodes.forEach(s => { if (newArea) s.area = newArea; propagateDown(s.subtasks); });
+                    }
+                    propagateDown(nodes[i].subtasks);
+                });
+            });
+            await saveData(); refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada");
+        }
+
+        // --- Filtrado y Recorte del Árbol de Jerarquías (Pruning) ---
+        function pruneTree(nodeList, parentMatched = false) {
+            if (!Array.isArray(nodeList)) return [];
+            const todayStr = getLocalDateString(new Date());
+            const tomorrowObj = new Date(); tomorrowObj.setDate(tomorrowObj.getDate() + 1); const tomorrowStr = getLocalDateString(tomorrowObj);
+            const daysToSunday = tomorrowObj.getDay() === 0 ? 0 : 7 - tomorrowObj.getDay();
+            const endOfWeekObj = new Date(); endOfWeekObj.setDate(endOfWeekObj.getDate() + daysToSunday); const endOfWeekStr = getLocalDateString(endOfWeekObj);
+            const fortnightObj = new Date(); fortnightObj.setDate(fortnightObj.getDate() + 15); const fortnightStr = getLocalDateString(fortnightObj);
+            
+            return nodeList.map(node => {
+                let matches = true;
+                if (currentFilters.search !== '') { const sTerm = currentFilters.search.toLowerCase(); const textMatch = node.name.toLowerCase().includes(sTerm) || (node.area || '').toLowerCase().includes(sTerm) || (node.context || '').toLowerCase().includes(sTerm); if (!textMatch) matches = false; }
+                
+                if (currentFilters.status === 'pending' && node.status === 'completed') matches = false; 
+                if (currentFilters.status === 'in_progress' && node.status !== 'in_progress') matches = false; 
+                if (currentFilters.status === 'completed' && node.status !== 'completed') matches = false; 
+                
+                if (currentFilters.priority !== 'all' && node.priority !== currentFilters.priority) matches = false; 
+                if (currentFilters.context !== 'all' && node.context !== currentFilters.context) matches = false;
+
+                if (currentState.view === 'today') { if (node.date > todayStr) matches = false; }
+                else if (currentState.view === 'tomorrow') { if (node.date !== tomorrowStr) matches = false; }
+                else if (currentState.view === 'week') { if (node.date > endOfWeekStr) matches = false; }
+                else if (currentState.view === 'fortnight') { if (node.date > fortnightStr) matches = false; }
+                else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
+                else if (currentState.view === 'focus') { matches = matches && containsFocusNode(node, currentState.focusTargetId); }
+
+                const effectivelyMatched = matches || parentMatched;
+                const prunedSubtasks = pruneTree(node.subtasks || [], effectivelyMatched);
+                
+                if (effectivelyMatched || prunedSubtasks.length > 0) { 
+                    return { ...node, subtasks: prunedSubtasks, _explicitMatch: effectivelyMatched }; 
+                }
+                return null;
+            }).filter(Boolean);
+        }
+
+        // --- Mutaciones de Grafo de Tareas ---
+        function findAndMutateTask(taskId, mutationFn) {
+            function traverse(nodes) {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (nodes[i].id === taskId) { mutationFn(nodes, i); return true; }
+                    if (nodes[i].subtasks && traverse(nodes[i].subtasks)) return true;
+                }
+                return false;
+            }
+            return traverse(tasks);
+        }
+
+        function extractTask(taskId) {
+            let extracted = null;
+            function walk(nodes) {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (nodes[i].id === taskId) {
+                        extracted = nodes.splice(i, 1)[0];
+                        return true;
+                    }
+                    if (nodes[i].subtasks && walk(nodes[i].subtasks)) return true;
+                }
+                return false;
+            }
+            walk(tasks);
+            return extracted;
+        }
+
+        function insertTask(taskObj, parentId) {
+            if (parentId === 'root') {
+                tasks.unshift(taskObj);
+            } else {
+                findAndMutateTask(parentId, (nodes, i) => {
+                    if (!nodes[i].subtasks) nodes[i].subtasks = [];
+                    nodes[i].subtasks.push(taskObj);
+                    expandedStates[parentId] = true;
+                });
+            }
+        }
+
+        function getParentId(taskId) {
+            let pId = 'root';
+            function search(nodes, currentParent) {
+                for (let n of nodes) {
+                    if (n.id === taskId) { pId = currentParent; return true; }
+                    if (n.subtasks && search(n.subtasks, n.id)) return true;
+                }
+                return false;
+            }
+            search(tasks, 'root');
+            return pId;
+        }
+
+        function isDescendant(ancestorId, targetId) {
+            if (ancestorId === targetId) return true;
+            let ancestorNode = null;
+            function findAnc(nodes) {
+                for(let n of nodes) {
+                    if (n.id === ancestorId) { ancestorNode = n; return; }
+                    if (n.subtasks) findAnc(n.subtasks);
+                }
+            }
+            findAnc(tasks);
+            if (!ancestorNode || !ancestorNode.subtasks) return false;
+
+            let found = false;
+            function checkTarget(nodes) {
+                for(let n of nodes) {
+                    if (n.id === targetId) { found = true; return; }
+                    if (n.subtasks) checkTarget(n.subtasks);
+                }
+            }
+            checkTarget(ancestorNode.subtasks);
+            return found;
+        }
+
+        function updateEditParentDropdown() {
+            const area = document.getElementById('editAreaInput').value;
+            const taskId = editState.id;
+            const select = document.getElementById('editParentInput');
+            
+            let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>';
+            
+            function collectValidParents(nodes, depth = 0) {
+                nodes.forEach(n => {
+                    if (n.id !== taskId && !isDescendant(taskId, n.id) && n.area === area) {
+                        const prefix = '— '.repeat(depth);
+                        optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`;
+                    }
+                    if (n.subtasks) collectValidParents(n.subtasks, depth + 1);
+                });
+            }
+            collectValidParents(tasks);
+            
+            const prevValue = select.value || editState.parentId;
+            select.innerHTML = optionsHtml;
+            
+            if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) {
+                select.value = prevValue;
+            } else {
+                select.value = 'root';
+            }
+        }
+
+        function toggleInlineAdd(id) {
+            document.getElementById(`btn-inline-add-${id}`).classList.add('hidden');
+            const input = document.getElementById(`inline-input-${id}`);
+            input.classList.remove('hidden');
+            input.focus();
+        }
+
+        function hideInlineAdd(id) {
+            const input = document.getElementById(`inline-input-${id}`);
+            if (!input || input.value.trim() !== '') return;
+            input.classList.add('hidden');
+            const btn = document.getElementById(`btn-inline-add-${id}`);
+            if (btn) btn.classList.remove('hidden');
+        }
+
+        async function submitInlineAdd(parentId) {
+            const input = document.getElementById(`inline-input-${parentId}`);
+            if (!input || !input.value.trim()) {
+                hideInlineAdd(parentId);
+                return;
+            }
+            
+            findAndMutateTask(parentId, (nodes, i) => {
+                if (!nodes[i].subtasks) nodes[i].subtasks = [];
+                nodes[i].subtasks.push({ 
+                    id: Date.now(), 
+                    name: input.value.trim(), 
+                    status: 'pending', 
+                    area: nodes[i].area, 
+                    context: nodes[i].context || '@Global', 
+                    priority: 'baja', 
+                    date: nodes[i].date || '', 
+                    time: '', 
+                    reminder: false, 
+                    subtasks: [] 
+                });
+            });
+            
+            expandedStates[parentId] = true; 
+            localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates)); 
+            await saveData(); 
+            renderTasks();
+        }
+
+        // --- Renderizadores HTML Dinámicos ---
+        function buildTaskRows(nodes, path = []) {
+            if (!nodes || nodes.length === 0) return '';
+            const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10 bg-navy-800/40', 3: 'pl-12 md:pl-14 bg-navy-800/60', 4: 'pl-16 md:pl-18 bg-navy-800/80', 5: 'pl-20 md:pl-22 bg-navy-800/90' };
+
+            return nodes.map(task => {
+                if (!task._explicitMatch) return buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]);
+
+                const hasChildren = task.subtasks && task.subtasks.length > 0;
+                const isExpanded = (currentState.view === 'focus' || currentFilters.search !== '') ? true : (expandedStates[task.id] || false);
+                const logicalDepth = path.length + 1;
+
+                const indentClass = indentMap[logicalDepth] || 'pl-20 bg-navy-800/90';
+
+                let dateDisplayHTML = `<span class="text-brand-500/80 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-brand-500/80 inline-block"></span> Sin fecha</span>`;
+                if (task.date) {
+                    const dateFormatted = formatDateAR(task.date, false);
+                    dateDisplayHTML = `<span class="text-brand-500 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide">
+                        <svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        ${dateFormatted}
+                    </span>`;
+                }
+
+                const dependencyHtml = path.length > 0 
+                    ? `<span class="mx-1.5 text-navy-600 shrink-0">&bull;</span><span class="text-brand-500/80 hover:text-brand-400 font-medium transition-colors cursor-pointer flex items-center gap-0.5 min-w-0" onclick="event.stopPropagation(); openEditModal(${path[path.length - 1].id})" title="Ruta: ${path.map(p=>p.name).join(' > ')}"><span class="text-[10px] leading-none mb-[1px] shrink-0">↳</span><span class="truncate max-w-[90px] md:max-w-[150px]">${path[path.length - 1].name}</span></span>`
+                    : '';
+
+                const inlineAddHtml = (currentFilters.search === '' && !isBulkMode) ? `
+                    <span class="mx-1 text-navy-600 shrink-0">&bull;</span>
+                    <button onclick="event.stopPropagation(); toggleInlineAdd(${task.id})" id="btn-inline-add-${task.id}" class="text-navy-400 hover:text-brand-500 transition-colors focus:outline-none flex items-center justify-center shrink-0" title="Añadir subtarea">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    </button>
+                    <input type="text" id="inline-input-${task.id}" class="hidden ml-1 bg-navy-900 border border-navy-600 text-[10px] text-navy-50 px-1.5 py-0.5 rounded focus:outline-none focus:border-brand-500 w-24 md:w-32 placeholder-navy-500 shrink-0" placeholder="Subtarea..." onkeydown="if(event.key === 'Enter') { event.stopPropagation(); submitInlineAdd(${task.id}); }" onclick="event.stopPropagation()" onblur="hideInlineAdd(${task.id})">
+                ` : '';
+
+                let subtasksHtml = isExpanded ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
+                const subtaskListHTML = `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
+
+                const isRecurring = task.recurrence && task.recurrence !== 'none' && task.status !== 'completed';
+                
+                const bulkCheckboxHTML = isBulkMode ? `
+                    <div class="shrink-0 mr-2 flex items-center justify-center cursor-pointer py-1 pr-1" onclick="toggleBulkSelect(${task.id}, event)">
+                        <input type="checkbox" class="w-[18px] h-[18px] rounded border border-navy-500 text-brand-500 bg-navy-800 focus:ring-0 cursor-pointer pointer-events-none transition-colors" ${selectedTaskIds.has(task.id) ? 'checked' : ''}>
+                    </div>
+                ` : '';
+
+                const isCompleted = task.status === 'completed';
+                const isInProgress = task.status === 'in_progress';
+                const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : 'text-navy-50');
+
+                let statusActionHtml = '';
+                if (!isBulkMode) {
+                    if (isInProgress) {
+                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar (Volver a pendiente)" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+                    } else if (!isCompleted) {
+                        statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+                    }
+                }
+
+                return `
+                    <div class="task-item" data-id="${task.id}">
+                        <div class="group flex flex-col py-2.5 pr-4 border-b border-navy-600 hover:bg-navy-600/30 transition-colors ${indentClass}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    ${bulkCheckboxHTML}
+                                    ${hasChildren ? `<button onclick="toggleExpand(${task.id}, event)" class="p-0.5 text-navy-400 hover:text-navy-50 transition-transform ${isExpanded ? 'rotate-90' : ''} focus:outline-none shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>` : `<div class="w-4 shrink-0"></div>`}
+                                    
+                                    <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTaskUniversal(${task.id})" class="task-cb shrink-0 ${isBulkMode ? 'opacity-40 pointer-events-none' : ''} ${isInProgress ? 'is-in-progress' : ''}">
+                                    
+                                    <div class="flex flex-col min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[14px] font-medium task-name ${nameStyle} truncate cursor-pointer select-none leading-none transition-colors" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.name}</span>
+                                            ${task.reminder ? `<svg class="w-3 h-3 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
+                                        </div>
+                                        <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
+                                            <span class="text-navy-400 truncate cursor-pointer hover:text-navy-300 transition-colors shrink-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.area} &bull; ${task.context}</span>
+                                            ${dependencyHtml}
+                                            ${inlineAddHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0 relative">
+                                    ${!isBulkMode ? `
+                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-700/0 via-navy-700 to-transparent pl-6">
+                                        ${isRecurring ? `<button onclick="event.stopPropagation(); skipTask(${task.id})" title="Saltar Ocurrencia" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>` : ''}
+                                        ${statusActionHtml}
+                                        <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                                        <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                                        <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-600 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                    </div>
+                                    ` : ''}
+                                    <div class="w-24 flex justify-end items-center text-xs">
+                                        ${dateDisplayHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ${subtaskListHTML}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
+            const prunedTasks = pruneTree(tasks);
+            if (prunedTasks.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            
+            const html = `
+                <div id="taskList-root" class="flex flex-col min-h-[50px] pb-4 bg-navy-700 shadow-xl rounded-2xl overflow-hidden">
+                    ${buildTaskRows(prunedTasks)}
+                </div>
+            `;
+            list.innerHTML = html;
+        }
+
+        function toggleExpand(id, event) { if (event) event.stopPropagation(); expandedStates[id] = !expandedStates[id]; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates)); renderTasks(); }
+
+        function openAddTaskModal() { document.getElementById('taskInput').value = ''; document.getElementById('dateInput').value = ''; document.getElementById('timeInput').value = ''; document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); document.getElementById('addTaskModal').classList.remove('hidden'); setTimeout(() => document.getElementById('taskInput').focus(), 100); }
+        function closeAddTaskModal() { document.getElementById('addTaskModal').classList.add('hidden'); }
+        
+        async function addTask() { 
+            try {
+                const name = document.getElementById('taskInput').value.trim(); 
+                const area = document.getElementById('areaInput').value; 
+                const context = document.getElementById('contextInput').value; 
+                const priority = document.getElementById('priorityInput').value; 
+                const recurrence = document.getElementById('recurrenceInput').value; 
+                const dateInput = document.getElementById('dateInput').value; 
+                const timeInput = document.getElementById('timeInput').value; 
+                const reminder = document.getElementById('reminderToggle').checked; 
+                const businessDayNum = parseInt(document.getElementById('businessDayInput').value) || 5; 
+                const completionBased = document.getElementById('completionBasedInput').checked; 
+                
+                if (!name) return; 
+                
+                let finalDate = dateInput; 
+                if (!finalDate) { 
+                    if (recurrence === 'dia_habil') { 
+                        const today = new Date(); 
+                        const currentMonthBD = calculateNthBusinessDay(today.getFullYear(), today.getMonth(), businessDayNum); 
+                        if (today > currentMonthBD) { 
+                            let nextMonth = today.getMonth() + 1; let nextYear = today.getFullYear(); 
+                            if (nextMonth > 11) { nextMonth = 0; nextYear += 1; } 
+                            finalDate = calculateNthBusinessDay(nextYear, nextMonth, businessDayNum).toISOString().split('T')[0]; 
+                        } else { 
+                            finalDate = currentMonthBD.toISOString().split('T')[0]; 
+                        } 
+                    } else { 
+                        finalDate = ''; 
+                    } 
+                } 
+                
+                tasks.unshift({ id: Date.now(), name, area, context, priority, recurrence, date: finalDate, time: timeInput, reminder, businessDayNum, completionBased, status: 'pending', subtasks: [] }); 
+                
+                await saveData(); 
+                refreshAllDropdowns(); 
+                renderTasks(); 
+                closeAddTaskModal(); 
+                showNotice("Tarea guardada exitosamente"); 
+            } catch (error) {
+                console.error("Fallo crítico en addTask:", error);
+                showNotice("Error interno. Revisar consola.");
+            }
+        }
+
+        async function setTaskStatus(id, newStatus) {
+            findAndMutateTask(id, (nodes, i) => {
+                nodes[i].status = newStatus;
+            });
+            await saveData(); renderTasks(); renderCalendar();
+        }
+
+        async function toggleTaskUniversal(id) {
+            findAndMutateTask(id, (nodes, i) => {
+                const t = nodes[i];
+                if (t.status !== 'completed' && t.recurrence && t.recurrence !== 'none') {
+                    const nextDate = getNextOccurrenceDate(t.date, t.recurrence, t.completionBased, t.businessDayNum);
+                    showNotice(`Próxima repetición: ${formatDateAR(nextDate)}`);
+                    const historicalCopy = JSON.parse(JSON.stringify(t));
+                    historicalCopy.id = Date.now() + Math.random(); 
+                    historicalCopy.status = 'completed'; 
+                    historicalCopy.recurrence = 'none';
+                    
+                    t.date = nextDate; 
+                    t.status = 'pending'; 
+                    
+                    function resetCompletion(task) { task.status = 'pending'; if (task.subtasks) task.subtasks.forEach(resetCompletion); }
+                    if(t.subtasks) t.subtasks.forEach(resetCompletion);
+                    
+                    nodes.splice(i, 0, historicalCopy);
+                } else { 
+                    t.status = t.status === 'completed' ? 'pending' : 'completed'; 
+                }
+            });
+            await saveData(); renderTasks(); renderCalendar();
+        }
+
+        async function skipTask(id) { findAndMutateTask(id, (nodes, i) => { const nextDate = getNextOccurrenceDate(nodes[i].date, nodes[i].recurrence, nodes[i].completionBased, nodes[i].businessDayNum); showNotice("Saltada a: " + formatDateAR(nextDate)); nodes[i].date = nextDate; }); await saveData(); renderTasks(); renderCalendar(); }
+        async function deleteTaskUniversal(id) { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea eliminada"); } }
+        
+        function saveCategories() { localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas)); localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts)); }
+        function calculateNthBusinessDay(year, month, n) { let count = 0; let date = new Date(year, month, 1); while (date.getMonth() === month) { const dayOfWeek = date.getDay(); if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; if (count === n) return date; } date.setDate(date.getDate() + 1); } let fallbackDate = new Date(year, month + 1, 0); while (fallbackDate.getDay() === 0 || fallbackDate.getDay() === 6) fallbackDate.setDate(fallbackDate.getDate() - 1); return fallbackDate; }
+        function getNextOccurrenceDate(dateStr, recurrence, baseFromCompletion = false, businessDayNum = 5) { let baseDate = baseFromCompletion ? new Date() : new Date(dateStr + "T00:00:00"); if (isNaN(baseDate.getTime())) baseDate = new Date(); let nextDate = new Date(baseDate); if (recurrence === 'diario') nextDate.setDate(nextDate.getDate() + 1); else if (recurrence === 'semanal') nextDate.setDate(nextDate.getDate() + 7); else if (recurrence === 'mensual') nextDate.setMonth(nextDate.getMonth() + 1); else if (recurrence === 'dia_habil') { let nextMonth = baseDate.getMonth() + 1; let nextYear = baseDate.getFullYear(); if (nextMonth > 11) { nextMonth = 0; nextYear += 1; } nextDate = calculateNthBusinessDay(nextYear, nextMonth, businessDayNum); } return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`; }
+        
+        // --- Handlers de Campos Dinámicos en Modales ---
+        function toggleRecurrenceFields() { const r = document.getElementById('recurrenceInput').value; document.getElementById('recurrenceOptionsContainer').classList.toggle('hidden', r === 'none'); document.getElementById('businessDayContainer').classList.toggle('hidden', r !== 'dia_habil'); document.getElementById('completionBasedContainer').classList.toggle('hidden', r === 'dia_habil'); }
+        function toggleEditRecurrenceFields() { const r = document.getElementById('editRecurrenceInput').value; document.getElementById('editRecurrenceOptionsContainer').classList.toggle('hidden', r === 'none'); document.getElementById('editBusinessDayContainer').classList.toggle('hidden', r !== 'dia_habil'); document.getElementById('editCompletionBasedContainer').classList.toggle('hidden', r === 'dia_habil'); }
+        function openCategoryModal(type, isEdit = false) { currentPromptType = type; isCategoryForEditModal = isEdit; document.getElementById('categoryModalTitle').innerText = type === 'area' ? 'Nueva Área' : 'Nuevo Contexto'; document.getElementById('categoryModalInput').placeholder = type === 'area' ? 'Ej. Trabajo Científico' : 'Ej. @oficina'; document.getElementById('categoryModalInput').value = ''; const picker = document.getElementById('categoryColorPickerContainer'); if (type === 'context') { picker.classList.remove('hidden'); selectNewContextColor('blue'); } else { picker.classList.add('hidden'); } document.getElementById('categoryModal').classList.remove('hidden'); setTimeout(() => document.getElementById('categoryModalInput').focus(), 100); }
+        function closeCategoryModal() { document.getElementById('categoryModal').classList.add('hidden'); }
+        function selectNewContextColor(color) { selectedNewColor = color; ['blue', 'purple', 'green', 'red', 'orange', 'gray', 'pink', 'teal'].forEach(c => { const btn = document.getElementById(`btn-color-${c}`); if (btn) { if (c === color) { btn.classList.add('ring-navy-50', 'scale-110'); btn.classList.remove('ring-transparent'); } else { btn.classList.remove('ring-navy-50', 'scale-110'); btn.classList.add('ring-transparent'); } } }); }
+        
+        function saveCustomCategory() { const newVal = document.getElementById('categoryModalInput').value.trim(); if (newVal !== "") { if (currentPromptType === 'area') { if (!customAreas.includes(newVal)) { customAreas.push(newVal); saveCategories(); } refreshAllDropdowns(); if (isCategoryForEditModal) document.getElementById('editAreaInput').value = newVal; else document.getElementById('areaInput').value = newVal; } else { const finalVal = newVal.startsWith('@') ? newVal : '@' + newVal; if (!customContexts.some(c => c.name === finalVal)) { customContexts.push({ name: finalVal, color: selectedNewColor }); saveCategories(); } refreshAllDropdowns(); if (isCategoryForEditModal) document.getElementById('editContextInput').value = finalVal; else document.getElementById('contextInput').value = finalVal; } showNotice(`${currentPromptType === 'area' ? 'Área' : 'Contexto'} agregada`); } closeCategoryModal(); }
+        
+        // --- Gestión y Modificación de Metadatos ---
+        function openManageModal(type) { manageType = type; document.getElementById('manageModalTitle').innerText = type === 'area' ? 'Gestionar Áreas y Proyectos' : 'Gestionar Contextos'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
+        function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
+        function addAreaFromManage() { const input = document.getElementById('new-manage-area-input'); const val = input.value.trim(); if (val && !customAreas.includes(val)) { customAreas.push(val); saveCategories(); refreshAllDropdowns(); renderManageItems(); showNotice("Área agregada"); } }
+        
+        function renderManageItems() { 
+            const container = document.getElementById('manageModalContent'); container.innerHTML = ''; 
+            if (manageType === 'area') { 
+                container.innerHTML = `<div class="flex items-center gap-2 mb-4"><input type="text" id="new-manage-area-input" placeholder="Crear nueva área..." class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500"><button onclick="addAreaFromManage()" class="bg-brand-500 text-navy-900 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">+</button></div>`;
+                if (customAreas.length === 0) return container.innerHTML += '<p class="text-sm text-navy-400 italic text-center py-6">No hay áreas.</p>'; 
+                customAreas.forEach((area, i) => { const isInbox = area === 'Inbox'; container.innerHTML += `<div class="flex items-center justify-between p-3.5 bg-navy-800 rounded-2xl border border-navy-600 transition-all"><div class="flex-grow mr-2" id="area-display-${i}"><span class="text-sm font-semibold text-navy-50">${area}</span></div><div class="hidden flex-grow mr-2" id="area-edit-${i}"><input type="text" id="area-input-${i}" value="${area}" class="w-full text-sm border border-navy-500 bg-navy-900 text-navy-50 px-3 py-1 rounded"></div><div class="flex space-x-1">${!isInbox ? `<button onclick="toggleEditArea(${i})" id="area-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditArea(${i})" id="area-btn-save-${i}" class="hidden text-brand-500 hover:text-brand-400 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteArea(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>` : `<span class="text-[10px] text-brand-500 font-bold uppercase">Base</span>`}</div></div>`; }); 
+            } else { 
+                if (customContexts.length === 0) return container.innerHTML = '<p class="text-sm text-navy-400 italic text-center py-6">No hay contextos.</p>'; 
+                customContexts.forEach((ctx, i) => { const st = getContextStyles(ctx.name); container.innerHTML += `<div class="flex flex-col p-3.5 bg-navy-800 rounded-2xl border border-navy-600 space-y-3 transition-all"><div class="flex items-center justify-between"><div class="flex items-center space-x-2 flex-grow mr-2" id="ctx-display-${i}"><span class="w-3 h-3 rounded-full ${st.dot}"></span><span class="text-xs font-semibold ${st.text} ${st.bg} px-2.5 py-0.5 rounded-full border ${st.border}">${ctx.name}</span></div><div class="hidden flex-grow mr-2" id="ctx-edit-${i}"><input type="text" id="ctx-input-${i}" value="${ctx.name}" class="w-full text-sm border border-navy-500 bg-navy-900 text-navy-50 px-3 py-1 rounded"></div><div class="flex space-x-1"><button onclick="toggleEditCtx(${i})" id="ctx-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditCtx(${i})" id="ctx-btn-save-${i}" class="hidden text-brand-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteCtx(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button></div></div><div class="hidden pt-1" id="ctx-color-selector-${i}"><div class="text-[9px] font-bold text-navy-400 uppercase mb-2">Color:</div><div class="flex space-x-2">${Object.keys(contextColorMap).map(color => `<button onclick="setCtxColor(${i}, '${color}')" class="w-5 h-5 rounded-full ${contextColorMap[color].dot} border-2 ${ctx.color === color ? 'border-navy-50' : 'border-navy-700'} hover:scale-110"></button>`).join('')}</div></div></div>`; }); 
+            } 
+        }
+        function toggleEditArea(i) { document.getElementById(`area-display-${i}`).classList.toggle('hidden'); document.getElementById(`area-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-save-${i}`).classList.toggle('hidden'); }
+        function toggleEditCtx(i) { document.getElementById(`ctx-display-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-color-selector-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-save-${i}`).classList.toggle('hidden'); }
+        function saveEditArea(index) { const newVal = document.getElementById(`area-input-${index}`).value.trim(); if (!newVal || customAreas[index] === newVal) return toggleEditArea(index); const oldVal = customAreas[index]; customAreas[index] = newVal; function update(ns) { ns.forEach(n => { if (n.area === oldVal) n.area = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Área actualizada"); }
+        function saveEditCtx(index) { const inputVal = document.getElementById(`ctx-input-${index}`).value.trim(); if (!inputVal) return; const newVal = inputVal.startsWith('@') ? inputVal : '@' + inputVal; const oldVal = customContexts[index].name; if (oldVal === newVal) return toggleEditCtx(index); customContexts[index].name = newVal; function update(ns) { ns.forEach(n => { if (n.context === oldVal) n.context = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Contexto actualizado"); }
+        function setCtxColor(i, c) { customContexts[i].color = c; saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
+        function deleteArea(i) { const o = customAreas[i]; if(o === 'Inbox') return; customAreas.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.area === o) n.area = "Inbox"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
+        function deleteCtx(i) { const o = customContexts[i].name; customContexts.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.context === o) n.context = "Global"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
+        
+        // --- Formulario de Edición Detallada ---
+        function openEditModal(id) { 
+            editState = { id, parentId: getParentId(id) }; let target = null;
+            function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } }
+            traverse(tasks); if (!target) return;
+            
+            document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); 
+            document.getElementById('editStatusInput').value = target.status || 'pending';
+            document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || 'Global'; 
+            document.getElementById('editPriorityInput').value = target.priority || 'baja'; document.getElementById('editDateInput').value = target.date || ''; 
+            document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; 
+            document.getElementById('editRecurrenceInput').value = target.recurrence || 'none'; document.getElementById('editBusinessDayInput').value = target.businessDayNum || '5'; 
+            document.getElementById('editCompletionBasedInput').checked = target.completionBased || false; toggleEditRecurrenceFields(); 
+            
+            updateEditParentDropdown();
+            document.getElementById('editModal').classList.remove('hidden'); 
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+        
+        async function saveEdit() { 
+            try {
+                const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
+                const status = document.getElementById('editStatusInput').value;
+                const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; const reminder = document.getElementById('editReminderToggle').checked; const recurrence = document.getElementById('editRecurrenceInput').value; const businessDayNum = parseInt(document.getElementById('editBusinessDayInput').value) || 5; const completionBased = document.getElementById('editCompletionBasedInput').checked;
+                
+                const newParentIdRaw = document.getElementById('editParentInput').value;
+                const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
+
+                let targetTask = null;
+
+                if (newParentId !== editState.parentId) {
+                    targetTask = extractTask(id);
+                }
+
+                if (targetTask) {
+                    targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.reminder = reminder; targetTask.recurrence = recurrence; targetTask.businessDayNum = businessDayNum; targetTask.completionBased = completionBased;
+                    
+                    function propagate(subnodes) { 
+                        if (!Array.isArray(subnodes)) return;
+                        subnodes.forEach(sn => { sn.area = area; if(sn.subtasks) propagate(sn.subtasks); }); 
+                    }
+                    if(targetTask.subtasks) propagate(targetTask.subtasks);
+
+                    insertTask(targetTask, newParentId);
+                } else {
+                    findAndMutateTask(id, (nodes, i) => {
+                        const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.reminder = reminder; n.recurrence = recurrence; n.businessDayNum = businessDayNum; n.completionBased = completionBased;
+                        function propagate(subnodes) { 
+                            if (!Array.isArray(subnodes)) return;
+                            subnodes.forEach(sn => { sn.area = area; if(sn.subtasks) propagate(sn.subtasks); }); 
+                        }
+                        if(n.subtasks) propagate(n.subtasks);
+                    });
+                }
+                
+                await saveData(); refreshAllDropdowns(); renderTasks(); closeEditModal(); showNotice("Guardado exitosamente"); 
+            } catch (err) {
+                console.error("Fallo al guardar edición:", err);
+                showNotice("Error interno al guardar dependencias.");
+            }
+        }
+
+        // --- Gestión de Pospuestos ---
+        function openPostponeModal(id, event) { 
+            if (event) event.stopPropagation(); 
+            if (id === 'bulk' && selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
+            
+            postponeState = { id }; 
+            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7); 
+            document.getElementById('postpone-opt-tomorrow').innerText = tomorrow.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }); 
+            document.getElementById('postpone-opt-nextweek').innerText = nextWeek.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }); 
+            document.getElementById('postponeCustomDate').value = ''; document.getElementById('postponeCustomTime').value = ''; 
+            document.getElementById('postponeModal').classList.remove('hidden'); 
+        }
+        function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
+        
+        async function postponeAction(type) { 
+            let finalDate = ''; let finalTime = ''; 
+            if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); finalDate = tom.toISOString().split('T')[0]; } 
+            else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); finalDate = nw.toISOString().split('T')[0]; } 
+            else if (type === 'custom') { finalDate = document.getElementById('postponeCustomDate').value; finalTime = document.getElementById('postponeCustomTime').value; if (!finalDate) return showNotice("Fecha inválida."); } 
+            
+            if (postponeState.id === 'bulk') {
+                selectedTaskIds.forEach(taskId => {
+                    findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = finalDate; if(type==='custom') nodes[i].time = finalTime; });
+                });
+                toggleBulkMode();
+            } else {
+                findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = finalDate; if(type==='custom') nodes[i].time = finalTime; }); 
+            }
+            
+            await saveData(); renderTasks(); renderCalendar(); closePostponeModal(); 
+            showNotice(postponeState.id === 'bulk' ? `Tareas pospuestas a ${formatDateAR(finalDate, finalTime)}` : `Pospuesto a ${formatDateAR(finalDate, finalTime)}`); 
+        }
+
+        // --- Módulo Calendario Mensual ---
+        function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
+        function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
+        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-800 border border-navy-600 rounded-2xl flex items-center justify-between cursor-pointer hover:bg-navy-600 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded ${priorityColors[t.priority]}">${t.priority}</span>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
+        function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
+        function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-2xl text-xs font-bold shadow-2xl animate-in select-none pointer-events-auto"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
+    </script>
+</body>
+</html>
