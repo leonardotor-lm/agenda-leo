@@ -686,6 +686,45 @@
 
             try {
                 const aiResult = await fetchGeminiResponse(`Desglosá la siguiente tarea en pasos lógicos secuenciales. Tarea: "${taskName}". Fecha base: ${taskDate}.`, schema, instruction);
+                const { id } = editState;
+                const baseDateObj = new Date(taskDate + "T00:00:00");
+                
+                const subtasksArray = aiResult.subtasks || [];
+                const newSubtasks = subtasksArray.map(st => {
+                    const stDate = new Date(baseDateObj); stDate.setDate(stDate.getDate() + (st.offsetDays || 0));
+                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', subtasks: [] };
+                });
+
+                if (newSubtasks.length > 0) {
+                    findAndMutateTask(id, (nodes, i) => { nodes[i].subtasks = [...(nodes[i].subtasks || []), ...newSubtasks]; });
+                    expandedStates[id] = true; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates));
+                    await saveData(); renderTasks(); closeEditModal(); showNotice("Tarea desglosada exitosamente.");
+                } else {
+                    showNotice("La IA no ha retornado datos estructurados.");
+                }
+            } catch (err) { 
+                console.error(err); 
+                showNotice(`Error IA: ${err.message.substring(0, 70)}...`); 
+            } finally { 
+                btn.disabled = false; btn.innerHTML = originalText; 
+            }
+        }
+
+        window.onload = async () => { 
+            populateTimeSelects(); 
+            initSpeechRecognition(); 
+            migrateAndNormalizeTasks(); 
+            updateDateDisplay(); 
+
+            // Carga inicial de inputs de configuración
+            document.getElementById('settingsDbUrlInput').value = dbUrl;
+            document.getElementById('settingsApiKeyInput').value = customApiKey;
+
+            if (dbUrl) {
+                await loadDataFromCloud();
+            } else {
+                showSyncStatus('none');
+                refreshAllDropdowns(); 
                 renderSidebarAreas(); 
                 updateUI(); 
             }
@@ -893,8 +932,8 @@
                     valA = a.date || '9999-12-31'; // Fechas vacías al final
                     valB = b.date || '9999-12-31';
                 } else if (currentSort.by === 'name') {
-                    valA = a.name.toLowerCase();
-                    valB = b.name.toLowerCase();
+                    valA = (a.name || '').toLowerCase();
+                    valB = (b.name || '').toLowerCase();
                 }
                 
                 let comparison = 0;
