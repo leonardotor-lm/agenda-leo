@@ -111,9 +111,15 @@
     <div id="mobile-overlay" class="fixed inset-0 bg-navy-900 bg-opacity-70 z-30 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
     
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-navy-700 border-r border-navy-600 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none">
-        <div class="p-6 pb-2">
+        <div class="p-6 pb-2 flex flex-col">
             <h2 class="text-xl font-bold tracking-tight text-navy-50">Mi Agenda</h2>
             <p id="current-date-display" class="text-[10px] text-green-400 mt-1 uppercase tracking-[0.15em] font-bold"></p>
+            
+            <!-- Cloud Status Indicator -->
+            <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center space-x-1.5 mt-3 px-2.5 py-1 bg-navy-800/60 border border-navy-600 rounded-full text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-600/80 select-none w-max">
+                <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
+                <span id="sync-status-text" class="text-navy-300">Nube Desconectada</span>
+            </div>
         </div>
         
         <nav class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
@@ -184,12 +190,6 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
                     <h1 id="view-title" class="text-base sm:text-lg lg:text-2xl font-bold text-navy-50 tracking-tight whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">Hoy y atrasadas</h1>
-                </div>
-                
-                <!-- Cloud Status Indicator -->
-                <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer flex items-center space-x-1.5 px-2.5 py-1 bg-navy-800 border border-navy-600 rounded-full text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-600/50 shrink-0 select-none">
-                    <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
-                    <span id="sync-status-text" class="text-navy-300">Nube Desconectada</span>
                 </div>
             </div>
 
