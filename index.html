@@ -222,14 +222,14 @@
             <div class="max-w-5xl mx-auto space-y-6">
                 <div id="omnibar-container" class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <input type="text" id="omnibarInput" placeholder="Añadir tarea con IA (ej. 'Revisar apuntes mañana a las 10:00 con prioridad alta @casa')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-700 border border-navy-600 rounded-2xl shadow-lg text-sm text-navy-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-navy-400" onkeydown="handleOmnibarKeydown(event)">
+                    <input type="text" id="omnibarInput" placeholder="Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-700 border border-navy-600 rounded-2xl shadow-lg text-sm text-navy-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-navy-400" onkeydown="handleOmnibarKeydown(event)">
                     <div class="absolute inset-y-0 right-2 flex items-center gap-1">
-                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Dictar tarea">
+                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Dictar búsqueda">
                             <svg id="micIcon" class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                         </button>
-                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Procesar comando">
+                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-xl hover:bg-navy-600" title="Filtrar y Ordenar">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
                     </div>
@@ -464,6 +464,7 @@
 
         let currentState = { view: 'today', selectedArea: null, focusTargetId: null };
         let currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
+        let currentSort = { by: 'none', order: 'asc' };
         let navHistory = [];
 
         let isBulkMode = false;
@@ -537,7 +538,7 @@
             const SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechAPI) return document.getElementById('micBtn')?.classList.add('hidden');
             speechRecognition = new SpeechAPI(); speechRecognition.lang = 'es-AR'; speechRecognition.interimResults = false; speechRecognition.maxAlternatives = 1;
-            speechRecognition.onstart = function() { isListening = true; const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput'); micIcon.classList.add('text-danger-500', 'animate-pulse'); micIcon.classList.remove('text-navy-400'); if(!inputEl.disabled) inputEl.placeholder = "Escuchando... Hablá ahora."; };
+            speechRecognition.onstart = function() { isListening = true; const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput'); micIcon.classList.add('text-danger-500', 'animate-pulse'); micIcon.classList.remove('text-navy-400'); if(!inputEl.disabled) inputEl.placeholder = "Escuchando parámetros de búsqueda..."; };
             speechRecognition.onresult = function(event) { document.getElementById('omnibarInput').value = event.results[0][0].transcript; processOmnibarCommand(); };
             speechRecognition.onerror = function(event) { showNotice(event.error === 'not-allowed' ? "Permiso denegado." : "Error de voz."); resetMicUI(); };
             speechRecognition.onend = function() { isListening = false; resetMicUI(); };
@@ -546,7 +547,7 @@
         function resetMicUI() {
             const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput');
             micIcon.classList.remove('text-danger-500', 'animate-pulse'); micIcon.classList.add('text-navy-400');
-            if (!inputEl.disabled) inputEl.placeholder = "Añadir tarea con IA (ej. 'Revisar apuntes mañana a las 10:00 con prioridad alta @casa')";
+            if (!inputEl.disabled) inputEl.placeholder = "Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')";
         }
 
         function toggleVoiceCapture() {
@@ -554,7 +555,7 @@
             if (isListening) speechRecognition.stop(); else try { speechRecognition.start(); } catch (e) { }
         }
 
-        async function fetchGeminiResponse(prompt, schema) {
+        async function fetchGeminiResponse(prompt, schema, systemInstructionText) {
             const activeApiKey = (customApiKey || apiKey).trim();
             if (!activeApiKey) {
                 showNotice("Falta la API Key. Revisá la Configuración Cloud.");
@@ -566,7 +567,7 @@
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
-                systemInstruction: { parts: [{ text: "Sos un asistente de productividad. Extraé los datos solicitados. Fecha de hoy: " + getLocalDateString(new Date()) + ". Usá siempre el formato YYYY-MM-DD para las fechas. Si especifican hora ajustala al intervalo de 30 mins más cercano." }] }, 
+                systemInstruction: { parts: [{ text: systemInstructionText }] }, 
                 generationConfig: { responseMimeType: "application/json", responseSchema: schema } 
             };
             
@@ -605,30 +606,68 @@
         
         async function processOmnibarCommand() {
             const inputEl = document.getElementById('omnibarInput'); const prompt = inputEl.value.trim(); if (!prompt) return;
-            inputEl.disabled = true; inputEl.classList.add('ai-loading-gradient'); inputEl.placeholder = "Procesando...";
+            inputEl.disabled = true; inputEl.classList.add('ai-loading-gradient'); inputEl.placeholder = "Procesando búsqueda...";
             const btnIcon = document.querySelector('#omnibarBtn svg'); btnIcon.outerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
-            const schema = { type: "OBJECT", properties: { name: { type: "STRING" }, date: { type: "STRING", description: "Formato YYYY-MM-DD" }, time: { type: "STRING" }, priority: { type: "STRING", description: "baja, media, alta o urgente" }, area: { type: "STRING" }, context: { type: "STRING" } }, required: ["name", "date", "priority", "area", "context"] };
+            const schema = { 
+                type: "OBJECT", 
+                properties: { 
+                    search: { type: "STRING", description: "Texto a buscar en el nombre de la tarea (opcional)" },
+                    view: { type: "STRING", description: "today, tomorrow, week, fortnight, all, area" },
+                    area: { type: "STRING", description: "Nombre exacto del área si pide una" },
+                    context: { type: "STRING", description: "Contexto exacto (ej. @casa) si lo pide" },
+                    status: { type: "STRING", description: "pending, in_progress, completed, all" },
+                    priority: { type: "STRING", description: "urgente, alta, media, baja, all" },
+                    sortBy: { type: "STRING", description: "date, priority, name, none" },
+                    sortOrder: { type: "STRING", description: "asc, desc" }
+                } 
+            };
+
+            const instruction = "Sos un motor de búsqueda. Convertí la petición del usuario en parámetros de filtrado y ordenamiento. Valores permitidos para 'view': today, tomorrow, week, fortnight, all, area. 'status': pending, in_progress, completed, all. 'priority': urgente, alta, media, baja, all. 'sortBy': date, priority, name, none. 'sortOrder': asc, desc. Si el usuario pide orden de urgencia, usá sortOrder='desc'. Si no especifica algo, omitilo o dejalo nulo para no sobreescribir el estado actual.";
 
             try {
-                const aiResult = await fetchGeminiResponse(prompt, schema);
+                const aiResult = await fetchGeminiResponse(prompt, schema, instruction);
                 
-                const aiName = aiResult.name || "Nueva tarea generada por IA";
-                const aiArea = aiResult.area || "Inbox";
-                const aiContextStr = aiResult.context || "@Global";
-                const aiPriority = (aiResult.priority && ["urgente", "alta", "media", "baja"].includes(aiResult.priority.toLowerCase())) ? aiResult.priority.toLowerCase() : "baja";
-                const aiDate = aiResult.date || getLocalDateString(new Date());
+                if (aiResult.search !== undefined) document.getElementById('searchInput').value = aiResult.search;
+                if (aiResult.status && ['pending', 'in_progress', 'completed', 'all'].includes(aiResult.status)) {
+                    document.getElementById('filterStatus').value = aiResult.status;
+                }
+                if (aiResult.priority && ['urgente', 'alta', 'media', 'baja', 'all'].includes(aiResult.priority)) {
+                    document.getElementById('filterPriority').value = aiResult.priority;
+                }
+                if (aiResult.context) {
+                    const ctxSelect = document.getElementById('filterContext');
+                    if (Array.from(ctxSelect.options).some(o => o.value === aiResult.context)) {
+                        ctxSelect.value = aiResult.context;
+                    }
+                }
 
-                if (!customAreas.includes(aiArea)) { customAreas.push(aiArea); saveCategories(); }
-                let finalCtx = aiContextStr.startsWith('@') ? aiContextStr : '@' + aiContextStr;
-                if (!customContexts.some(c => c.name === finalCtx)) { customContexts.push({ name: finalCtx, color: 'gray' }); saveCategories(); }
+                if (aiResult.sortBy && aiResult.sortBy !== 'none') {
+                    currentSort.by = aiResult.sortBy;
+                    currentSort.order = aiResult.sortOrder || 'asc';
+                }
 
-                tasks.unshift({ id: Date.now(), name: aiName, area: aiArea, context: finalCtx, priority: aiPriority, recurrence: 'none', date: aiDate, time: aiResult.time || '', reminder: false, status: 'pending', subtasks: [] });
-                await saveData(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea generada vía IA"); inputEl.value = '';
+                let targetView = currentState.view;
+                let targetArea = currentState.selectedArea;
+
+                if (aiResult.view && ['today', 'tomorrow', 'week', 'fortnight', 'all', 'area'].includes(aiResult.view)) {
+                    targetView = aiResult.view;
+                }
+                if (aiResult.area) {
+                    targetView = 'area';
+                    targetArea = aiResult.area;
+                }
+
+                navigate(targetView, targetArea, true);
+                updateFilters();
+                
+                let sortMsg = currentSort.by !== 'none' ? ` (Orden: ${currentSort.by})` : '';
+                showNotice("Filtros aplicados" + sortMsg); 
             } catch (err) { 
                 console.error(err); 
                 showNotice(`Error IA: ${err.message.substring(0, 70)}...`); 
             } finally { 
+                inputEl.value = '';
                 inputEl.disabled = false; inputEl.classList.remove('ai-loading-gradient'); resetMicUI(); 
                 document.querySelector('#omnibarBtn svg').outerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`; 
                 inputEl.focus(); 
@@ -643,48 +682,10 @@
             btn.disabled = true; btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Procesando...</span>`;
 
             const schema = { type: "OBJECT", properties: { subtasks: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, offsetDays: { type: "INTEGER", description: "Días a sumar a la fecha base" } }, required: ["name", "offsetDays"] } } }, required: ["subtasks"] };
+            const instruction = "Sos un asistente de productividad. Extraé los datos solicitados. Fecha de hoy: " + getLocalDateString(new Date()) + ". Usá siempre el formato YYYY-MM-DD para las fechas.";
 
             try {
-                const aiResult = await fetchGeminiResponse(`Desglosá la siguiente tarea en pasos lógicos secuenciales. Tarea: "${taskName}". Fecha base: ${taskDate}.`, schema);
-                const { id } = editState;
-                const baseDateObj = new Date(taskDate + "T00:00:00");
-                
-                const subtasksArray = aiResult.subtasks || [];
-                const newSubtasks = subtasksArray.map(st => {
-                    const stDate = new Date(baseDateObj); stDate.setDate(stDate.getDate() + (st.offsetDays || 0));
-                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', subtasks: [] };
-                });
-
-                if (newSubtasks.length > 0) {
-                    findAndMutateTask(id, (nodes, i) => { nodes[i].subtasks = [...(nodes[i].subtasks || []), ...newSubtasks]; });
-                    expandedStates[id] = true; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates));
-                    await saveData(); renderTasks(); closeEditModal(); showNotice("Tarea desglosada exitosamente.");
-                } else {
-                    showNotice("La IA no ha retornado datos estructurados.");
-                }
-            } catch (err) { 
-                console.error(err); 
-                showNotice(`Error IA: ${err.message.substring(0, 70)}...`); 
-            } finally { 
-                btn.disabled = false; btn.innerHTML = originalText; 
-            }
-        }
-
-        window.onload = async () => { 
-            populateTimeSelects(); 
-            initSpeechRecognition(); 
-            migrateAndNormalizeTasks(); 
-            updateDateDisplay(); 
-
-            // Carga inicial de inputs de configuración
-            document.getElementById('settingsDbUrlInput').value = dbUrl;
-            document.getElementById('settingsApiKeyInput').value = customApiKey;
-
-            if (dbUrl) {
-                await loadDataFromCloud();
-            } else {
-                showSyncStatus('none');
-                refreshAllDropdowns(); 
+                const aiResult = await fetchGeminiResponse(`Desglosá la siguiente tarea en pasos lógicos secuenciales. Tarea: "${taskName}". Fecha base: ${taskDate}.`, schema, instruction);
                 renderSidebarAreas(); 
                 updateUI(); 
             }
@@ -874,9 +875,35 @@
         function populateSelect(id, items, defaultLabel = null) { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel ? `<option value="all">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal && Array.from(el.options).some(o => o.value === currentVal)) el.value = currentVal; }
         function updateDateDisplay() { document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
         function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
-        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; updateFilters(); }
+        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros y orden restablecidos"); }
         function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
         function getLocalDateString(dateObj) { const year = dateObj.getFullYear(); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const day = String(dateObj.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
+
+        // --- Motor de Ordenamiento (Sorting) ---
+        function sortTasks(taskList) {
+            if (currentSort.by === 'none') return taskList;
+            const priorityWeight = { urgente: 4, alta: 3, media: 2, baja: 1 };
+            
+            return taskList.sort((a, b) => {
+                let valA, valB;
+                if (currentSort.by === 'priority') {
+                    valA = priorityWeight[a.priority] || 0;
+                    valB = priorityWeight[b.priority] || 0;
+                } else if (currentSort.by === 'date') {
+                    valA = a.date || '9999-12-31'; // Fechas vacías al final
+                    valB = b.date || '9999-12-31';
+                } else if (currentSort.by === 'name') {
+                    valA = a.name.toLowerCase();
+                    valB = b.name.toLowerCase();
+                }
+                
+                let comparison = 0;
+                if (valA < valB) comparison = -1;
+                if (valA > valB) comparison = 1;
+                
+                return currentSort.order === 'desc' ? -comparison : comparison;
+            });
+        }
 
         // --- Selección Múltiple y Operaciones Masivas (Lote) ---
         function toggleBulkMode() {
@@ -967,7 +994,7 @@
             const endOfWeekObj = new Date(); endOfWeekObj.setDate(endOfWeekObj.getDate() + daysToSunday); const endOfWeekStr = getLocalDateString(endOfWeekObj);
             const fortnightObj = new Date(); fortnightObj.setDate(fortnightObj.getDate() + 15); const fortnightStr = getLocalDateString(fortnightObj);
             
-            return nodeList.map(node => {
+            let filtered = nodeList.map(node => {
                 let matches = true;
                 if (currentFilters.search !== '') { const sTerm = currentFilters.search.toLowerCase(); const textMatch = node.name.toLowerCase().includes(sTerm) || (node.area || '').toLowerCase().includes(sTerm) || (node.context || '').toLowerCase().includes(sTerm); if (!textMatch) matches = false; }
                 
@@ -993,6 +1020,8 @@
                 }
                 return null;
             }).filter(Boolean);
+
+            return sortTasks(filtered);
         }
 
         // --- Mutaciones de Grafo de Tareas ---
