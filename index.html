@@ -562,9 +562,8 @@
                 throw new Error("API Key ausente.");
             }
             
-            // Migración arquitectónica: Se reemplaza el modelo experimental por la versión estable (1.5-flash) 
-            // para garantizar la compatibilidad con las credenciales públicas estándar.
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeApiKey}`;
+            // Migración arquitectónica: Actualización a la iteración estable más reciente del modelo
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
                 systemInstruction: { parts: [{ text: "Sos un asistente de productividad. Extraé los datos solicitados. Fecha de hoy: " + getLocalDateString(new Date()) + ". Usá siempre el formato YYYY-MM-DD para las fechas. Si especifican hora ajustala al intervalo de 30 mins más cercano." }] }, 
