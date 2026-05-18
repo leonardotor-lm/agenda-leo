@@ -44,10 +44,10 @@
         
         body { font-family: 'Inter', sans-serif; background-color: theme('colors.navy.800'); color: theme('colors.navy.50'); -webkit-font-smoothing: antialiased; }
         
-        /* Checkbox Multi-Estado - Contraste Mejorado */
+        /* Checkbox Multi-Estado - Contraste Mejorado y Corrección de Compilador */
         input[type="checkbox"].task-cb {
             appearance: none; background-color: transparent; margin: 0;
-            border: 2px solid theme('colors.navy.300'); border-radius: 4px;
+            border: 2px solid #8A9DB5; border-radius: 4px;
             width: 1.1rem; height: 1.1rem; display: grid; place-content: center;
             cursor: pointer; transition: all 0.2s ease-in-out;
         }
@@ -56,32 +56,32 @@
         input[type="checkbox"].task-cb::before {
             content: ""; width: 0.65em; height: 0.65em; transform: scale(0);
             transition: 120ms transform ease-in-out;
-            box-shadow: inset 1em 1em theme('colors.navy.800');
-            background-color: theme('colors.navy.800');
+            box-shadow: inset 1em 1em #122028;
+            background-color: #122028;
             transform-origin: center;
             clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
         }
 
         /* Estado En Progreso */
         input[type="checkbox"].task-cb.is-in-progress {
-            border-color: theme('colors.info.500');
+            border-color: #50A3AB;
             background-color: rgba(80, 163, 171, 0.1);
         }
         input[type="checkbox"].task-cb.is-in-progress::before {
             content: ""; width: 0.4em; height: 0.4em; transform: scale(1);
-            background-color: theme('colors.info.500');
+            background-color: #50A3AB;
             box-shadow: none; clip-path: none; border-radius: 1px;
         }
         
         /* Estado Completada */
         input[type="checkbox"].task-cb:checked { 
-            background-color: theme('colors.navy.600'); 
-            border-color: theme('colors.navy.600');
+            background-color: #324252; 
+            border-color: #324252;
         }
         input[type="checkbox"].task-cb:checked::before { 
             transform: scale(1); 
-            box-shadow: inset 1em 1em theme('colors.navy.800');
-            background-color: theme('colors.navy.800');
+            box-shadow: inset 1em 1em #122028;
+            background-color: #122028;
             clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
             border-radius: 0;
         }
@@ -1214,7 +1214,9 @@
         // --- Renderizadores HTML Dinámicos ---
         function buildTaskRows(nodes, path = []) {
             if (!nodes || nodes.length === 0) return '';
-            const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10 bg-navy-800/40', 3: 'pl-12 md:pl-14 bg-navy-800/60', 4: 'pl-16 md:pl-18 bg-navy-800/80', 5: 'pl-20 md:pl-22 bg-navy-800/90' };
+            
+            // Refactorización: Diseño plano sin fondos superpuestos
+            const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
 
             return nodes.map(task => {
                 if (!task._explicitMatch) return buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]);
@@ -1272,7 +1274,7 @@
 
                 return `
                     <div class="task-item" data-id="${task.id}">
-                        <div class="group flex flex-col py-2.5 pr-4 border-b border-navy-600 hover:bg-navy-600/30 transition-colors ${indentClass}">
+                        <div class="group flex flex-col py-2.5 pr-4 border-b border-navy-700 hover:bg-navy-700/50 transition-colors ${indentClass}">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     ${bulkCheckboxHTML}
@@ -1320,8 +1322,9 @@
             if (prunedTasks.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden');
             
+            // Refactorización: Eliminación del contenedor redondeado y sombra
             const html = `
-                <div id="taskList-root" class="flex flex-col min-h-[50px] pb-4 bg-navy-700 shadow-xl rounded-2xl overflow-hidden">
+                <div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">
                     ${buildTaskRows(prunedTasks)}
                 </div>
             `;
