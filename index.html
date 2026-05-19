@@ -1296,7 +1296,7 @@
 
                 return `
                     <div class="task-item" data-id="${task.id}">
-                        <div class="group flex flex-col py-2.5 pr-4 border-b border-navy-700 hover:bg-navy-700/50 transition-colors ${indentClass}">
+                        <div class="group flex flex-col py-1.5 pr-4 border-b border-navy-700 hover:bg-navy-700/50 transition-colors ${indentClass}">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     ${bulkCheckboxHTML}
@@ -1310,7 +1310,7 @@
                                             ${task.reminder ? `<svg class="w-3.5 h-3.5 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
                                             ${notesIconHtml}
                                         </div>
-                                        <div class="flex items-center text-[11px] mt-1.5 leading-none min-w-0 select-none">
+                                        <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
                                             <span class="text-navy-400 truncate cursor-pointer hover:text-navy-300 transition-colors shrink-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.area} &bull; ${task.context}</span>
                                             ${inlineAddHtml}
                                         </div>
