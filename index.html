@@ -304,6 +304,11 @@
                     <select id="parentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                 </div>
 
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Notas</label>
+                    <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                </div>
+
                 <div class="pt-4 border-t border-navy-700 space-y-4">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -358,6 +363,11 @@
                 </div>
                 
                 <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Notas</label>
+                    <textarea id="editNotesInput" rows="2" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                </div>
 
                 <div class="pt-4 border-t border-navy-700 space-y-4">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación</span>
@@ -688,7 +698,7 @@
                 const subtasksArray = aiResult.subtasks || [];
                 const newSubtasks = subtasksArray.map(st => {
                     const stDate = new Date(baseDateObj); stDate.setDate(stDate.getDate() + (st.offsetDays || 0));
-                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', subtasks: [] };
+                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', notes: '', subtasks: [] };
                 });
 
                 if (newSubtasks.length > 0) {
@@ -740,6 +750,7 @@
                     }
                     if(!n.priority) { n.priority = 'baja'; changed = true; }
                     if(!n.subtasks) { n.subtasks = []; changed = true; }
+                    if(n.notes === undefined) { n.notes = ''; changed = true; }
                     if(!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
                     if(!n.context) { n.context = '@Global'; changed = true; }
                     if(n.time === undefined) { n.time = ''; changed = true; }
@@ -1211,7 +1222,8 @@
                     priority: 'baja', 
                     date: nodes[i].date || '', 
                     time: '', 
-                    reminder: false, 
+                    reminder: false,
+                    notes: '',
                     subtasks: [] 
                 });
             });
@@ -1267,6 +1279,9 @@
                 const isInProgress = task.status === 'in_progress';
                 const isMuted = !task._explicitMatch && isFiltering;
                 
+                const hasNotes = task.notes && task.notes.trim() !== '';
+                const notesIconHtml = hasNotes ? `<svg class="w-3.5 h-3.5 text-navy-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene notas adjuntas"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>` : '';
+
                 // Aplicamos estilo atenuado y cursiva si la tarea madre es visible solo para dar contexto estructural a una hija filtrada
                 const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
@@ -1292,7 +1307,8 @@
                                     <div class="flex flex-col min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
                                             <span class="text-[14px] font-medium task-name ${nameStyle} truncate cursor-pointer select-none leading-none transition-colors" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.name}</span>
-                                            ${task.reminder ? `<svg class="w-3 h-3 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
+                                            ${task.reminder ? `<svg class="w-3.5 h-3.5 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
+                                            ${notesIconHtml}
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1.5 leading-none min-w-0 select-none">
                                             <span class="text-navy-400 truncate cursor-pointer hover:text-navy-300 transition-colors shrink-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.area} &bull; ${task.context}</span>
@@ -1343,6 +1359,7 @@
             document.getElementById('taskInput').value = ''; 
             document.getElementById('dateInput').value = ''; 
             document.getElementById('timeInput').value = ''; 
+            document.getElementById('notesInput').value = ''; 
             document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
             
             updateAddParentDropdown();
@@ -1361,6 +1378,7 @@
                 const recurrence = document.getElementById('recurrenceInput').value; 
                 const dateInput = document.getElementById('dateInput').value; 
                 const timeInput = document.getElementById('timeInput').value; 
+                const notes = document.getElementById('notesInput').value.trim(); 
                 const reminder = document.getElementById('reminderToggle').checked; 
                 const businessDayNum = parseInt(document.getElementById('businessDayInput').value) || 5; 
                 const completionBased = document.getElementById('completionBasedInput').checked; 
@@ -1387,7 +1405,7 @@
                     } 
                 } 
                 
-                const newTask = { id: Date.now(), name, area, context, priority, recurrence, date: finalDate, time: timeInput, reminder, businessDayNum, completionBased, status: 'pending', subtasks: [] };
+                const newTask = { id: Date.now(), name, area, context, priority, recurrence, date: finalDate, time: timeInput, notes, reminder, businessDayNum, completionBased, status: 'pending', subtasks: [] };
                 
                 if (parentId === 'root') {
                     tasks.unshift(newTask); 
@@ -1507,6 +1525,7 @@
             document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || 'Global'; 
             document.getElementById('editPriorityInput').value = target.priority || 'baja'; document.getElementById('editDateInput').value = target.date || ''; 
             document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; 
+            document.getElementById('editNotesInput').value = target.notes || '';
             document.getElementById('editRecurrenceInput').value = target.recurrence || 'none'; document.getElementById('editBusinessDayInput').value = target.businessDayNum || '5'; 
             document.getElementById('editCompletionBasedInput').checked = target.completionBased || false; toggleEditRecurrenceFields(); 
             
@@ -1519,7 +1538,7 @@
             try {
                 const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
                 const status = document.getElementById('editStatusInput').value;
-                const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; const reminder = document.getElementById('editReminderToggle').checked; const recurrence = document.getElementById('editRecurrenceInput').value; const businessDayNum = parseInt(document.getElementById('editBusinessDayInput').value) || 5; const completionBased = document.getElementById('editCompletionBasedInput').checked;
+                const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; const notes = document.getElementById('editNotesInput').value.trim(); const reminder = document.getElementById('editReminderToggle').checked; const recurrence = document.getElementById('editRecurrenceInput').value; const businessDayNum = parseInt(document.getElementById('editBusinessDayInput').value) || 5; const completionBased = document.getElementById('editCompletionBasedInput').checked;
                 
                 const newParentIdRaw = document.getElementById('editParentInput').value;
                 const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
@@ -1531,7 +1550,7 @@
                 }
 
                 if (targetTask) {
-                    targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.reminder = reminder; targetTask.recurrence = recurrence; targetTask.businessDayNum = businessDayNum; targetTask.completionBased = completionBased;
+                    targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrence = recurrence; targetTask.businessDayNum = businessDayNum; targetTask.completionBased = completionBased;
                     
                     function propagate(subnodes) { 
                         if (!Array.isArray(subnodes)) return;
@@ -1542,7 +1561,7 @@
                     insertTask(targetTask, newParentId);
                 } else {
                     findAndMutateTask(id, (nodes, i) => {
-                        const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.reminder = reminder; n.recurrence = recurrence; n.businessDayNum = businessDayNum; n.completionBased = completionBased;
+                        const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrence = recurrence; n.businessDayNum = businessDayNum; n.completionBased = completionBased;
                         function propagate(subnodes) { 
                             if (!Array.isArray(subnodes)) return;
                             subnodes.forEach(sn => { sn.area = area; if(sn.subtasks) propagate(sn.subtasks); }); 
