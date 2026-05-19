@@ -752,7 +752,7 @@
                     if(!n.subtasks) { n.subtasks = []; changed = true; }
                     if(n.notes === undefined) { n.notes = ''; changed = true; }
                     if(!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
-                    if(!n.context) { n.context = '@Global'; changed = true; }
+                    if(n.context === undefined) { n.context = ''; changed = true; }
                     if(n.time === undefined) { n.time = ''; changed = true; }
                     if(n.subtasks) walk(n.subtasks, n.area);
                 });
@@ -896,21 +896,35 @@
         
         function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
 
+        function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { 
+            const el = document.getElementById(id); if (!el) return; 
+            const currentVal = el.value; 
+            let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; 
+            html += items.map(item => `<option value="${item}">${item}</option>`).join(''); 
+            el.innerHTML = html; 
+            if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) {
+                el.value = currentVal; 
+            } else if (defaultLabel !== null) {
+                el.value = defaultValue;
+            }
+        }
+
         function refreshAllDropdowns() { 
             const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
-            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
             populateSelect('areaInput', allAreas); 
-            populateSelect('contextInput', allContexts); 
-            populateSelect('filterContext', allContexts, "Contexto (Todos)"); 
+            populateSelect('contextInput', allContexts, "Sin contexto", ""); 
+            populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); 
             renderSidebarAreas(); 
         }
+        
         function refreshEditDropdowns() { 
             const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
-            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
             populateSelect('editAreaInput', allAreas); 
-            populateSelect('editContextInput', allContexts); 
+            populateSelect('editContextInput', allContexts, "Sin contexto", ""); 
         }
-        function populateSelect(id, items, defaultLabel = null) { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel ? `<option value="all">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal && Array.from(el.options).some(o => o.value === currentVal)) el.value = currentVal; }
+        
         function updateDateDisplay() { document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
         function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
         function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros y orden restablecidos"); }
@@ -993,9 +1007,11 @@
         function openBulkMoveModal() {
             if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
             const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
-            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(Boolean).sort(); 
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
+            
             let areaHtml = '<option value="">-- No cambiar --</option>' + allAreas.map(item => `<option value="${item}">${item}</option>`).join('');
-            let ctxHtml = '<option value="">-- No cambiar --</option>' + allContexts.map(item => `<option value="${item}">${item}</option>`).join('');
+            let ctxHtml = '<option value="">-- No cambiar --</option><option value="remove_context">-- Quitar contexto --</option>' + allContexts.map(item => `<option value="${item}">${item}</option>`).join('');
+            
             document.getElementById('bulkAreaInput').innerHTML = areaHtml;
             document.getElementById('bulkContextInput').innerHTML = ctxHtml;
             document.getElementById('bulkMoveModal').classList.remove('hidden');
@@ -1010,7 +1026,9 @@
             selectedTaskIds.forEach(id => {
                 findAndMutateTask(id, (nodes, i) => {
                     if (newArea) nodes[i].area = newArea;
-                    if (newCtx) nodes[i].context = newCtx;
+                    if (newCtx === 'remove_context') nodes[i].context = '';
+                    else if (newCtx) nodes[i].context = newCtx;
+                    
                     function propagateDown(subnodes) {
                         if (!subnodes) return;
                         subnodes.forEach(s => { if (newArea) s.area = newArea; propagateDown(s.subtasks); });
@@ -1218,7 +1236,7 @@
                     name: input.value.trim(), 
                     status: 'pending', 
                     area: nodes[i].area, 
-                    context: nodes[i].context || '@Global', 
+                    context: nodes[i].context || '', 
                     priority: 'baja', 
                     date: nodes[i].date || '', 
                     time: '', 
@@ -1282,6 +1300,14 @@
                 const hasNotes = task.notes && task.notes.trim() !== '';
                 const notesIconHtml = hasNotes ? `<svg class="w-3.5 h-3.5 text-navy-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene notas adjuntas"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>` : '';
 
+                // Renderizado condicional del contexto
+                const hasContext = task.context && task.context.trim() !== '';
+                let contextHtml = '';
+                if (hasContext) {
+                    const ctxStyles = getContextStyles(task.context);
+                    contextHtml = `<span class="mx-1 shrink-0">&bull;</span><span class="inline-flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full ${ctxStyles.dot}"></span><span class="truncate max-w-[80px] sm:max-w-[120px]">${task.context}</span></span>`;
+                }
+
                 // Aplicamos estilo atenuado y cursiva si la tarea madre es visible solo para dar contexto estructural a una hija filtrada
                 const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
@@ -1311,7 +1337,9 @@
                                             ${notesIconHtml}
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
-                                            <span class="text-navy-400 truncate cursor-pointer hover:text-navy-300 transition-colors shrink-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.area} &bull; ${task.context}</span>
+                                            <div class="flex items-center text-navy-400 cursor-pointer hover:text-navy-300 transition-colors shrink-0 min-w-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">
+                                                <span class="truncate">${task.area}</span>${contextHtml}
+                                            </div>
                                             ${inlineAddHtml}
                                         </div>
                                     </div>
@@ -1360,7 +1388,14 @@
             document.getElementById('dateInput').value = ''; 
             document.getElementById('timeInput').value = ''; 
             document.getElementById('notesInput').value = ''; 
-            document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
+            
+            let defaultArea = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox');
+            if (currentState.view === 'area' && currentState.selectedArea) {
+                defaultArea = currentState.selectedArea;
+            }
+            
+            document.getElementById('areaInput').value = defaultArea; 
+            document.getElementById('contextInput').value = ''; 
             
             updateAddParentDropdown();
             
@@ -1522,7 +1557,7 @@
             
             document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); 
             document.getElementById('editStatusInput').value = target.status || 'pending';
-            document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || 'Global'; 
+            document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || ''; 
             document.getElementById('editPriorityInput').value = target.priority || 'baja'; document.getElementById('editDateInput').value = target.date || ''; 
             document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; 
             document.getElementById('editNotesInput').value = target.notes || '';
@@ -1611,7 +1646,7 @@
 
         function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
         function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
-        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg title="Prioridad: ${t.priority}" class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
+        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg title="Prioridad: ${t.priority}" class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
         function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
         function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
