@@ -44,7 +44,7 @@
         
         body { font-family: 'Inter', sans-serif; background-color: theme('colors.navy.800'); color: theme('colors.navy.50'); -webkit-font-smoothing: antialiased; }
         
-        /* Checkbox Multi-Estado - Contraste Mejorado y Corrección de Compilador */
+        /* Checkbox Multi-Estado */
         input[type="checkbox"].task-cb {
             appearance: none; background-color: transparent; margin: 0;
             border: 2px solid #8A9DB5; border-radius: 4px;
@@ -52,7 +52,6 @@
             cursor: pointer; transition: all 0.2s ease-in-out;
         }
         
-        /* Estado Pendiente (Base) */
         input[type="checkbox"].task-cb::before {
             content: ""; width: 0.65em; height: 0.65em; transform: scale(0);
             transition: 120ms transform ease-in-out;
@@ -62,7 +61,6 @@
             clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
         }
 
-        /* Estado En Progreso */
         input[type="checkbox"].task-cb.is-in-progress {
             border-color: #50A3AB;
             background-color: rgba(80, 163, 171, 0.1);
@@ -73,7 +71,6 @@
             box-shadow: none; clip-path: none; border-radius: 1px;
         }
         
-        /* Estado Completada */
         input[type="checkbox"].task-cb:checked { 
             background-color: #324252; 
             border-color: #324252;
@@ -219,7 +216,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-32" id="main-scroll-area">
             <div class="max-w-5xl mx-auto space-y-6">
-                <!-- Omnibar Flat Design -->
+                <!-- Omnibar -->
                 <div id="omnibar-container" class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -260,7 +257,7 @@
             </div>
         </div>
 
-        <!-- Bulk Action Bar Flotante - Flat Style -->
+        <!-- Bulk Action Bar -->
         <div id="bulkActionBar" class="fixed bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 bg-navy-800 border border-brand-500 rounded-md px-5 py-3 flex items-center gap-3 md:gap-4 z-40 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
             <span class="text-xs md:text-sm font-bold text-brand-500 whitespace-nowrap"><span id="bulkCount">0</span> sel.</span>
             <div class="h-5 w-px bg-navy-700"></div>
@@ -277,7 +274,7 @@
         </button>
     </main>
 
-    <!-- Modal: Nueva Tarea (Flat Design) -->
+    <!-- Modal: Nueva Tarea -->
     <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
         <div class="bg-navy-800 w-full max-w-2xl rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
             <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center shrink-0">
@@ -441,7 +438,7 @@
     <div id="notification-box" class="fixed bottom-8 right-24 z-[70] flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
-        const apiKey = ""; // Llave hardcodeada nula por seguridad
+        const apiKey = ""; 
         const DB_URL_KEY = 'leo_agenda_db_url';
         const API_KEY_STORAGE_KEY = 'leo_gemini_api_key';
 
@@ -472,7 +469,7 @@
         let isBulkMode = false;
         let selectedTaskIds = new Set();
 
-        const priorityColors = { urgente: 'text-danger-500 border border-danger-500/30 bg-danger-500/10', alta: 'text-brand-500 border border-brand-500/30 bg-brand-500/10', media: 'text-yellow-500 border border-yellow-500/30 bg-yellow-500/10', baja: 'text-navy-400 border border-navy-700 bg-navy-800' };
+        const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
         const contextColorMap = { blue: { dot: 'bg-blue-500' }, purple: { dot: 'bg-purple-500' }, green: { dot: 'bg-green-500' }, red: { dot: 'bg-red-500' }, orange: { dot: 'bg-orange-500' }, gray: { dot: 'bg-gray-500' }, pink: { dot: 'bg-pink-500' }, teal: { dot: 'bg-teal-500' } };
         let currentPromptType = ''; let selectedNewColor = 'blue'; let isCategoryForEditModal = false; let manageType = 'area'; 
         let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
@@ -1297,7 +1294,6 @@
                                     <div class="flex flex-col min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
                                             <span class="text-[14px] font-medium task-name ${nameStyle} truncate cursor-pointer select-none leading-none transition-colors" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.name}</span>
-                                            <span class="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm ${priorityColors[task.priority]} shrink-0 mt-px tracking-wider">${task.priority}</span>
                                             ${task.reminder ? `<svg class="w-3 h-3 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1.5 leading-none min-w-0 select-none">
@@ -1317,7 +1313,8 @@
                                         <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                                     </div>
                                     ` : ''}
-                                    <div class="w-24 flex justify-end items-center text-xs">
+                                    <div class="w-28 flex flex-col items-start justify-center gap-1.5 shrink-0 pl-2">
+                                        <svg title="Prioridad: ${task.priority}" class="w-3.5 h-3.5 ${priorityColors[task.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>
                                         ${dateDisplayHTML}
                                     </div>
                                 </div>
@@ -1598,7 +1595,7 @@
 
         function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
         function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
-        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-sm ${priorityColors[t.priority]}">${t.priority}</span>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
+        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area} &bull; ${t.context} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg title="Prioridad: ${t.priority}" class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
         function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
         function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
