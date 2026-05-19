@@ -1010,7 +1010,7 @@
             await saveData(); refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada");
         }
 
-        function pruneTree(nodeList, parentMatched = false) {
+        function pruneTree(nodeList) {
             if (!Array.isArray(nodeList)) return [];
             const todayStr = getLocalDateString(new Date());
             const tomorrowObj = new Date(); tomorrowObj.setDate(tomorrowObj.getDate() + 1); const tomorrowStr = getLocalDateString(tomorrowObj);
@@ -1036,11 +1036,11 @@
                 else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
                 else if (currentState.view === 'focus') { matches = matches && containsFocusNode(node, currentState.focusTargetId); }
 
-                const effectivelyMatched = matches || parentMatched;
-                const prunedSubtasks = pruneTree(node.subtasks || [], effectivelyMatched);
+                const prunedSubtasks = pruneTree(node.subtasks || []);
                 
-                if (effectivelyMatched || prunedSubtasks.length > 0) { 
-                    return { ...node, subtasks: prunedSubtasks, _explicitMatch: effectivelyMatched }; 
+                // Conservación estructural estricta: Se mantiene si coincide con el filtro O si tiene hijas que coinciden
+                if (matches || prunedSubtasks.length > 0) { 
+                    return { ...node, subtasks: prunedSubtasks, _explicitMatch: matches }; 
                 }
                 return null;
             }).filter(Boolean);
@@ -1226,12 +1226,11 @@
             if (!nodes || nodes.length === 0) return '';
             
             const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
+            const isFiltering = currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status === 'in_progress' || currentFilters.status === 'completed';
 
             return nodes.map(task => {
-                if (!task._explicitMatch) return buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]);
-
                 const hasChildren = task.subtasks && task.subtasks.length > 0;
-                const isExpanded = (currentState.view === 'focus' || currentFilters.search !== '') ? true : (expandedStates[task.id] || false);
+                const isExpanded = (currentState.view === 'focus' || isFiltering) ? true : (expandedStates[task.id] || false);
                 const logicalDepth = path.length + 1;
 
                 const indentClass = indentMap[logicalDepth] || 'pl-20 md:pl-22';
@@ -1244,10 +1243,6 @@
                         ${dateFormatted}
                     </span>`;
                 }
-
-                const dependencyHtml = path.length > 0 
-                    ? `<span class="mx-1.5 text-navy-600 shrink-0">&bull;</span><span class="text-brand-500/80 hover:text-brand-400 font-medium transition-colors cursor-pointer flex items-center gap-0.5 min-w-0" onclick="event.stopPropagation(); openEditModal(${path[path.length - 1].id})" title="Ruta: ${path.map(p=>p.name).join(' > ')}"><span class="text-[10px] leading-none mb-[1px] shrink-0">↳</span><span class="truncate max-w-[90px] md:max-w-[150px]">${path[path.length - 1].name}</span></span>`
-                    : '';
 
                 const inlineAddHtml = (currentFilters.search === '' && !isBulkMode) ? `
                     <span class="mx-1 text-navy-600 shrink-0">&bull;</span>
@@ -1270,7 +1265,10 @@
 
                 const isCompleted = task.status === 'completed';
                 const isInProgress = task.status === 'in_progress';
-                const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : 'text-navy-50');
+                const isMuted = !task._explicitMatch && isFiltering;
+                
+                // Aplicamos estilo atenuado y cursiva si la tarea madre es visible solo para dar contexto estructural a una hija filtrada
+                const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
                 let statusActionHtml = '';
                 if (!isBulkMode) {
@@ -1298,7 +1296,6 @@
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1.5 leading-none min-w-0 select-none">
                                             <span class="text-navy-400 truncate cursor-pointer hover:text-navy-300 transition-colors shrink-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.area} &bull; ${task.context}</span>
-                                            ${dependencyHtml}
                                             ${inlineAddHtml}
                                         </div>
                                     </div>
