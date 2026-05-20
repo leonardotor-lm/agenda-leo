@@ -373,7 +373,7 @@
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="timeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="timeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
                         <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
@@ -444,7 +444,7 @@
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="editTimeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="editTimeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
                         <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
@@ -484,7 +484,7 @@
     </div>
 
     <!-- Modal Posponer -->
-    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-700 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><select id="postponeCustomTime" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-2 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></select></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
+    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-700 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="postponeCustomTime" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
 
     <!-- Modal: Configuración Cloud -->
     <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
@@ -571,6 +571,7 @@
         
         let currentPromptType = ''; let selectedNewColor = 'blue'; let isCategoryForEditModal = false; 
         let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
+        let draggedAreaIndex = null;
 
         let speechRecognition = null;
         let isListening = false;
@@ -615,18 +616,6 @@
                     text.className = "text-navy-400";
                     break;
             }
-        }
-
-        function populateTimeSelects() {
-            let optionsHtml = '<option value="">Sin hora</option>';
-            for(let i=0; i<24; i++) {
-                let h = i.toString().padStart(2, '0');
-                optionsHtml += `<option value="${h}:00">${h}:00</option>`;
-                optionsHtml += `<option value="${h}:30">${h}:30</option>`;
-            }
-            document.getElementById('timeInput').innerHTML = optionsHtml;
-            document.getElementById('editTimeInput').innerHTML = optionsHtml;
-            document.getElementById('postponeCustomTime').innerHTML = optionsHtml;
         }
 
         function initSpeechRecognition() {
@@ -825,7 +814,6 @@
         }
 
         window.onload = async () => { 
-            populateTimeSelects(); 
             initSpeechRecognition(); 
             migrateAndNormalizeTasks(); 
             updateDateDisplay(); 
@@ -1046,7 +1034,10 @@
         }
 
         function toggleSidebar(force) { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobile-overlay'); const isOpen = !sidebar.classList.contains('-translate-x-full'); if (force === false || isOpen) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); } else { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } }
-        function renderSidebarAreas() { const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+        
+        function getAllAreasOrdered() { const uniqueTasksAreas = getUniqueValues(tasks, 'area').filter(Boolean); const orphaned = uniqueTasksAreas.filter(a => !customAreas.includes(a)).sort((a, b) => String(a).localeCompare(String(b))); return [...customAreas.filter(Boolean), ...orphaned]; }
+        
+        function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
         
         function getUniqueValues(nodes, key) { 
             let vals = new Set(); 
@@ -1076,7 +1067,7 @@
         }
 
         function refreshAllDropdowns() { 
-            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allAreas = getAllAreasOrdered(); 
             const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
             populateSelect('areaInput', allAreas); 
             populateSelect('contextInput', allContexts, "Sin contexto", ""); 
@@ -1085,7 +1076,7 @@
         }
         
         function refreshEditDropdowns() { 
-            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allAreas = getAllAreasOrdered(); 
             const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
             populateSelect('editAreaInput', allAreas); 
             populateSelect('editContextInput', allContexts, "Sin contexto", ""); 
@@ -1180,7 +1171,7 @@
 
         function openBulkMoveModal() {
             if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
-            const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].filter(Boolean).sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); 
+            const allAreas = getAllAreasOrdered(); 
             const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); 
             
             let areaHtml = '<option value="">-- No cambiar --</option>' + allAreas.map(item => `<option value="${item}">${item}</option>`).join('');
@@ -1809,7 +1800,10 @@
                 html += '<p class="text-sm text-navy-400 italic text-center py-4 mb-6">No hay áreas.</p>'; 
             } else {
                 html += '<div class="space-y-2 mb-6">';
-                customAreas.forEach((area, i) => { const isInbox = area === 'Inbox'; html += `<div class="flex items-center justify-between p-3.5 bg-navy-900 rounded-md border border-navy-700 transition-all"><div class="flex-grow mr-2" id="area-display-${i}"><span class="text-sm font-semibold text-navy-50">${area}</span></div><div class="hidden flex-grow mr-2" id="area-edit-${i}"><input type="text" id="area-input-${i}" value="${area}" class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-1 rounded-md"></div><div class="flex space-x-1">${!isInbox ? `<button onclick="toggleEditArea(${i})" id="area-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditArea(${i})" id="area-btn-save-${i}" class="hidden text-brand-500 hover:text-brand-400 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteArea(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>` : `<span class="text-[10px] text-brand-500 font-bold uppercase">Base</span>`}</div></div>`; }); 
+                customAreas.forEach((area, i) => { 
+                    const isInbox = area === 'Inbox'; 
+                    html += `<div draggable="true" ondragstart="handleAreaDragStart(event, ${i})" ondragover="handleAreaDragOver(event)" ondragenter="handleAreaDragEnter(event)" ondragleave="handleAreaDragLeave(event)" ondrop="handleAreaDrop(event, ${i})" ondragend="handleAreaDragEnd(event)" class="flex items-center justify-between p-3.5 bg-navy-900 rounded-md border border-navy-700 transition-all hover:bg-navy-800"><div class="flex items-center flex-grow mr-2"><div class="cursor-grab text-navy-500 hover:text-navy-300 pr-3 active:cursor-grabbing"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm8-12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div><div class="flex-grow" id="area-display-${i}"><span class="text-sm font-semibold text-navy-50">${area}</span></div><div class="hidden flex-grow" id="area-edit-${i}"><input type="text" id="area-input-${i}" value="${area}" class="w-full text-sm border border-navy-600 bg-navy-800 text-navy-50 px-3 py-1 rounded-md"></div></div><div class="flex space-x-1">${!isInbox ? `<button onclick="toggleEditArea(${i})" id="area-btn-edit-${i}" class="text-navy-400 hover:text-navy-50 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 5l4 4-10 10H5v-4L15 5z"/></svg></button><button onclick="saveEditArea(${i})" id="area-btn-save-${i}" class="hidden text-brand-500 hover:text-brand-400 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><button onclick="deleteArea(${i})" class="text-navy-500 hover:text-danger-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>` : `<span class="text-[10px] text-brand-500 font-bold uppercase">Base</span>`}</div></div>`; 
+                }); 
                 html += '</div>';
             }
 
@@ -1827,6 +1821,13 @@
         function toggleEditArea(i) { document.getElementById(`area-display-${i}`).classList.toggle('hidden'); document.getElementById(`area-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-save-${i}`).classList.toggle('hidden'); }
         function toggleEditCtx(i) { document.getElementById(`ctx-display-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-color-selector-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-save-${i}`).classList.toggle('hidden'); }
         
+        function handleAreaDragStart(e, index) { draggedAreaIndex = index; e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('opacity-50'); }
+        function handleAreaDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleAreaDragEnter(e) { e.preventDefault(); e.currentTarget.classList.add('border-brand-500'); }
+        function handleAreaDragLeave(e) { e.currentTarget.classList.remove('border-brand-500'); }
+        async function handleAreaDrop(e, targetIndex) { e.preventDefault(); e.currentTarget.classList.remove('border-brand-500'); if (draggedAreaIndex === null || draggedAreaIndex === targetIndex) return; const movedItem = customAreas.splice(draggedAreaIndex, 1)[0]; customAreas.splice(targetIndex, 0, movedItem); saveCategories(); refreshAllDropdowns(); renderManageItems(); await saveData(); }
+        function handleAreaDragEnd(e) { e.currentTarget.classList.remove('opacity-50'); draggedAreaIndex = null; }
+
         async function saveEditArea(index) { const newVal = document.getElementById(`area-input-${index}`).value.trim(); if (!newVal || customAreas[index] === newVal) return toggleEditArea(index); const oldVal = customAreas[index]; customAreas[index] = newVal; function update(ns) { ns.forEach(n => { if (n.area === oldVal) n.area = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Área actualizada"); await saveData(); }
         async function saveEditCtx(index) { const inputVal = document.getElementById(`ctx-input-${index}`).value.trim(); if (!inputVal) return; const newVal = inputVal.startsWith('@') ? inputVal : '@' + inputVal; const oldVal = customContexts[index].name; if (oldVal === newVal) return toggleEditCtx(index); customContexts[index].name = newVal; function update(ns) { ns.forEach(n => { if (n.context === oldVal) n.context = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Contexto actualizado"); await saveData(); }
         async function setCtxColor(i, c) { customContexts[i].color = c; saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); await saveData(); }
