@@ -206,6 +206,14 @@
                 <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden md:block transition-colors">
                     <option value="all">Contexto</option>
                 </select>
+                <select onchange="updateSort()" id="sortSelect" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[120px] sm:max-w-none text-ellipsis">
+                    <option value="none-asc">Ordenar por...</option>
+                    <option value="date-asc">Fecha (ascendente)</option>
+                    <option value="date-desc">Fecha (descendente)</option>
+                    <option value="priority-desc">Prioridad (mayor a menor)</option>
+                    <option value="priority-asc">Prioridad (menor a mayor)</option>
+                    <option value="context-asc">Contexto (A-Z)</option>
+                </select>
                 <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Selección múltiple">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                 </button>
@@ -707,6 +715,11 @@
                 if (aiResult.sortBy && aiResult.sortBy !== 'none') {
                     currentSort.by = aiResult.sortBy;
                     currentSort.order = aiResult.sortOrder || 'asc';
+                    const sortVal = `${currentSort.by}-${currentSort.order}`;
+                    const sortSelect = document.getElementById('sortSelect');
+                    if (Array.from(sortSelect.options).some(o => o.value === sortVal)) {
+                        sortSelect.value = sortVal;
+                    }
                 }
 
                 let targetView = currentState.view;
@@ -993,7 +1006,8 @@
         
         function updateDateDisplay() { document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
         function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
-        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros y orden restablecidos"); }
+        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'none-asc'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros y orden restablecidos"); }
+        function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
         function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
         function getLocalDateString(dateObj) { const year = dateObj.getFullYear(); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const day = String(dateObj.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
@@ -1012,6 +1026,9 @@
                 } else if (currentSort.by === 'name') {
                     valA = (a.name || '').toLowerCase();
                     valB = (b.name || '').toLowerCase();
+                } else if (currentSort.by === 'context') {
+                    valA = (a.context || '\uFFFF').toLowerCase();
+                    valB = (b.context || '\uFFFF').toLowerCase();
                 }
                 
                 let comparison = 0;
@@ -1557,8 +1574,30 @@
             await saveData(); renderTasks(); renderCalendar();
         }
 
+        function getTaskById(id) {
+            let found = null;
+            function walk(nodes) {
+                for (let n of nodes) {
+                    if (n.id === id) { found = n; return; }
+                    if (n.subtasks && n.subtasks.length > 0) walk(n.subtasks);
+                }
+            }
+            walk(tasks);
+            return found;
+        }
+
         async function skipTask(id) { findAndMutateTask(id, (nodes, i) => { const nextDate = getNextOccurrenceDate(nodes[i].date, nodes[i].recurrence, nodes[i].completionBased, nodes[i].businessDayNum); showNotice("Saltada a: " + formatDateAR(nextDate)); nodes[i].date = nextDate; }); await saveData(); renderTasks(); renderCalendar(); }
-        async function deleteTaskUniversal(id) { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea eliminada"); } }
+        async function deleteTaskUniversal(id) { 
+            const task = getTaskById(id);
+            if (task && task.subtasks && task.subtasks.length > 0) {
+                if (!confirm(`La tarea "${task.name}" contiene ${task.subtasks.length} subtarea(s). ¿Estás seguro de eliminarla junto con todas sus dependencias?`)) {
+                    return;
+                }
+            }
+            if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { 
+                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea eliminada"); 
+            } 
+        }
         
         function saveCategories() { localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas)); localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts)); }
         function calculateNthBusinessDay(year, month, n) { let count = 0; let date = new Date(year, month, 1); while (date.getMonth() === month) { const dayOfWeek = date.getDay(); if (dayOfWeek !== 0 && dayOfWeek !== 6) { count++; if (count === n) return date; } date.setDate(date.getDate() + 1); } let fallbackDate = new Date(year, month + 1, 0); while (fallbackDate.getDay() === 0 || fallbackDate.getDay() === 6) fallbackDate.setDate(fallbackDate.getDate() - 1); return fallbackDate; }
