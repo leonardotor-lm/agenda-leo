@@ -155,6 +155,13 @@
                 </div>
                 <div id="sidebar-areas-list" class="space-y-0.5"></div>
             </div>
+
+            <div class="mt-6">
+                <button onclick="navigate('trash')" id="nav-trash" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60 text-danger-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <span>Papelera</span>
+                </button>
+            </div>
         </nav>
 
         <div class="p-4 border-t border-navy-700 bg-navy-900/30 space-y-1 shrink-0">
@@ -191,7 +198,7 @@
 
             <!-- Herramientas (Búsqueda y filtros) reubicadas debajo del título -->
             <div id="filters-container" class="flex flex-wrap items-center gap-2 mt-1">
-                <div class="relative flex-grow sm:flex-grow-0 sm:min-w-[200px]">
+                <div id="searchWrap" class="relative flex-grow sm:flex-grow-0 sm:min-w-[200px]">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="w-3.5 h-3.5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
@@ -217,12 +224,17 @@
                 <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Selección múltiple">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                 </button>
-                <button onclick="resetFilters()" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Limpiar filtros secundarios">
+                <button onclick="resetFilters()" id="btnResetFilters" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Limpiar filtros secundarios">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
-                <div class="h-6 w-px bg-navy-700 mx-1 hidden sm:block"></div>
+                <div class="h-6 w-px bg-navy-700 mx-1 hidden sm:block" id="filtersDivider"></div>
                 <button onclick="toggleAIFilter()" id="btnAIToggle" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Asistente de Filtrado IA">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                </button>
+                
+                <!-- Botón de vaciado exclusivo para la papelera -->
+                <button onclick="emptyTrash()" id="btnEmptyTrash" class="hidden p-2 px-4 text-danger-500 hover:text-danger-400 bg-navy-900 border border-danger-500/50 hover:border-danger-500 rounded-md transition-colors focus:outline-none text-xs font-bold tracking-wide">
+                    Vaciar Papelera
                 </button>
             </div>
         </header>
@@ -518,7 +530,6 @@
 
         const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
         
-        // Mapeo actualizado de colores para soportar texto y estilos de las píldoras de gestión
         const contextColorMap = { 
             blue: { dot: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }, 
             purple: { dot: 'bg-purple-500', text: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' }, 
@@ -808,10 +819,22 @@
 
         function migrateAndNormalizeTasks() { 
             if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); }
+            
+            const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
             let changed = false;
+            
             function walk(nodes, parentArea) {
                 if (!Array.isArray(nodes)) return;
-                nodes.forEach(n => {
+                for (let i = nodes.length - 1; i >= 0; i--) {
+                    let n = nodes[i];
+                    
+                    if (n.isDeleted && n.deletedAt && (now - n.deletedAt > tenDaysMs)) {
+                        nodes.splice(i, 1);
+                        changed = true;
+                        continue;
+                    }
+                    
                     if (n.status === undefined) {
                         n.status = n.completed ? 'completed' : 'pending';
                         delete n.completed;
@@ -823,8 +846,9 @@
                     if(!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
                     if(n.context === undefined) { n.context = ''; changed = true; }
                     if(n.time === undefined) { n.time = ''; changed = true; }
+                    
                     if(n.subtasks) walk(n.subtasks, n.area);
-                });
+                }
             }
             if (Array.isArray(tasks)) {
                 walk(tasks, null);
@@ -931,17 +955,21 @@
         function updateUI() {
             const btnBack = document.getElementById('btnBack'); if (navHistory.length > 0) btnBack.classList.remove('hidden'); else btnBack.classList.add('hidden');
             const titleEl = document.getElementById('view-title');
-            const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica' };
+            const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
             titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
 
-            ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar'].forEach(id => { 
+            const isTrash = currentState.view === 'trash';
+
+            ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { 
                 const el = document.getElementById(id); 
                 if (id === `nav-${currentState.view}`) { 
                     el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
                     el.classList.remove('text-navy-300', 'border-transparent'); 
+                    if(id === 'nav-trash') el.querySelector('svg').classList.remove('text-danger-500');
                 } else { 
                     el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
                     el.classList.add('text-navy-300', 'border-transparent'); 
+                    if(id === 'nav-trash') el.querySelector('svg').classList.add('text-danger-500');
                 } 
             });
             document.querySelectorAll('.sidebar-area-item').forEach(el => { 
@@ -956,7 +984,6 @@
 
             document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); 
             
-            // Ocultar siempre el omnibar al entrar a calendario para que no rompa el diseño
             if (currentState.view === 'calendar') {
                 document.getElementById('omnibar-container').classList.add('hidden');
                 document.getElementById('btnAIToggle').classList.remove('text-brand-500', 'bg-navy-700');
@@ -966,6 +993,26 @@
             document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); 
             document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
             
+            document.getElementById('btnEmptyTrash').classList.toggle('hidden', !isTrash);
+            document.getElementById('searchWrap').classList.toggle('hidden', isTrash);
+            document.getElementById('filterStatus').classList.toggle('hidden', isTrash);
+            document.getElementById('filterPriority').classList.toggle('hidden', isTrash);
+            document.getElementById('filterContext').classList.toggle('hidden', isTrash);
+            document.getElementById('sortSelect').classList.toggle('hidden', isTrash);
+            document.getElementById('btnBulkMode').classList.toggle('hidden', isTrash);
+            document.getElementById('btnResetFilters').classList.toggle('hidden', isTrash);
+            document.getElementById('btnAIToggle').classList.toggle('hidden', isTrash);
+            document.getElementById('filtersDivider').classList.toggle('hidden', isTrash);
+
+            const fab = document.getElementById('mainFab');
+            if (isTrash) {
+                fab.classList.add('hidden');
+            } else {
+                fab.classList.remove('hidden');
+                if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0');
+                else fab.classList.remove('translate-y-24', 'opacity-0');
+            }
+
             if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
             if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
         }
@@ -973,7 +1020,19 @@
         function toggleSidebar(force) { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobile-overlay'); const isOpen = !sidebar.classList.contains('-translate-x-full'); if (force === false || isOpen) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); } else { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } }
         function renderSidebarAreas() { const allAreas = [...new Set([...customAreas, ...getUniqueValues(tasks, 'area')])].sort((a,b) => a === 'Inbox' ? -1 : (b === 'Inbox' ? 1 : String(a).localeCompare(String(b)))); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
         
-        function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
+        function getUniqueValues(nodes, key) { 
+            let vals = new Set(); 
+            function walk(ns) { 
+                if(!Array.isArray(ns)) return; 
+                ns.forEach(n => { 
+                    if (n.isDeleted) return; 
+                    if (n[key]) vals.add(n[key]); 
+                    if(n.subtasks) walk(n.subtasks); 
+                }); 
+            } 
+            walk(nodes); 
+            return Array.from(vals); 
+        }
 
         function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { 
             const el = document.getElementById(id); if (!el) return; 
@@ -1051,13 +1110,13 @@
                 btn.classList.remove('text-navy-400');
                 bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
                 bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-                fab.classList.add('translate-y-24', 'opacity-0');
+                if(!fab.classList.contains('hidden')) fab.classList.add('translate-y-24', 'opacity-0');
             } else {
                 btn.classList.remove('text-brand-500', 'bg-navy-700');
                 btn.classList.add('text-navy-400');
                 bar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
                 bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
-                fab.classList.remove('translate-y-24', 'opacity-0');
+                if(!fab.classList.contains('hidden')) fab.classList.remove('translate-y-24', 'opacity-0');
             }
             updateBulkCount();
             renderTasks();
@@ -1075,10 +1134,14 @@
 
         async function bulkDelete() {
             if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
-            if (!confirm(`¿Eliminar las ${selectedTaskIds.size} tareas seleccionadas?`)) return;
-            const idsToDelete = new Set(selectedTaskIds);
-            idsToDelete.forEach(id => { findAndMutateTask(id, (nodes, i) => { nodes.splice(i, 1); }); });
-            toggleBulkMode(); await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas eliminadas en lote");
+            if (!confirm(`¿Mover las ${selectedTaskIds.size} tareas seleccionadas a la papelera?`)) return;
+            selectedTaskIds.forEach(id => { 
+                findAndMutateTask(id, (nodes, i) => { 
+                    nodes[i].isDeleted = true; 
+                    nodes[i].deletedAt = Date.now();
+                }); 
+            });
+            toggleBulkMode(); await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas movidas a la papelera");
         }
 
         async function bulkComplete() {
@@ -1131,6 +1194,8 @@
             const fortnightObj = new Date(); fortnightObj.setDate(fortnightObj.getDate() + 15); const fortnightStr = getLocalDateString(fortnightObj);
             
             let filtered = nodeList.map(node => {
+                if (node.isDeleted) return null; 
+
                 let matches = true;
                 if (currentFilters.search !== '') { const sTerm = currentFilters.search.toLowerCase(); const textMatch = node.name.toLowerCase().includes(sTerm) || (node.area || '').toLowerCase().includes(sTerm) || (node.context || '').toLowerCase().includes(sTerm); if (!textMatch) matches = false; }
                 
@@ -1150,7 +1215,6 @@
 
                 const prunedSubtasks = pruneTree(node.subtasks || []);
                 
-                // Conservación estructural estricta: Se mantiene si coincide con el filtro O si tiene hijas que coinciden
                 if (matches || prunedSubtasks.length > 0) { 
                     return { ...node, subtasks: prunedSubtasks, _explicitMatch: matches }; 
                 }
@@ -1243,7 +1307,7 @@
             
             function collectValidParents(nodes, depth = 0) {
                 nodes.forEach(n => {
-                    if (n.area === area) {
+                    if (n.area === area && !n.isDeleted) {
                         const prefix = '— '.repeat(depth);
                         optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`;
                     }
@@ -1271,7 +1335,7 @@
             
             function collectValidParents(nodes, depth = 0) {
                 nodes.forEach(n => {
-                    if (n.id !== taskId && !isDescendant(taskId, n.id) && n.area === area) {
+                    if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) {
                         const prefix = '— '.repeat(depth);
                         optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`;
                     }
@@ -1338,15 +1402,16 @@
         function buildTaskRows(nodes, path = []) {
             if (!nodes || nodes.length === 0) return '';
             
+            const isTrash = currentState.view === 'trash';
             const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
             const isFiltering = currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status === 'in_progress' || currentFilters.status === 'completed';
 
             return nodes.map(task => {
                 const hasChildren = task.subtasks && task.subtasks.length > 0;
-                const isExpanded = (currentState.view === 'focus' || isFiltering) ? true : (expandedStates[task.id] || false);
+                const isExpanded = isTrash || (currentState.view === 'focus' || isFiltering) ? true : (expandedStates[task.id] || false);
                 const logicalDepth = path.length + 1;
 
-                const indentClass = indentMap[logicalDepth] || 'pl-20 md:pl-22';
+                const indentClass = isTrash ? 'pl-3 md:pl-5' : (indentMap[logicalDepth] || 'pl-20 md:pl-22');
 
                 let dateDisplayHTML = `<span class="text-brand-500/80 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-brand-500/80 inline-block"></span> Sin fecha</span>`;
                 if (task.date) {
@@ -1357,7 +1422,7 @@
                     </span>`;
                 }
 
-                const inlineAddHtml = (currentFilters.search === '' && !isBulkMode) ? `
+                const inlineAddHtml = (currentFilters.search === '' && !isBulkMode && !isTrash) ? `
                     <span class="mx-1 text-navy-600 shrink-0">&bull;</span>
                     <button onclick="event.stopPropagation(); toggleInlineAdd(${task.id})" id="btn-inline-add-${task.id}" class="text-navy-400 hover:text-brand-500 transition-colors focus:outline-none flex items-center justify-center shrink-0" title="Añadir subtarea">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -1365,12 +1430,12 @@
                     <input type="text" id="inline-input-${task.id}" class="hidden ml-1 bg-navy-900 border border-navy-700 text-[10px] text-navy-50 px-1.5 py-0.5 rounded focus:outline-none focus:border-brand-500 w-24 md:w-32 placeholder-navy-500 shrink-0" placeholder="Subtarea..." onkeydown="if(event.key === 'Enter') { event.stopPropagation(); submitInlineAdd(${task.id}); }" onclick="event.stopPropagation()" onblur="hideInlineAdd(${task.id})">
                 ` : '';
 
-                let subtasksHtml = isExpanded ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
-                const subtaskListHTML = `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
+                let subtasksHtml = (isExpanded && !isTrash) ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
+                const subtaskListHTML = isTrash ? '' : `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
 
                 const isRecurring = task.recurrence && task.recurrence !== 'none' && task.status !== 'completed';
                 
-                const bulkCheckboxHTML = isBulkMode ? `
+                const bulkCheckboxHTML = (isBulkMode && !isTrash) ? `
                     <div class="shrink-0 mr-2 flex items-center justify-center cursor-pointer py-1 pr-1" onclick="toggleBulkSelect(${task.id}, event)">
                         <input type="checkbox" class="w-[18px] h-[18px] rounded-sm border border-navy-500 text-brand-500 bg-navy-800 focus:ring-0 cursor-pointer pointer-events-none transition-colors" ${selectedTaskIds.has(task.id) ? 'checked' : ''}>
                     </div>
@@ -1378,12 +1443,11 @@
 
                 const isCompleted = task.status === 'completed';
                 const isInProgress = task.status === 'in_progress';
-                const isMuted = !task._explicitMatch && isFiltering;
+                const isMuted = !task._explicitMatch && isFiltering && !isTrash;
                 
                 const hasNotes = task.notes && task.notes.trim() !== '';
                 const notesIconHtml = hasNotes ? `<svg class="w-3.5 h-3.5 text-navy-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene notas adjuntas"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>` : '';
 
-                // Renderizado modificado del contexto: solo texto coloreado
                 const hasContext = task.context && task.context.trim() !== '';
                 let contextHtml = '';
                 if (hasContext) {
@@ -1393,13 +1457,28 @@
 
                 const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
-                let statusActionHtml = '';
-                if (!isBulkMode) {
+                let actionButtonsHtml = '';
+                if (isTrash) {
+                    actionButtonsHtml = `
+                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">
+                        <button onclick="event.stopPropagation(); restoreTask(${task.id})" title="Restaurar" class="p-1 text-emerald-500 hover:text-emerald-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+                        <button onclick="event.stopPropagation(); hardDeleteTask(${task.id})" title="Eliminar definitivamente" class="p-1 text-danger-500 hover:text-danger-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>`;
+                } else if (!isBulkMode) {
+                    let statusActionHtml = '';
                     if (isInProgress) {
                         statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar (Volver a pendiente)" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
                     } else if (!isCompleted) {
                         statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
                     }
+                    actionButtonsHtml = `
+                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">
+                        ${isRecurring ? `<button onclick="event.stopPropagation(); skipTask(${task.id})" title="Saltar Ocurrencia" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>` : ''}
+                        ${statusActionHtml}
+                        <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                        <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                        <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>`;
                 }
 
                 return `
@@ -1408,18 +1487,19 @@
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     ${bulkCheckboxHTML}
-                                    ${hasChildren ? `<button onclick="toggleExpand(${task.id}, event)" class="p-0.5 text-navy-400 hover:text-navy-50 transition-transform ${isExpanded ? 'rotate-90' : ''} focus:outline-none shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>` : `<div class="w-4 shrink-0"></div>`}
+                                    ${(hasChildren && !isTrash) ? `<button onclick="toggleExpand(${task.id}, event)" class="p-0.5 text-navy-400 hover:text-navy-50 transition-transform ${isExpanded ? 'rotate-90' : ''} focus:outline-none shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>` : `<div class="w-4 shrink-0"></div>`}
                                     
-                                    <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTaskUniversal(${task.id})" class="task-cb shrink-0 ${isBulkMode ? 'opacity-40 pointer-events-none' : ''} ${isInProgress ? 'is-in-progress' : ''}">
+                                    <input type="checkbox" ${isCompleted ? 'checked' : ''} ${isTrash ? 'disabled' : `onchange="toggleTaskUniversal(${task.id})"`} class="task-cb shrink-0 ${(isBulkMode || isTrash) ? 'opacity-40 pointer-events-none' : ''} ${isInProgress ? 'is-in-progress' : ''}">
                                     
                                     <div class="flex flex-col min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <span class="text-[14px] font-medium task-name ${nameStyle} truncate cursor-pointer select-none leading-none transition-colors" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">${task.name}</span>
+                                            <span class="text-[14px] font-medium task-name ${nameStyle} truncate ${isTrash ? 'pointer-events-none' : 'cursor-pointer'} select-none leading-none transition-colors" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">${task.name}</span>
                                             ${task.reminder ? `<svg class="w-3.5 h-3.5 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
                                             ${notesIconHtml}
+                                            ${(isTrash && hasChildren) ? `<span class="text-[9px] bg-navy-700 text-navy-400 px-1.5 py-0.5 rounded ml-2">+${task.subtasks.length} sub.</span>` : ''}
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
-                                            <div class="flex items-center text-navy-400 cursor-pointer hover:text-navy-300 transition-colors shrink-0 min-w-0" onclick="${isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`}">
+                                            <div class="flex items-center text-navy-400 ${isTrash ? '' : 'cursor-pointer hover:text-navy-300'} transition-colors shrink-0 min-w-0" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">
                                                 <span class="truncate">${task.area}</span>${contextHtml}
                                             </div>
                                             ${inlineAddHtml}
@@ -1427,15 +1507,7 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0 relative">
-                                    ${!isBulkMode ? `
-                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">
-                                        ${isRecurring ? `<button onclick="event.stopPropagation(); skipTask(${task.id})" title="Saltar Ocurrencia" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg></button>` : ''}
-                                        ${statusActionHtml}
-                                        <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                                        <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                                        <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                                    </div>
-                                    ` : ''}
+                                    ${actionButtonsHtml}
                                     <div class="w-28 flex flex-col items-start justify-center gap-1.5 shrink-0 pl-2">
                                         <svg title="Prioridad: ${task.priority}" class="w-3.5 h-3.5 ${priorityColors[task.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>
                                         ${dateDisplayHTML}
@@ -1451,13 +1523,36 @@
 
         function renderTasks() {
             const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
-            const prunedTasks = pruneTree(tasks);
-            if (prunedTasks.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            
+            let nodesToRender = [];
+            
+            if (currentState.view === 'trash') {
+                function collectDeleted(nodes) {
+                    nodes.forEach(n => {
+                        if (n.isDeleted) {
+                            nodesToRender.push(n); 
+                        } else if (n.subtasks) {
+                            collectDeleted(n.subtasks);
+                        }
+                    });
+                }
+                collectDeleted(tasks);
+                nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+            } else {
+                nodesToRender = pruneTree(tasks);
+            }
+
+            if (nodesToRender.length === 0) { 
+                list.innerHTML = ''; 
+                empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales.";
+                empty.classList.remove('hidden'); 
+                return; 
+            }
             empty.classList.add('hidden');
             
             const html = `
                 <div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">
-                    ${buildTaskRows(prunedTasks)}
+                    ${buildTaskRows(nodesToRender)}
                 </div>
             `;
             list.innerHTML = html;
@@ -1470,7 +1565,7 @@
             document.getElementById('dateInput').value = ''; 
             document.getElementById('timeInput').value = ''; 
             document.getElementById('notesInput').value = ''; 
-            document.getElementById('priorityInput').value = 'baja'; // Forzar defecto a baja
+            document.getElementById('priorityInput').value = 'baja';
             
             let defaultArea = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox');
             if (currentState.view === 'area' && currentState.selectedArea) {
@@ -1587,16 +1682,57 @@
         }
 
         async function skipTask(id) { findAndMutateTask(id, (nodes, i) => { const nextDate = getNextOccurrenceDate(nodes[i].date, nodes[i].recurrence, nodes[i].completionBased, nodes[i].businessDayNum); showNotice("Saltada a: " + formatDateAR(nextDate)); nodes[i].date = nextDate; }); await saveData(); renderTasks(); renderCalendar(); }
+        
         async function deleteTaskUniversal(id) { 
             const task = getTaskById(id);
             if (task && task.subtasks && task.subtasks.length > 0) {
-                if (!confirm(`La tarea "${task.name}" contiene ${task.subtasks.length} subtarea(s). ¿Estás seguro de eliminarla junto con todas sus dependencias?`)) {
+                if (!confirm(`La tarea "${task.name}" contiene ${task.subtasks.length} subtarea(s). ¿Estás seguro de enviarla a la papelera junto con todas sus dependencias?`)) {
                     return;
                 }
             }
-            if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { 
-                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea eliminada"); 
+            if (findAndMutateTask(id, (nodes, i) => {
+                nodes[i].isDeleted = true;
+                nodes[i].deletedAt = Date.now();
+            })) { 
+                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); 
             } 
+        }
+
+        async function restoreTask(id) {
+            if (findAndMutateTask(id, (nodes, i) => {
+                nodes[i].isDeleted = false;
+                delete nodes[i].deletedAt;
+            })) {
+                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada");
+            }
+        }
+
+        async function hardDeleteTask(id) {
+            if (!confirm("¿Eliminar definitivamente esta tarea? Esta acción no se puede deshacer.")) return;
+            if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) {
+                await saveData(); refreshAllDropdowns(); renderTasks(); showNotice("Eliminada permanentemente");
+            }
+        }
+
+        async function emptyTrash() {
+            if (!confirm("¿Vaciar toda la papelera? No podrás recuperar estas tareas.")) return;
+            let changed = false;
+            function walk(nodes) {
+                for (let i = nodes.length - 1; i >= 0; i--) {
+                    if (nodes[i].isDeleted) {
+                        nodes.splice(i, 1);
+                        changed = true;
+                    } else if (nodes[i].subtasks) {
+                        walk(nodes[i].subtasks);
+                    }
+                }
+            }
+            walk(tasks);
+            if (changed) {
+                await saveData(); renderTasks(); showNotice("Papelera vaciada");
+            } else {
+                showNotice("La papelera ya está vacía");
+            }
         }
         
         function saveCategories() { localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas)); localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts)); }
@@ -1749,9 +1885,9 @@
             showNotice(postponeState.id === 'bulk' ? `Tareas pospuestas a ${formatDateAR(finalDate, finalTime)}` : `Pospuesto a ${formatDateAR(finalDate, finalTime)}`); 
         }
 
-        function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
+        function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.isDeleted) continue; if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
         function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
-        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg title="Prioridad: ${t.priority}" class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
+        function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg title="Prioridad: ${t.priority}" class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>${t.time ? `<span class="text-xs text-navy-400 font-medium">${t.time}</span>` : ''}</div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
         function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
         function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
