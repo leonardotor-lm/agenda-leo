@@ -176,7 +176,7 @@
     </aside>
 
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header class="bg-navy-800 border-b border-navy-700 p-4 md:px-10 md:py-6 flex flex-col md:flex-row md:items-center justify-between z-20 shrink-0 gap-4">
+        <header class="bg-navy-800 border-b border-navy-700 p-4 md:px-8 md:py-5 flex flex-col justify-start z-20 shrink-0 gap-3">
             <div class="flex items-center space-x-3 min-w-0">
                 <button onclick="toggleSidebar()" class="md:hidden text-brand-500 hover:text-brand-400 focus:outline-none p-1 shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -185,24 +185,25 @@
                     <button id="btnBack" onclick="goBack()" class="hidden text-navy-400 hover:text-navy-50 transition-colors focus:outline-none shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <h1 id="view-title" class="text-base sm:text-lg lg:text-2xl font-bold text-navy-50 tracking-tight whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">Hoy y atrasadas</h1>
+                    <h1 id="view-title" class="text-xl sm:text-2xl lg:text-3xl font-bold text-navy-50 tracking-tight whitespace-nowrap truncate max-w-[200px] sm:max-w-none">Hoy y atrasadas</h1>
                 </div>
             </div>
 
-            <div id="filters-container" class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <div class="relative mr-1 sm:mr-2">
+            <!-- Herramientas (Búsqueda y filtros) reubicadas debajo del título -->
+            <div id="filters-container" class="flex flex-wrap items-center gap-2 mt-1">
+                <div class="relative flex-grow sm:flex-grow-0 sm:min-w-[200px]">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg class="w-3.5 h-3.5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="text-xs bg-navy-900 border border-navy-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-md py-2 pl-9 pr-3 w-28 sm:w-36 lg:w-56 transition-all outline-none text-navy-50 placeholder-navy-500">
+                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="w-full text-xs bg-navy-900 border border-navy-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-md py-2 pl-9 pr-3 transition-all outline-none text-navy-50 placeholder-navy-500">
                 </div>
-                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-2 sm:px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
+                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
                     <option value="pending" selected>Pendientes / En Progreso</option><option value="in_progress">Solo En Progreso</option><option value="completed">Completadas</option><option value="all">Todas</option>
                 </select>
-                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden lg:block transition-colors">
+                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors">
                     <option value="all">Prioridad</option><option value="urgente">Urgentes</option><option value="alta">Altas</option><option value="media">Medias</option><option value="baja">Bajas</option>
                 </select>
-                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden xl:block transition-colors">
+                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden md:block transition-colors">
                     <option value="all">Contexto</option>
                 </select>
                 <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Selección múltiple">
@@ -211,24 +212,36 @@
                 <button onclick="resetFilters()" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Limpiar filtros secundarios">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
+                <div class="h-6 w-px bg-navy-700 mx-1 hidden sm:block"></div>
+                <button onclick="toggleAIFilter()" id="btnAIToggle" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Asistente de Filtrado IA">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                </button>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-32" id="main-scroll-area">
             <div class="max-w-5xl mx-auto space-y-6">
-                <!-- Omnibar -->
-                <div id="omnibar-container" class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <svg class="w-5 h-5 text-brand-500 opacity-70 group-focus-within:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <!-- Panel dedicado a IA (Oculto por defecto) -->
+                <div id="omnibar-container" class="hidden relative group bg-navy-900/80 p-5 rounded-lg border border-brand-500/30 slide-up mb-6 shadow-lg">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-brand-400 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg> 
+                            Asistente de Filtrado Inteligente
+                        </h3>
+                        <button onclick="toggleAIFilter()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
-                    <input type="text" id="omnibarInput" placeholder="Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')" class="w-full pl-12 pr-[4.5rem] py-4 bg-navy-900 border border-navy-700 rounded-md text-sm text-navy-50 focus:outline-none focus:border-brand-500 transition-all placeholder:text-navy-500" onkeydown="handleOmnibarKeydown(event)">
-                    <div class="absolute inset-y-0 right-2 flex items-center gap-1">
-                        <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Dictar búsqueda">
-                            <svg id="micIcon" class="w-5 h-5 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
-                        </button>
-                        <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Filtrar y Ordenar">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                        </button>
+                    <div class="relative">
+                        <input type="text" id="omnibarInput" placeholder="Ej. 'Mostrame las urgentes de casa' o 'Ordená alfabéticamente'" class="w-full pl-4 pr-[5.5rem] py-3 bg-navy-900 border border-navy-700 rounded-md text-sm text-navy-50 focus:outline-none focus:border-brand-500 transition-all placeholder:text-navy-500" onkeydown="handleOmnibarKeydown(event)">
+                        <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+                            <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Dictar búsqueda">
+                                <svg id="micIcon" class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                            </button>
+                            <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Procesar comando">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -269,7 +282,7 @@
             <button onclick="toggleBulkMode()" class="p-2 text-navy-400 hover:text-navy-50 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Cancelar Múltiple"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
 
-        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-md flex items-center justify-center hover:bg-brand-400 transition-colors focus:outline-none">
+        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-md flex items-center justify-center hover:bg-brand-400 transition-colors focus:outline-none shadow-lg">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
     </main>
@@ -295,7 +308,12 @@
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">Prioridad</label>
-                        <select id="priorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja" selected>Baja</option></select>
+                        <select id="priorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                            <option value="urgente">Urgente</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja" selected>Baja</option>
+                        </select>
                     </div>
                 </div>
 
@@ -333,10 +351,13 @@
         </div>
     </div>
     
+    <!-- Modal: Detalle de Día -->
     <div id="dayDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="modalDateTitle" class="font-semibold text-lg text-navy-50">Detalle del día</h3><button onclick="closeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="modalContent" class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-3"></div></div></div>
     
+    <!-- Modal: Categorías (Áreas/Contextos) -->
     <div id="categoryModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="categoryModalTitle" class="font-semibold text-lg text-navy-50">Nueva categoría</h3><button onclick="closeCategoryModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><input type="text" id="categoryModalInput" placeholder="Nombre..." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500"><div id="categoryColorPickerContainer" class="hidden space-y-2"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Color del Contexto</label><div class="flex space-x-2 justify-center py-2" id="newContextColorOptions"><button onclick="selectNewContextColor('blue')" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-blue"></button><button onclick="selectNewContextColor('purple')" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-purple"></button><button onclick="selectNewContextColor('green')" class="w-6 h-6 rounded-full bg-green-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-green"></button><button onclick="selectNewContextColor('red')" class="w-6 h-6 rounded-full bg-red-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-red"></button><button onclick="selectNewContextColor('orange')" class="w-6 h-6 rounded-full bg-orange-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-orange"></button><button onclick="selectNewContextColor('gray')" class="w-6 h-6 rounded-full bg-gray-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-gray"></button><button onclick="selectNewContextColor('pink')" class="w-6 h-6 rounded-full bg-pink-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-pink"></button><button onclick="selectNewContextColor('teal')" class="w-6 h-6 rounded-full bg-teal-500 border-2 border-navy-800 ring-2 ring-transparent" id="btn-color-teal"></button></div></div><div class="flex space-x-3"><button onclick="closeCategoryModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="saveCustomCategory()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar</button></div></div></div></div>
     
+    <!-- Modal: Gestionar -->
     <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
     
     <!-- Modal: Edición de Tarea -->
@@ -359,7 +380,15 @@
                     <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
                     <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Área</label><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
                     <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Contexto</label><select id="editContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label><select id="editPriorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label>
+                        <select id="editPriorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                            <option value="urgente">Urgente</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja">Baja</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
@@ -480,7 +509,19 @@
         let selectedTaskIds = new Set();
 
         const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
-        const contextColorMap = { blue: { dot: 'bg-blue-500' }, purple: { dot: 'bg-purple-500' }, green: { dot: 'bg-green-500' }, red: { dot: 'bg-red-500' }, orange: { dot: 'bg-orange-500' }, gray: { dot: 'bg-gray-500' }, pink: { dot: 'bg-pink-500' }, teal: { dot: 'bg-teal-500' } };
+        
+        // Mapeo actualizado de colores para soportar texto y estilos de las píldoras de gestión
+        const contextColorMap = { 
+            blue: { dot: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }, 
+            purple: { dot: 'bg-purple-500', text: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' }, 
+            green: { dot: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' }, 
+            red: { dot: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' }, 
+            orange: { dot: 'bg-orange-500', text: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }, 
+            gray: { dot: 'bg-gray-500', text: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20' }, 
+            pink: { dot: 'bg-pink-500', text: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }, 
+            teal: { dot: 'bg-teal-500', text: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/20' } 
+        };
+        
         let currentPromptType = ''; let selectedNewColor = 'blue'; let isCategoryForEditModal = false; let manageType = 'area'; 
         let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
 
@@ -554,12 +595,27 @@
         function resetMicUI() {
             const micIcon = document.getElementById('micIcon'); const inputEl = document.getElementById('omnibarInput');
             micIcon.classList.remove('text-danger-500', 'animate-pulse'); micIcon.classList.add('text-navy-400');
-            if (!inputEl.disabled) inputEl.placeholder = "Búsqueda inteligente (ej. 'Mostrame las urgentes de casa', 'Ordená por fecha')";
+            if (!inputEl.disabled) inputEl.placeholder = "Ej. 'Mostrame las urgentes de casa' o 'Ordená alfabéticamente'";
         }
 
         function toggleVoiceCapture() {
             if (!speechRecognition) return showNotice("Tu navegador no soporta captura de voz.");
             if (isListening) speechRecognition.stop(); else try { speechRecognition.start(); } catch (e) { }
+        }
+
+        function toggleAIFilter() {
+            const container = document.getElementById('omnibar-container');
+            const btn = document.getElementById('btnAIToggle');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                btn.classList.add('text-brand-500', 'bg-navy-700');
+                btn.classList.remove('text-navy-400');
+                setTimeout(() => document.getElementById('omnibarInput').focus(), 50);
+            } else {
+                container.classList.add('hidden');
+                btn.classList.remove('text-brand-500', 'bg-navy-700');
+                btn.classList.add('text-navy-400');
+            }
         }
 
         async function fetchGeminiResponse(prompt, schema, systemInstructionText) {
@@ -613,7 +669,7 @@
         async function processOmnibarCommand() {
             const inputEl = document.getElementById('omnibarInput'); const prompt = inputEl.value.trim(); if (!prompt) return;
             inputEl.disabled = true; inputEl.classList.add('ai-loading-gradient'); inputEl.placeholder = "Procesando búsqueda...";
-            const btnIcon = document.querySelector('#omnibarBtn svg'); btnIcon.outerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            const btnIcon = document.querySelector('#omnibarBtn svg'); btnIcon.outerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 
             const schema = { 
                 type: "OBJECT", 
@@ -675,7 +731,7 @@
             } finally { 
                 inputEl.value = '';
                 inputEl.disabled = false; inputEl.classList.remove('ai-loading-gradient'); resetMicUI(); 
-                document.querySelector('#omnibarBtn svg').outerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`; 
+                document.querySelector('#omnibarBtn svg').outerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`; 
                 inputEl.focus(); 
             }
         }
@@ -885,7 +941,17 @@
                 } 
             });
 
-            document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('omnibar-container').classList.toggle('hidden', currentState.view === 'calendar'); document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
+            document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); 
+            
+            // Ocultar siempre el omnibar al entrar a calendario para que no rompa el diseño
+            if (currentState.view === 'calendar') {
+                document.getElementById('omnibar-container').classList.add('hidden');
+                document.getElementById('btnAIToggle').classList.remove('text-brand-500', 'bg-navy-700');
+                document.getElementById('btnAIToggle').classList.add('text-navy-400');
+            }
+            
+            document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); 
+            document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
             
             if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
             if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
@@ -1300,15 +1366,14 @@
                 const hasNotes = task.notes && task.notes.trim() !== '';
                 const notesIconHtml = hasNotes ? `<svg class="w-3.5 h-3.5 text-navy-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene notas adjuntas"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>` : '';
 
-                // Renderizado condicional del contexto
+                // Renderizado modificado del contexto: solo texto coloreado
                 const hasContext = task.context && task.context.trim() !== '';
                 let contextHtml = '';
                 if (hasContext) {
                     const ctxStyles = getContextStyles(task.context);
-                    contextHtml = `<span class="mx-1 shrink-0">&bull;</span><span class="inline-flex items-center gap-1 shrink-0"><span class="w-1.5 h-1.5 rounded-full ${ctxStyles.dot}"></span><span class="truncate max-w-[80px] sm:max-w-[120px]">${task.context}</span></span>`;
+                    contextHtml = `<span class="mx-1 shrink-0 text-navy-600">&bull;</span><span class="truncate font-semibold tracking-wide ${ctxStyles.text} max-w-[80px] sm:max-w-[120px]">${task.context}</span>`;
                 }
 
-                // Aplicamos estilo atenuado y cursiva si la tarea madre es visible solo para dar contexto estructural a una hija filtrada
                 const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
                 let statusActionHtml = '';
@@ -1388,6 +1453,7 @@
             document.getElementById('dateInput').value = ''; 
             document.getElementById('timeInput').value = ''; 
             document.getElementById('notesInput').value = ''; 
+            document.getElementById('priorityInput').value = 'baja'; // Forzar defecto a baja
             
             let defaultArea = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox');
             if (currentState.view === 'area' && currentState.selectedArea) {
