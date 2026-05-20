@@ -319,11 +319,11 @@
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div class="space-y-1">
-                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div>
+                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><div class="flex items-center gap-1.5"><button onclick="openManageModal('area')" class="text-navy-400 hover:text-navy-50 focus:outline-none" title="Gestionar áreas"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button><button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div></div>
                         <select id="areaInput" onchange="updateAddParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
-                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div>
+                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><div class="flex items-center gap-1.5"><button onclick="openManageModal('context')" class="text-navy-400 hover:text-navy-50 focus:outline-none" title="Gestionar contextos"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button><button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div></div>
                         <select id="contextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
@@ -398,8 +398,8 @@
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                     <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Área</label><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Contexto</label><select id="editContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><div class="flex items-center gap-1.5"><button onclick="openManageModal('area')" class="text-navy-400 hover:text-navy-50 focus:outline-none" title="Gestionar áreas"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button><button onclick="openCategoryModal('area', true)" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div></div><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><div class="flex items-center gap-1.5"><button onclick="openManageModal('context')" class="text-navy-400 hover:text-navy-50 focus:outline-none" title="Gestionar contextos"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button><button onclick="openCategoryModal('context', true)" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div></div><select id="editContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label>
                         <select id="editPriorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
@@ -1206,10 +1206,10 @@
                 if (currentFilters.priority !== 'all' && node.priority !== currentFilters.priority) matches = false; 
                 if (currentFilters.context !== 'all' && node.context !== currentFilters.context) matches = false;
 
-                if (currentState.view === 'today') { if (node.date > todayStr) matches = false; }
-                else if (currentState.view === 'tomorrow') { if (node.date !== tomorrowStr) matches = false; }
-                else if (currentState.view === 'week') { if (node.date > endOfWeekStr) matches = false; }
-                else if (currentState.view === 'fortnight') { if (node.date > fortnightStr) matches = false; }
+                if (currentState.view === 'today') { if (!node.date || node.date > todayStr) matches = false; }
+                else if (currentState.view === 'tomorrow') { if (!node.date || node.date !== tomorrowStr) matches = false; }
+                else if (currentState.view === 'week') { if (!node.date || node.date > endOfWeekStr) matches = false; }
+                else if (currentState.view === 'fortnight') { if (!node.date || node.date > fortnightStr) matches = false; }
                 else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
                 else if (currentState.view === 'focus') { matches = matches && containsFocusNode(node, currentState.focusTargetId); }
 
@@ -1626,10 +1626,10 @@
                     insertTask(newTask, parentId);
                 }
                 
-                await saveData(); 
+                closeAddTaskModal(); 
                 refreshAllDropdowns(); 
                 renderTasks(); 
-                closeAddTaskModal(); 
+                await saveData(); 
                 showNotice("Tarea guardada exitosamente"); 
             } catch (error) {
                 console.error("Fallo crítico en addTask:", error);
@@ -1846,7 +1846,11 @@
                     });
                 }
                 
-                await saveData(); refreshAllDropdowns(); renderTasks(); closeEditModal(); showNotice("Guardado exitosamente"); 
+                closeEditModal(); 
+                refreshAllDropdowns(); 
+                renderTasks(); 
+                await saveData(); 
+                showNotice("Guardado exitosamente"); 
             } catch (err) {
                 console.error("Fallo al guardar edición:", err);
                 showNotice("Error interno al guardar dependencias.");
