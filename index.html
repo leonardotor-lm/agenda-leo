@@ -784,7 +784,7 @@
                 if (newSubtasks.length > 0) {
                     findAndMutateTask(id, (nodes, i) => { nodes[i].subtasks = [...(nodes[i].subtasks || []), ...newSubtasks]; });
                     expandedStates[id] = true; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates));
-                    await saveData(); renderTasks(); closeEditModal(); showNotice("Tarea desglosada exitosamente.");
+                    renderTasks(); closeEditModal(); showNotice("Tarea desglosada exitosamente."); await saveData();
                 } else {
                     showNotice("La IA no ha retornado datos estructurados.");
                 }
@@ -852,7 +852,7 @@
             }
             if (Array.isArray(tasks)) {
                 walk(tasks, null);
-                if (changed) saveData();
+                if (changed) saveData(); // Esto corre en background si es necesario
             } else {
                 tasks = [];
             }
@@ -946,7 +946,7 @@
         }
 
         function exportData() { const blob = new Blob([JSON.stringify({ tasks, customAreas, customContexts, expandedStates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `agenda_backup_leo.json`; a.click(); URL.revokeObjectURL(url); }
-        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if (data.tasks) tasks = data.tasks; if (data.customAreas) customAreas = data.customAreas; if (data.customContexts) customContexts = data.customContexts; if (data.expandedStates) expandedStates = data.expandedStates; saveCategories(); await saveData(); refreshAllDropdowns(); updateUI(); showNotice("Respaldo restaurado."); } catch (err) { showNotice("Error de archivo."); } }; reader.readAsText(file); event.target.value = ''; }
+        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if (data.tasks) tasks = data.tasks; if (data.customAreas) customAreas = data.customAreas; if (data.customContexts) customContexts = data.customContexts; if (data.expandedStates) expandedStates = data.expandedStates; saveCategories(); refreshAllDropdowns(); updateUI(); showNotice("Respaldo restaurado."); await saveData(); } catch (err) { showNotice("Error de archivo."); } }; reader.readAsText(file); event.target.value = ''; }
 
         function navigate(view, areaName = null, pushHistory = true) { if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); currentState.view = view; currentState.selectedArea = areaName; currentState.focusTargetId = null; if (window.innerWidth < 768) toggleSidebar(false); updateUI(); }
         function goBack() { if (navHistory.length > 0) { currentState = navHistory.pop(); updateUI(); } }
@@ -1141,13 +1141,13 @@
                     nodes[i].deletedAt = Date.now();
                 }); 
             });
-            toggleBulkMode(); await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas movidas a la papelera");
+            toggleBulkMode(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas movidas a la papelera"); await saveData();
         }
 
         async function bulkComplete() {
             if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
             selectedTaskIds.forEach(id => { findAndMutateTask(id, (nodes, i) => { nodes[i].status = 'completed'; }); });
-            toggleBulkMode(); await saveData(); renderTasks(); renderCalendar(); showNotice("Estado actualizado");
+            toggleBulkMode(); renderTasks(); renderCalendar(); showNotice("Estado actualizado"); await saveData();
         }
 
         function openBulkMoveModal() {
@@ -1182,7 +1182,7 @@
                     propagateDown(nodes[i].subtasks);
                 });
             });
-            await saveData(); refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada");
+            refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada"); await saveData();
         }
 
         function pruneTree(nodeList) {
@@ -1395,8 +1395,9 @@
             
             expandedStates[parentId] = true; 
             localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates)); 
-            await saveData(); 
+            
             renderTasks();
+            await saveData(); 
         }
 
         function buildTaskRows(nodes, path = []) {
@@ -1629,8 +1630,8 @@
                 closeAddTaskModal(); 
                 refreshAllDropdowns(); 
                 renderTasks(); 
-                await saveData(); 
                 showNotice("Tarea guardada exitosamente"); 
+                await saveData(); 
             } catch (error) {
                 console.error("Fallo crítico en addTask:", error);
                 showNotice("Error interno. Revisar consola.");
@@ -1641,7 +1642,7 @@
             findAndMutateTask(id, (nodes, i) => {
                 nodes[i].status = newStatus;
             });
-            await saveData(); renderTasks(); renderCalendar();
+            renderTasks(); renderCalendar(); await saveData();
         }
 
         async function toggleTaskUniversal(id) {
@@ -1666,7 +1667,7 @@
                     t.status = t.status === 'completed' ? 'pending' : 'completed'; 
                 }
             });
-            await saveData(); renderTasks(); renderCalendar();
+            renderTasks(); renderCalendar(); await saveData();
         }
 
         function getTaskById(id) {
@@ -1681,7 +1682,7 @@
             return found;
         }
 
-        async function skipTask(id) { findAndMutateTask(id, (nodes, i) => { const nextDate = getNextOccurrenceDate(nodes[i].date, nodes[i].recurrence, nodes[i].completionBased, nodes[i].businessDayNum); showNotice("Saltada a: " + formatDateAR(nextDate)); nodes[i].date = nextDate; }); await saveData(); renderTasks(); renderCalendar(); }
+        async function skipTask(id) { findAndMutateTask(id, (nodes, i) => { const nextDate = getNextOccurrenceDate(nodes[i].date, nodes[i].recurrence, nodes[i].completionBased, nodes[i].businessDayNum); showNotice("Saltada a: " + formatDateAR(nextDate)); nodes[i].date = nextDate; }); renderTasks(); renderCalendar(); await saveData(); }
         
         async function deleteTaskUniversal(id) { 
             const task = getTaskById(id);
@@ -1694,7 +1695,7 @@
                 nodes[i].isDeleted = true;
                 nodes[i].deletedAt = Date.now();
             })) { 
-                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); 
+                refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData();
             } 
         }
 
@@ -1703,14 +1704,14 @@
                 nodes[i].isDeleted = false;
                 delete nodes[i].deletedAt;
             })) {
-                await saveData(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada");
+                refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); 
             }
         }
 
         async function hardDeleteTask(id) {
             if (!confirm("¿Eliminar definitivamente esta tarea? Esta acción no se puede deshacer.")) return;
             if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) {
-                await saveData(); refreshAllDropdowns(); renderTasks(); showNotice("Eliminada permanentemente");
+                refreshAllDropdowns(); renderTasks(); showNotice("Eliminada permanentemente"); await saveData();
             }
         }
 
@@ -1729,7 +1730,7 @@
             }
             walk(tasks);
             if (changed) {
-                await saveData(); renderTasks(); showNotice("Papelera vaciada");
+                renderTasks(); showNotice("Papelera vaciada"); await saveData();
             } else {
                 showNotice("La papelera ya está vacía");
             }
@@ -1797,11 +1798,12 @@
         }
         function toggleEditArea(i) { document.getElementById(`area-display-${i}`).classList.toggle('hidden'); document.getElementById(`area-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`area-btn-save-${i}`).classList.toggle('hidden'); }
         function toggleEditCtx(i) { document.getElementById(`ctx-display-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-color-selector-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-edit-${i}`).classList.toggle('hidden'); document.getElementById(`ctx-btn-save-${i}`).classList.toggle('hidden'); }
-        function saveEditArea(index) { const newVal = document.getElementById(`area-input-${index}`).value.trim(); if (!newVal || customAreas[index] === newVal) return toggleEditArea(index); const oldVal = customAreas[index]; customAreas[index] = newVal; function update(ns) { ns.forEach(n => { if (n.area === oldVal) n.area = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Área actualizada"); }
-        function saveEditCtx(index) { const inputVal = document.getElementById(`ctx-input-${index}`).value.trim(); if (!inputVal) return; const newVal = inputVal.startsWith('@') ? inputVal : '@' + inputVal; const oldVal = customContexts[index].name; if (oldVal === newVal) return toggleEditCtx(index); customContexts[index].name = newVal; function update(ns) { ns.forEach(n => { if (n.context === oldVal) n.context = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Contexto actualizado"); }
-        function setCtxColor(i, c) { customContexts[i].color = c; saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
-        function deleteArea(i) { const o = customAreas[i]; if(o === 'Inbox') return; customAreas.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.area === o) n.area = "Inbox"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
-        function deleteCtx(i) { const o = customContexts[i].name; customContexts.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.context === o) n.context = "Global"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); saveData(); refreshAllDropdowns(); renderTasks(); renderManageItems(); }
+        
+        async function saveEditArea(index) { const newVal = document.getElementById(`area-input-${index}`).value.trim(); if (!newVal || customAreas[index] === newVal) return toggleEditArea(index); const oldVal = customAreas[index]; customAreas[index] = newVal; function update(ns) { ns.forEach(n => { if (n.area === oldVal) n.area = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Área actualizada"); await saveData(); }
+        async function saveEditCtx(index) { const inputVal = document.getElementById(`ctx-input-${index}`).value.trim(); if (!inputVal) return; const newVal = inputVal.startsWith('@') ? inputVal : '@' + inputVal; const oldVal = customContexts[index].name; if (oldVal === newVal) return toggleEditCtx(index); customContexts[index].name = newVal; function update(ns) { ns.forEach(n => { if (n.context === oldVal) n.context = newVal; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); showNotice("Contexto actualizado"); await saveData(); }
+        async function setCtxColor(i, c) { customContexts[i].color = c; saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); await saveData(); }
+        async function deleteArea(i) { const o = customAreas[i]; if(o === 'Inbox') return; customAreas.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.area === o) n.area = "Inbox"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); await saveData(); }
+        async function deleteCtx(i) { const o = customContexts[i].name; customContexts.splice(i, 1); function update(ns) { ns.forEach(n => { if (n.context === o) n.context = "Global"; if (n.subtasks) update(n.subtasks); }); } update(tasks); saveCategories(); refreshAllDropdowns(); renderTasks(); renderManageItems(); await saveData(); }
         
         function openEditModal(id) { 
             editState = { id, parentId: getParentId(id) }; let target = null;
@@ -1861,8 +1863,8 @@
                 closeEditModal(); 
                 refreshAllDropdowns(); 
                 renderTasks(); 
-                await saveData(); 
                 showNotice("Guardado exitosamente"); 
+                await saveData(); 
             } catch (err) {
                 console.error("Fallo al guardar edición:", err);
                 showNotice("Error interno al guardar dependencias.");
@@ -1897,8 +1899,10 @@
                 findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = finalDate; if(type==='custom') nodes[i].time = finalTime; }); 
             }
             
-            await saveData(); renderTasks(); renderCalendar(); closePostponeModal(); 
+            closePostponeModal();
+            renderTasks(); renderCalendar(); 
             showNotice(postponeState.id === 'bulk' ? `Tareas pospuestas a ${formatDateAR(finalDate, finalTime)}` : `Pospuesto a ${formatDateAR(finalDate, finalTime)}`); 
+            await saveData(); 
         }
 
         function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.isDeleted) continue; if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = getLocalDateString(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
