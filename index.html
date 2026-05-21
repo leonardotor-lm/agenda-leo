@@ -1364,7 +1364,7 @@
             refreshAllDropdowns(); renderTasks(); closeBulkMoveModal(); toggleBulkMode(); showNotice("Reubicación masiva aplicada"); await saveData();
         }
 
-        function pruneTree(nodeList) {
+        function pruneTree(nodeList, inFocusedSubtree = false) {
             if (!Array.isArray(nodeList)) return [];
             const todayStr = getLocalDateString(new Date());
             const tomorrowObj = new Date(); tomorrowObj.setDate(tomorrowObj.getDate() + 1); const tomorrowStr = getLocalDateString(tomorrowObj);
@@ -1390,9 +1390,14 @@
                 else if (currentState.view === 'week') { if (!node.date || node.date > endOfWeekStr) matches = false; }
                 else if (currentState.view === 'fortnight') { if (!node.date || node.date > fortnightStr) matches = false; }
                 else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
-                else if (currentState.view === 'focus') { matches = matches && containsFocusNode(node, currentState.focusTargetId); }
+                else if (currentState.view === 'focus') { 
+                    if (!inFocusedSubtree && !containsFocusNode(node, currentState.focusTargetId)) {
+                        matches = false;
+                    }
+                }
 
-                const prunedSubtasks = pruneTree(node.subtasks || []);
+                const isNowFocused = inFocusedSubtree || (currentState.view === 'focus' && node.id === currentState.focusTargetId);
+                const prunedSubtasks = pruneTree(node.subtasks || [], isNowFocused);
                 
                 if (matches || prunedSubtasks.length > 0) { 
                     return { ...node, subtasks: prunedSubtasks, _explicitMatch: matches }; 
