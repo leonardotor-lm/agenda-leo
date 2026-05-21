@@ -369,6 +369,22 @@
                     <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
                 </div>
 
+                <!-- SECCIÓN DE ADJUNTOS (NUEVA) -->
+                <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
+                        <div class="relative">
+                            <input type="file" id="attachFileInput" class="hidden" onchange="handleFileUpload(event, 'add')">
+                            <button onclick="document.getElementById('attachFileInput').click()" class="text-[10px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-3 py-1.5 rounded transition-colors font-semibold flex items-center gap-1.5">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                Añadir Archivo (Max 5MB)
+                            </button>
+                        </div>
+                    </div>
+                    <div id="addAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
+                    <div id="addAttachmentsList" class="flex flex-wrap gap-2 empty:hidden mt-2"></div>
+                </div>
+
                 <div class="pt-4 border-t border-navy-700 space-y-4">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -438,6 +454,22 @@
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Notas</label>
                     <textarea id="editNotesInput" rows="2" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                </div>
+
+                <!-- SECCIÓN DE ADJUNTOS (EDICIÓN) -->
+                <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
+                        <div class="relative">
+                            <input type="file" id="editAttachFileInput" class="hidden" onchange="handleFileUpload(event, 'edit')">
+                            <button onclick="document.getElementById('editAttachFileInput').click()" class="text-[10px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-3 py-1.5 rounded transition-colors font-semibold flex items-center gap-1.5">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                Añadir Archivo (Max 5MB)
+                            </button>
+                        </div>
+                    </div>
+                    <div id="editAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
+                    <div id="editAttachmentsList" class="flex flex-wrap gap-2 empty:hidden mt-2"></div>
                 </div>
 
                 <div class="pt-4 border-t border-navy-700 space-y-4">
@@ -549,6 +581,7 @@
 
         let isBulkMode = false;
         let selectedTaskIds = new Set();
+        let currentAttachments = []; 
 
         const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
         
@@ -795,7 +828,7 @@
                 const subtasksArray = aiResult.subtasks || [];
                 const newSubtasks = subtasksArray.map(st => {
                     const stDate = new Date(baseDateObj); stDate.setDate(stDate.getDate() + (st.offsetDays || 0));
-                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', notes: '', subtasks: [] };
+                    return { id: Date.now() + Math.random(), name: st.name || "Subtarea", area: document.getElementById('editAreaInput').value, context: document.getElementById('editContextInput').value, priority: 'baja', date: getLocalDateString(stDate), time: '', reminder: false, status: 'pending', notes: '', attachments: [], subtasks: [] };
                 });
 
                 if (newSubtasks.length > 0) {
@@ -859,6 +892,7 @@
                     if(!n.priority) { n.priority = 'baja'; changed = true; }
                     if(!n.subtasks) { n.subtasks = []; changed = true; }
                     if(n.notes === undefined) { n.notes = ''; changed = true; }
+                    if(n.attachments === undefined) { n.attachments = []; changed = true; }
                     if(!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
                     if(n.context === undefined) { n.context = ''; changed = true; }
                     if(n.time === undefined) { n.time = ''; changed = true; }
@@ -868,7 +902,7 @@
             }
             if (Array.isArray(tasks)) {
                 walk(tasks, null);
-                if (changed) saveData(); // Esto corre en background si es necesario
+                if (changed) saveData();
             } else {
                 tasks = [];
             }
@@ -878,20 +912,101 @@
             localStorage.setItem('leo_agenda_v10', JSON.stringify(tasks));
             if (dbUrl) {
                 showSyncStatus('saving');
-                const payload = { tasks, customAreas, customContexts, expandedStates };
                 try {
-                    await fetch(dbUrl, {
+                    const response = await fetch(dbUrl, {
                         method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(tasks)
                     });
-                    showSyncStatus('synced');
+                    
+                    if (response.ok) {
+                        showSyncStatus('synced');
+                    } else {
+                        throw new Error('Respuesta no exitosa del servidor');
+                    }
                 } catch (e) {
                     console.error("Fallo de guardado remoto, operando en caché local:", e);
                     showSyncStatus('offline');
                 }
             }
+        }
+
+        async function handleFileUpload(event, mode) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!dbUrl) {
+                showNotice("Requerís una URL de Google Apps Script configurada para adjuntar archivos.");
+                event.target.value = '';
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                showNotice("El archivo supera el límite de 5MB.");
+                event.target.value = '';
+                return;
+            }
+
+            const loadingEl = document.getElementById(mode === 'add' ? 'addAttachmentLoading' : 'editAttachmentLoading');
+            loadingEl.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result.split(',')[1];
+                
+                const payload = {
+                    action: 'uploadFile',
+                    fileName: file.name,
+                    mimeType: file.type,
+                    fileData: base64Data
+                };
+
+                try {
+                    const response = await fetch(dbUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error("Error en la subida");
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success' && result.url) {
+                        currentAttachments.push({ name: file.name, url: result.url });
+                        renderAttachments(mode);
+                    } else {
+                        throw new Error(result.message || "Fallo en la recepción del enlace");
+                    }
+                } catch (err) {
+                    console.error("Error al subir archivo:", err);
+                    showNotice("Fallo al subir. Revisá que el script tenga permisos de Google Drive.");
+                } finally {
+                    loadingEl.classList.add('hidden');
+                    event.target.value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeAttachment(index, mode) {
+            currentAttachments.splice(index, 1);
+            renderAttachments(mode);
+        }
+
+        function renderAttachments(mode) {
+            const listEl = document.getElementById(mode === 'add' ? 'addAttachmentsList' : 'editAttachmentsList');
+            if (currentAttachments.length === 0) {
+                listEl.innerHTML = '';
+                return;
+            }
+
+            listEl.innerHTML = currentAttachments.map((att, i) => `
+                <div class="flex items-center gap-2 bg-navy-800 border border-navy-600 px-3 py-1.5 rounded-md max-w-full">
+                    <a href="${att.url}" target="_blank" class="text-[11px] text-brand-500 hover:underline truncate max-w-[200px]" title="${att.name}">${att.name}</a>
+                    <button onclick="removeAttachment(${i}, '${mode}')" class="text-navy-400 hover:text-danger-500 focus:outline-none shrink-0" title="Quitar archivo">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            `).join('');
         }
 
         async function loadDataFromCloud() {
@@ -901,12 +1016,8 @@
                 const res = await fetch(dbUrl);
                 if (!res.ok) throw new Error("Fallo HTTP: " + res.status);
                 const data = await res.json();
-                if (data && data.tasks) {
-                    tasks = data.tasks;
-                    customAreas = data.customAreas || ["Inbox", "Trabajo", "Personal", "Estudios"];
-                    customContexts = data.customContexts || [];
-                    expandedStates = data.expandedStates || {};
-
+                if (data && data.length >= 0) { 
+                    tasks = data;
                     migrateAndNormalizeTasks();
                     saveCategories();
                     localStorage.setItem('leo_agenda_v10', JSON.stringify(tasks));
@@ -961,8 +1072,8 @@
             }
         }
 
-        function exportData() { const blob = new Blob([JSON.stringify({ tasks, customAreas, customContexts, expandedStates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `agenda_backup_leo.json`; a.click(); URL.revokeObjectURL(url); }
-        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if (data.tasks) tasks = data.tasks; if (data.customAreas) customAreas = data.customAreas; if (data.customContexts) customContexts = data.customContexts; if (data.expandedStates) expandedStates = data.expandedStates; saveCategories(); refreshAllDropdowns(); updateUI(); showNotice("Respaldo restaurado."); await saveData(); } catch (err) { showNotice("Error de archivo."); } }; reader.readAsText(file); event.target.value = ''; }
+        function exportData() { const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `agenda_backup_leo.json`; a.click(); URL.revokeObjectURL(url); }
+        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async function(e) { try { const data = JSON.parse(e.target.result); if (Array.isArray(data)) tasks = data; saveCategories(); refreshAllDropdowns(); updateUI(); showNotice("Respaldo restaurado."); await saveData(); } catch (err) { showNotice("Error de archivo."); } }; reader.readAsText(file); event.target.value = ''; }
 
         function navigate(view, areaName = null, pushHistory = true) { if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); currentState.view = view; currentState.selectedArea = areaName; currentState.focusTargetId = null; if (window.innerWidth < 768) toggleSidebar(false); updateUI(); }
         function goBack() { if (navHistory.length > 0) { currentState = navHistory.pop(); updateUI(); } }
@@ -1408,6 +1519,7 @@
                     time: '', 
                     reminder: false,
                     notes: '',
+                    attachments: [],
                     subtasks: [] 
                 });
             });
@@ -1466,7 +1578,10 @@
                 const isMuted = !task._explicitMatch && isFiltering && !isTrash;
                 
                 const hasNotes = task.notes && task.notes.trim() !== '';
+                const hasAttachments = task.attachments && task.attachments.length > 0;
+
                 const notesIconHtml = hasNotes ? `<svg class="w-3.5 h-3.5 text-navy-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene notas adjuntas"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>` : '';
+                const attachIconHtml = hasAttachments ? `<svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Contiene archivos adjuntos"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>` : '';
 
                 const hasContext = task.context && task.context.trim() !== '';
                 let contextHtml = '';
@@ -1516,6 +1631,7 @@
                                             <span class="text-[14px] font-medium task-name ${nameStyle} truncate ${isTrash ? 'pointer-events-none' : 'cursor-pointer'} select-none leading-none transition-colors" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">${task.name}</span>
                                             ${task.reminder ? `<svg class="w-3.5 h-3.5 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` : ''}
                                             ${notesIconHtml}
+                                            ${attachIconHtml}
                                             ${(isTrash && hasChildren) ? `<span class="text-[9px] bg-navy-700 text-navy-400 px-1.5 py-0.5 rounded ml-2">+${task.subtasks.length} sub.</span>` : ''}
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
@@ -1595,6 +1711,8 @@
             document.getElementById('areaInput').value = defaultArea; 
             document.getElementById('contextInput').value = ''; 
             
+            currentAttachments = [];
+            renderAttachments('add');
             updateAddParentDropdown();
             
             document.getElementById('addTaskModal').classList.remove('hidden'); 
@@ -1638,7 +1756,13 @@
                     } 
                 } 
                 
-                const newTask = { id: Date.now(), name, area, context, priority, recurrence, date: finalDate, time: timeInput, notes, reminder, businessDayNum, completionBased, status: 'pending', subtasks: [] };
+                const newTask = { 
+                    id: Date.now(), 
+                    name, area, context, priority, recurrence, date: finalDate, time: timeInput, notes, reminder, businessDayNum, completionBased, 
+                    status: 'pending', 
+                    attachments: [...currentAttachments],
+                    subtasks: [] 
+                };
                 
                 if (parentId === 'root') {
                     tasks.unshift(newTask); 
@@ -1848,6 +1972,8 @@
             document.getElementById('editRecurrenceInput').value = target.recurrence || 'none'; document.getElementById('editBusinessDayInput').value = target.businessDayNum || '5'; 
             document.getElementById('editCompletionBasedInput').checked = target.completionBased || false; toggleEditRecurrenceFields(); 
             
+            currentAttachments = target.attachments ? [...target.attachments] : [];
+            renderAttachments('edit');
             updateEditParentDropdown();
             document.getElementById('editModal').classList.remove('hidden'); 
         }
@@ -1870,6 +1996,7 @@
 
                 if (targetTask) {
                     targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrence = recurrence; targetTask.businessDayNum = businessDayNum; targetTask.completionBased = completionBased;
+                    targetTask.attachments = [...currentAttachments];
                     
                     function propagate(subnodes) { 
                         if (!Array.isArray(subnodes)) return;
@@ -1881,6 +2008,7 @@
                 } else {
                     findAndMutateTask(id, (nodes, i) => {
                         const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrence = recurrence; n.businessDayNum = businessDayNum; n.completionBased = completionBased;
+                        n.attachments = [...currentAttachments];
                         function propagate(subnodes) { 
                             if (!Array.isArray(subnodes)) return;
                             subnodes.forEach(sn => { sn.area = area; if(sn.subtasks) propagate(sn.subtasks); }); 
