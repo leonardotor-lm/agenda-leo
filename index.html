@@ -329,28 +329,34 @@
         </button>
     </main>
 
-    <!-- Modal: Nueva Tarea -->
+    <!-- Modal: Nueva Tarea (Estilo Compacto) -->
     <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-navy-800 w-full max-w-2xl rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
-            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center shrink-0">
-                <h3 class="font-semibold text-lg text-navy-50">Nueva Tarea</h3>
-                <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        <div class="bg-navy-800 w-full max-w-lg rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
+            <div class="p-4 md:p-5 border-b border-navy-700 flex justify-between items-center shrink-0">
+                <h3 class="font-semibold text-base text-navy-50">Nueva Tarea</h3>
+                <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-5 md:p-6 space-y-6 overflow-y-auto flex-1">
-                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-xl focus:outline-none border-b border-navy-700 pb-3 bg-transparent placeholder:text-navy-500 text-navy-50">
+            <div class="p-4 md:p-5 space-y-4 overflow-y-auto flex-1">
+                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-lg focus:outline-none border-b border-navy-700 pb-2 bg-transparent placeholder:text-navy-500 text-navy-50">
                 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="space-y-1">
-                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div>
-                        <select id="areaInput" onchange="updateAddParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                        <div class="flex flex-wrap justify-between items-center ml-1 gap-1">
+                            <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label>
+                            <button onclick="openCategoryModal('area')" class="text-[10px] text-brand-500 font-bold hover:underline shrink-0">+ Nueva</button>
+                        </div>
+                        <select id="areaInput" onchange="updateAddParentDropdown()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
-                        <div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div>
-                        <select id="contextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                        <div class="flex flex-wrap justify-between items-center ml-1 gap-1">
+                            <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label>
+                            <button onclick="openCategoryModal('context')" class="text-[10px] text-brand-500 font-bold hover:underline shrink-0">+ Nuevo</button>
+                        </div>
+                        <select id="contextInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">Prioridad</label>
-                        <select id="priorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                        <select id="priorityInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
                             <option value="urgente">Urgente</option>
                             <option value="alta">Alta</option>
                             <option value="media">Media</option>
@@ -361,50 +367,50 @@
 
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label>
-                    <select id="parentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                    <select id="parentInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                 </div>
 
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Notas</label>
-                    <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                    <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
                 </div>
 
                 <!-- SECCIÓN DE ADJUNTOS -->
-                <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
+                <div class="space-y-2 border border-navy-700 rounded-md p-3 bg-navy-900/50">
                     <div class="flex justify-between items-center">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
                         <div class="relative">
                             <input type="file" id="attachFileInput" class="hidden" onchange="handleFileUpload(event, 'add')">
-                            <button onclick="document.getElementById('attachFileInput').click()" class="text-[10px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-3 py-1.5 rounded transition-colors font-semibold flex items-center gap-1.5">
+                            <button onclick="document.getElementById('attachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                 Añadir Archivo (Max 5MB)
                             </button>
                         </div>
                     </div>
                     <div id="addAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
-                    <div id="addAttachmentsList" class="flex flex-wrap gap-2 empty:hidden mt-2"></div>
+                    <div id="addAttachmentsList" class="flex flex-wrap gap-1.5 empty:hidden mt-1.5"></div>
                 </div>
 
-                <div class="pt-4 border-t border-navy-700 space-y-4">
+                <div class="pt-3 border-t border-navy-700 space-y-3">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación de Tarea</span>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="timeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="dateInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="timeInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="recurrenceInput" onchange="toggleRecurrenceFields()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none" selected>No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
-                    <div id="recurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        <div id="businessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">¿Qué día hábil?</label><select id="businessDayInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5" selected>5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
-                        <div id="completionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-full"><input type="checkbox" id="completionBasedInput" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                    <div id="recurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div id="businessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase ml-1 tracking-wider">¿Qué día hábil?</label><select id="businessDayInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5" selected>5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="completionBasedContainer" class="hidden flex items-center pt-5"><label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-full"><input type="checkbox" id="completionBasedInput" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Repetir desde completado</span></label></div>
                     </div>
 
-                    <div class="pt-2">
-                        <label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                    <div class="pt-1">
+                        <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end p-5 md:p-6 border-t border-navy-700 shrink-0">
-                <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-10 py-3 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Tarea</button>
+            <div class="flex justify-end p-4 md:p-5 border-t border-navy-700 shrink-0">
+                <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-8 py-2.5 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Tarea</button>
             </div>
         </div>
     </div>
@@ -418,29 +424,29 @@
     <!-- Modal: Gestionar -->
     <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
     
-    <!-- Modal: Edición de Tarea -->
+    <!-- Modal: Edición de Tarea (Estilo Compacto) -->
     <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
         <div class="bg-navy-800 w-full max-w-lg rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
-            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center shrink-0">
+            <div class="p-4 md:p-5 border-b border-navy-700 flex justify-between items-center shrink-0">
                 <div class="flex items-center space-x-3">
-                    <h3 id="editModalTitle" class="font-semibold text-lg text-navy-50">Editar Tarea</h3>
-                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-3 py-1 bg-navy-700 border border-navy-600 hover:bg-navy-600 text-brand-400 rounded-md text-xs font-semibold transition-colors focus:outline-none">
+                    <h3 id="editModalTitle" class="font-semibold text-base text-navy-50">Editar Tarea</h3>
+                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-2.5 py-1 bg-navy-700 border border-navy-600 hover:bg-navy-600 text-brand-400 rounded-md text-xs font-semibold transition-colors focus:outline-none">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                         <span>Desglosar con IA</span>
                     </button>
                 </div>
-                <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
-            <div class="p-5 md:p-6 overflow-y-auto space-y-6 flex-1">
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nombre</label><input type="text" id="editNameInput" class="w-full text-base bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500"></div>
+            <div class="p-4 md:p-5 overflow-y-auto space-y-4 flex-1">
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Nombre</label><input type="text" id="editNameInput" class="w-full text-base bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2.5 rounded-md focus:outline-none focus:border-brand-500"></div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
-                    <div class="space-y-1"><div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area', true)" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nueva</button></div><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
-                    <div class="space-y-1"><div class="flex justify-between items-center ml-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context', true)" class="text-[10px] text-brand-500 font-bold hover:underline">+ Nuevo</button></div><select id="editContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Estado</label><select id="editStatusInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select></div>
+                    <div class="space-y-1"><div class="flex flex-wrap justify-between items-center ml-1 gap-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Área</label><button onclick="openCategoryModal('area', true)" class="text-[10px] text-brand-500 font-bold hover:underline shrink-0">+ Nueva</button></div><select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                    <div class="space-y-1"><div class="flex flex-wrap justify-between items-center ml-1 gap-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Contexto</label><button onclick="openCategoryModal('context', true)" class="text-[10px] text-brand-500 font-bold hover:underline shrink-0">+ Nuevo</button></div><select id="editContextInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Prioridad</label>
-                        <select id="editPriorityInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                        <select id="editPriorityInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
                             <option value="urgente">Urgente</option>
                             <option value="alta">Alta</option>
                             <option value="media">Media</option>
@@ -449,50 +455,50 @@
                     </div>
                 </div>
                 
-                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Dependencia</label><select id="editParentInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
 
                 <div class="space-y-1">
                     <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Notas</label>
-                    <textarea id="editNotesInput" rows="2" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                    <textarea id="editNotesInput" rows="2" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
                 </div>
 
                 <!-- SECCIÓN DE ADJUNTOS -->
-                <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
+                <div class="space-y-2 border border-navy-700 rounded-md p-3 bg-navy-900/50">
                     <div class="flex justify-between items-center">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
                         <div class="relative">
                             <input type="file" id="editAttachFileInput" class="hidden" onchange="handleFileUpload(event, 'edit')">
-                            <button onclick="document.getElementById('editAttachFileInput').click()" class="text-[10px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-3 py-1.5 rounded transition-colors font-semibold flex items-center gap-1.5">
+                            <button onclick="document.getElementById('editAttachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                 Añadir Archivo (Max 5MB)
                             </button>
                         </div>
                     </div>
                     <div id="editAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
-                    <div id="editAttachmentsList" class="flex flex-wrap gap-2 empty:hidden mt-2"></div>
+                    <div id="editAttachmentsList" class="flex flex-wrap gap-1.5 empty:hidden mt-1.5"></div>
                 </div>
 
-                <div class="pt-4 border-t border-navy-700 space-y-4">
+                <div class="pt-3 border-t border-navy-700 space-y-3">
                     <span class="text-[10px] text-navy-400 font-bold uppercase tracking-wider block ml-1">Programación</span>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="editTimeInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
-                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Fecha</label><input type="date" id="editDateInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Hora</label><input type="time" id="editTimeInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Repetición</label><select id="editRecurrenceInput" onchange="toggleEditRecurrenceFields()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="none">No repite</option><option value="diario">Diario</option><option value="semanal">Semanal</option><option value="mensual">Mensual</option><option value="dia_habil">Día hábil del mes</option></select></div>
                     </div>
                     
-                    <div id="editRecurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        <div id="editBusinessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">¿Qué día hábil?</label><select id="editBusinessDayInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5">5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
-                        <div id="editCompletionBasedContainer" class="hidden flex items-center pt-6"><label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-full"><input type="checkbox" id="editCompletionBasedInput" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Repetir desde completado</span></label></div>
+                    <div id="editRecurrenceOptionsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div id="editBusinessDayContainer" class="hidden space-y-1"><label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">¿Qué día hábil?</label><select id="editBusinessDayInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="1">1°</option><option value="2">2°</option><option value="3">3°</option><option value="4">4°</option><option value="5">5°</option><option value="6">6°</option><option value="7">7°</option><option value="8">8°</option><option value="9">9°</option><option value="10">10°</option></select></div>
+                        <div id="editCompletionBasedContainer" class="hidden flex items-center pt-5"><label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-full"><input type="checkbox" id="editCompletionBasedInput" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Repetir desde completado</span></label></div>
                     </div>
                     
-                    <div class="pt-2">
-                        <label class="flex items-center space-x-3 bg-navy-900 border border-navy-700 px-4 py-3 rounded-md cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-4 h-4 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-xs text-navy-300 font-semibold">Activar recordatorio</span></label>
+                    <div class="pt-1">
+                        <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
                 </div>
             </div>
-            <div class="p-5 md:p-6 border-t border-navy-700 flex space-x-3 shrink-0">
-                <button onclick="closeEditModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
-                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Cambios</button>
+            <div class="p-4 md:p-5 border-t border-navy-700 flex space-x-3 shrink-0">
+                <button onclick="closeEditModal()" class="w-1/2 bg-navy-700 text-navy-50 py-2.5 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -1045,7 +1051,7 @@
             listEl.innerHTML = currentAttachments.map((att, i) => `
                 <div class="flex items-center gap-2 bg-navy-800 border border-navy-600 px-3 py-1.5 rounded-md max-w-full">
                     <a href="${att.url}" target="_blank" class="text-[11px] text-brand-500 hover:underline truncate max-w-[200px]" title="${att.name}">${att.name}</a>
-                    <button onclick="removeAttachment(${i}, '${mode}')" class="text-navy-400 hover:text-danger-500 focus:outline-none shrink-0" title="Quitar archivo">
+                    <button onclick="removeAttachment(${index}, '${mode}')" class="text-navy-400 hover:text-danger-500 focus:outline-none shrink-0" title="Quitar archivo">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -1614,6 +1620,7 @@
             const isTrash = currentState.view === 'trash';
             const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
             const isFiltering = currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status === 'in_progress' || currentFilters.status === 'completed';
+            const todayStr = getLocalDateString(new Date());
 
             return nodes.map(task => {
                 const hasChildren = task.subtasks && task.subtasks.length > 0;
@@ -1621,13 +1628,16 @@
                 const logicalDepth = path.length + 1;
 
                 const indentClass = isTrash ? 'pl-3 md:pl-5' : (indentMap[logicalDepth] || 'pl-20 md:pl-22');
+                const isCompleted = task.status === 'completed';
+                const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
                 let dateDisplayHTML = `<span class="text-brand-500/80 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-brand-500/80 inline-block"></span> Sin fecha</span>`;
                 if (task.date) {
                     const dateFormatted = formatDateAR(task.date, false);
-                    dateDisplayHTML = `<span class="text-brand-500 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide">
+                    const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500';
+                    dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide">
                         <svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        ${dateFormatted}
+                        ${dateFormatted} ${isOverdue ? '(Vencida)' : ''}
                     </span>`;
                 }
 
@@ -1650,7 +1660,6 @@
                     </div>
                 ` : '';
 
-                const isCompleted = task.status === 'completed';
                 const isInProgress = task.status === 'in_progress';
                 const isMuted = !task._explicitMatch && isFiltering && !isTrash;
                 
@@ -1679,7 +1688,7 @@
                     `;
                 }
 
-                const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
+                const nameStyle = isCompleted ? 'line-through text-navy-500' : (isOverdue ? 'text-danger-500 font-semibold' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50')));
 
                 let actionButtonsHtml = '';
                 if (isTrash) {
