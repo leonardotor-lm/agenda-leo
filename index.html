@@ -369,7 +369,7 @@
                     <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
                 </div>
 
-                <!-- SECCIÓN DE ADJUNTOS (NUEVA) -->
+                <!-- SECCIÓN DE ADJUNTOS -->
                 <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
                     <div class="flex justify-between items-center">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
@@ -456,7 +456,7 @@
                     <textarea id="editNotesInput" rows="2" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
                 </div>
 
-                <!-- SECCIÓN DE ADJUNTOS (EDICIÓN) -->
+                <!-- SECCIÓN DE ADJUNTOS -->
                 <div class="space-y-2 border border-navy-700 rounded-md p-4 bg-navy-900/50">
                     <div class="flex justify-between items-center">
                         <label class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Archivos Adjuntos</label>
@@ -548,6 +548,25 @@
         </div>
     </div>
 
+    <!-- Modal: Confirmación Personalizada (Reemplaza a los confirm nativos) -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center animate-in">
+                <h3 id="confirmModalTitle" class="font-semibold text-lg text-navy-50">Confirmar acción</h3>
+                <button onclick="closeConfirmModal(false)" class="text-navy-400 hover:text-navy-50 focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-5 md:p-6 space-y-4">
+                <p id="confirmModalMessage" class="text-sm text-navy-300 leading-relaxed"></p>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeConfirmModal(false)" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                    <button onclick="closeConfirmModal(true)" id="confirmModalBtnAction" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="notification-box" class="fixed bottom-8 right-24 z-[70] flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
@@ -608,6 +627,30 @@
 
         let speechRecognition = null;
         let isListening = false;
+
+        /* Gestor del Diálogo de Confirmación Personalizado */
+        let confirmCallback = null;
+        function showConfirm(title, message, onConfirm, isDanger = false) {
+            document.getElementById('confirmModalTitle').innerText = title;
+            document.getElementById('confirmModalMessage').innerText = message;
+            confirmCallback = onConfirm;
+            
+            const btnConfirm = document.getElementById('confirmModalBtnAction');
+            if (isDanger) {
+                btnConfirm.className = "w-1/2 bg-danger-500 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-danger-600 transition-colors focus:outline-none";
+            } else {
+                btnConfirm.className = "w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none";
+            }
+            
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+        function closeConfirmModal(accepted) {
+            document.getElementById('confirmModal').classList.add('hidden');
+            if (accepted && confirmCallback) {
+                confirmCallback();
+            }
+            confirmCallback = null;
+        }
 
         function showSyncStatus(status) {
             const dot = document.getElementById('sync-status-dot');
@@ -1264,14 +1307,20 @@
 
         async function bulkDelete() {
             if (selectedTaskIds.size === 0) return showNotice("No hay tareas seleccionadas");
-            if (!confirm(`¿Mover las ${selectedTaskIds.size} tareas seleccionadas a la papelera?`)) return;
-            selectedTaskIds.forEach(id => { 
-                findAndMutateTask(id, (nodes, i) => { 
-                    nodes[i].isDeleted = true; 
-                    nodes[i].deletedAt = Date.now();
-                }); 
-            });
-            toggleBulkMode(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas movidas a la papelera"); await saveData();
+            showConfirm(
+                "Mover a la papelera",
+                `¿Querés mover las ${selectedTaskIds.size} tareas seleccionadas a la papelera?`,
+                async () => {
+                    selectedTaskIds.forEach(id => { 
+                        findAndMutateTask(id, (nodes, i) => { 
+                            nodes[i].isDeleted = true; 
+                            nodes[i].deletedAt = Date.now();
+                        }); 
+                    });
+                    toggleBulkMode(); refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tareas enviadas a la papelera"); await saveData();
+                },
+                true
+            );
         }
 
         async function bulkComplete() {
@@ -1352,6 +1401,29 @@
             }).filter(Boolean);
 
             return sortTasks(filtered);
+        }
+
+        /* Función para aplanar el árbol de tareas filtradas.
+          Garantiza que las tareas hijas se muestren en la raíz de la lista cuando la madre no exprese el vencimiento,
+          almacenando la cadena de dependencias en `_parentPath` para su renderizado.
+        */
+        function flattenMatches(prunedNodes, path = []) {
+            let flat = [];
+            if (!Array.isArray(prunedNodes)) return flat;
+            prunedNodes.forEach(node => {
+                const currentPath = [...path, { id: node.id, name: node.name }];
+                if (node._explicitMatch) {
+                    flat.push({
+                        ...node,
+                        _parentPath: path,
+                        subtasks: [] // Se limpia la jerarquía física para renderizar de forma aplanada
+                    });
+                }
+                if (node.subtasks && node.subtasks.length > 0) {
+                    flat = flat.concat(flattenMatches(node.subtasks, currentPath));
+                }
+            });
+            return flat;
         }
 
         function findAndMutateTask(taskId, mutationFn) {
@@ -1590,6 +1662,18 @@
                     contextHtml = `<span class="mx-1 shrink-0 text-navy-600">&bull;</span><span class="truncate font-semibold tracking-wide ${ctxStyles.text} max-w-[80px] sm:max-w-[120px]">${task.context}</span>`;
                 }
 
+                // Renderizado de dependencias (para vistas aplanadas)
+                let dependencyHtml = '';
+                if (task._parentPath && task._parentPath.length > 0) {
+                    const immediateParent = task._parentPath[task._parentPath.length - 1];
+                    dependencyHtml = `
+                        <span class="mx-1 shrink-0 text-navy-600">&bull;</span>
+                        <span class="text-navy-400 truncate max-w-[150px] sm:max-w-[250px]" title="Subtarea de: ${immediateParent.name}">
+                            Subtarea de: <span class="text-brand-400 font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); focusTaskTree(${immediateParent.id})">${immediateParent.name}</span>
+                        </span>
+                    `;
+                }
+
                 const nameStyle = isCompleted ? 'line-through text-navy-500' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50'));
 
                 let actionButtonsHtml = '';
@@ -1636,7 +1720,7 @@
                                         </div>
                                         <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
                                             <div class="flex items-center text-navy-400 ${isTrash ? '' : 'cursor-pointer hover:text-navy-300'} transition-colors shrink-0 min-w-0" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">
-                                                <span class="truncate">${task.area}</span>${contextHtml}
+                                                <span class="truncate">${task.area}</span>${contextHtml}${dependencyHtml}
                                             </div>
                                             ${inlineAddHtml}
                                         </div>
@@ -1675,7 +1759,16 @@
                 collectDeleted(tasks);
                 nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
             } else {
-                nodesToRender = pruneTree(tasks);
+                const pruned = pruneTree(tasks);
+                const isFiltering = currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending';
+                // Determinamos si se debe aplicar la vista aplanada (vistas de fecha o filtros de búsqueda activos)
+                const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || isFiltering;
+                
+                if (isFlatView) {
+                    nodesToRender = flattenMatches(pruned);
+                } else {
+                    nodesToRender = pruned;
+                }
             }
 
             if (nodesToRender.length === 0) { 
@@ -1829,17 +1922,27 @@
         
         async function deleteTaskUniversal(id) { 
             const task = getTaskById(id);
-            if (task && task.subtasks && task.subtasks.length > 0) {
-                if (!confirm(`La tarea "${task.name}" contiene ${task.subtasks.length} subtarea(s). ¿Estás seguro de enviarla a la papelera junto con todas sus dependencias?`)) {
-                    return;
-                }
+            if (!task) return;
+            
+            const performDelete = async () => {
+                if (findAndMutateTask(id, (nodes, i) => {
+                    nodes[i].isDeleted = true;
+                    nodes[i].deletedAt = Date.now();
+                })) { 
+                    refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData();
+                } 
+            };
+
+            if (task.subtasks && task.subtasks.length > 0) {
+                showConfirm(
+                    "Eliminar con subtareas",
+                    `La tarea "${task.name}" contiene ${task.subtasks.length} subtarea(s). ¿Estás seguro de enviarla a la papelera junto con todas sus dependencias?`,
+                    performDelete,
+                    true
+                );
+            } else {
+                await performDelete();
             }
-            if (findAndMutateTask(id, (nodes, i) => {
-                nodes[i].isDeleted = true;
-                nodes[i].deletedAt = Date.now();
-            })) { 
-                refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData();
-            } 
         }
 
         async function restoreTask(id) {
@@ -1852,31 +1955,43 @@
         }
 
         async function hardDeleteTask(id) {
-            if (!confirm("¿Eliminar definitivamente esta tarea? Esta acción no se puede deshacer.")) return;
-            if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) {
-                refreshAllDropdowns(); renderTasks(); showNotice("Eliminada permanentemente"); await saveData();
-            }
+            showConfirm(
+                "Eliminar definitivamente",
+                "¿Eliminar definitivamente esta tarea? Esta acción no se puede deshacer.",
+                async () => {
+                    if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) {
+                        refreshAllDropdowns(); renderTasks(); showNotice("Eliminada permanentemente"); await saveData();
+                    }
+                },
+                true
+            );
         }
 
         async function emptyTrash() {
-            if (!confirm("¿Vaciar toda la papelera? No podrás recuperar estas tareas.")) return;
-            let changed = false;
-            function walk(nodes) {
-                for (let i = nodes.length - 1; i >= 0; i--) {
-                    if (nodes[i].isDeleted) {
-                        nodes.splice(i, 1);
-                        changed = true;
-                    } else if (nodes[i].subtasks) {
-                        walk(nodes[i].subtasks);
+            showConfirm(
+                "Vaciar Papelera",
+                "¿Vaciar toda la papelera? No podrás recuperar estas tareas.",
+                async () => {
+                    let changed = false;
+                    function walk(nodes) {
+                        for (let i = nodes.length - 1; i >= 0; i--) {
+                            if (nodes[i].isDeleted) {
+                                nodes.splice(i, 1);
+                                changed = true;
+                            } else if (nodes[i].subtasks) {
+                                walk(nodes[i].subtasks);
+                            }
+                        }
                     }
-                }
-            }
-            walk(tasks);
-            if (changed) {
-                renderTasks(); showNotice("Papelera vaciada"); await saveData();
-            } else {
-                showNotice("La papelera ya está vacía");
-            }
+                    walk(tasks);
+                    if (changed) {
+                        renderTasks(); showNotice("Papelera vaciada"); await saveData();
+                    } else {
+                        showNotice("La papelera ya está vacía");
+                    }
+                },
+                true
+            );
         }
         
         function saveCategories() { localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas)); localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts)); }
