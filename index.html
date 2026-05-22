@@ -616,6 +616,7 @@
         let isBulkMode = false;
         let selectedTaskIds = new Set();
         let currentAttachments = []; 
+        let manageSelectedColor = 'blue';
 
         const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
         
@@ -2054,6 +2055,40 @@
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
         function addAreaFromManage() { const input = document.getElementById('new-manage-area-input'); const val = input.value.trim(); if (val && !customAreas.includes(val)) { customAreas.push(val); saveCategories(); refreshAllDropdowns(); renderManageItems(); showNotice("Área agregada"); } }
         
+        function selectNewCtxColorFromManage(color) {
+            manageSelectedColor = color;
+            Object.keys(contextColorMap).forEach(c => {
+                const btn = document.getElementById(`manage-new-color-${c}`);
+                if (btn) {
+                    if (c === color) {
+                        btn.classList.add('border-navy-50', 'scale-110');
+                        btn.classList.remove('border-transparent');
+                    } else {
+                        btn.classList.remove('border-navy-50', 'scale-110');
+                        btn.classList.add('border-transparent');
+                    }
+                }
+            });
+        }
+
+        async function addCtxFromManage() {
+            const input = document.getElementById('new-manage-ctx-input');
+            const val = input.value.trim();
+            if (!val) return;
+            
+            const finalVal = val.startsWith('@') ? val : '@' + val;
+            if (!customContexts.some(c => c.name === finalVal)) {
+                customContexts.push({ name: finalVal, color: manageSelectedColor });
+                saveCategories();
+                refreshAllDropdowns();
+                renderManageItems();
+                showNotice("Contexto agregado");
+                await saveData();
+            } else {
+                showNotice("Ese contexto ya existe");
+            }
+        }
+
         function renderManageItems() { 
             const container = document.getElementById('manageModalContent'); container.innerHTML = ''; 
             let html = '<h4 class="text-xs font-bold text-brand-500 uppercase tracking-wider mb-3">Áreas y Proyectos</h4>';
@@ -2070,6 +2105,20 @@
             }
 
             html += '<h4 class="text-xs font-bold text-brand-500 uppercase tracking-wider mb-3 pt-4 border-t border-navy-700">Contextos</h4>';
+            
+            // Campo de creación de contextos con selector de color simplificado
+            html += `<div class="space-y-2 mb-4">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="new-manage-ctx-input" placeholder="Crear nuevo contexto (ej. @trabajo)..." class="w-full text-sm border border-navy-700 bg-navy-900 text-navy-50 px-3 py-2.5 rounded-md focus:outline-none focus:border-brand-500">
+                            <button onclick="addCtxFromManage()" class="bg-brand-500 text-navy-900 px-4 py-2.5 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">+</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 justify-center py-2 bg-navy-900/60 rounded-md border border-navy-700/50" id="new-manage-ctx-color-options">
+                            ${Object.keys(contextColorMap).map(color => `
+                                <button onclick="selectNewCtxColorFromManage('${color}')" class="w-5 h-5 rounded-full ${contextColorMap[color].dot} border-2 ${manageSelectedColor === color ? 'border-navy-50 scale-110' : 'border-transparent'} hover:scale-110" id="manage-new-color-${color}"></button>
+                            `).join('')}
+                        </div>
+                    </div>`;
+
             if (customContexts.length === 0) {
                 html += '<p class="text-sm text-navy-400 italic text-center py-4">No hay contextos.</p>'; 
             } else {
