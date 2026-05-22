@@ -398,7 +398,6 @@
                         <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
 
-                    <!-- NUEVO MOTOR DE RECURRENCIA (ADD) -->
                     <div class="flex items-center justify-between p-3 bg-navy-900 border border-navy-700 rounded-lg mt-3">
                         <div class="flex flex-col">
                             <span class="text-[11px] font-bold text-navy-50">Automatizar periodicidad</span>
@@ -414,11 +413,11 @@
                             <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Frecuencia</label>
                             <select id="addFrequency" onchange="refreshRecurrenceUI('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
                                 <option value="daily">Diaria</option>
-                                <option value="weekly">Semanal Alterna</option>
+                                <option value="weekly">Semanal (Días específicos)</option>
                                 <option value="monthly">Mensual</option>
                                 <option value="yearly">Anual</option>
                                 <option value="after_completion">Días después de completar</option>
-                                <option value="custom">Personalizada (Meses)</option>
+                                <option value="custom">Mensual extendida (Personalizada)</option>
                             </select>
                         </div>
                         <div class="flex items-center space-x-3">
@@ -570,7 +569,6 @@
                         <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
 
-                    <!-- NUEVO MOTOR DE RECURRENCIA (EDIT) -->
                     <div class="flex items-center justify-between p-3 bg-navy-900 border border-navy-700 rounded-lg mt-3">
                         <div class="flex flex-col">
                             <span class="text-[11px] font-bold text-navy-50">Automatizar periodicidad</span>
@@ -586,11 +584,11 @@
                             <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Frecuencia</label>
                             <select id="editFrequency" onchange="refreshRecurrenceUI('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
                                 <option value="daily">Diaria</option>
-                                <option value="weekly">Semanal Alterna</option>
+                                <option value="weekly">Semanal (Días específicos)</option>
                                 <option value="monthly">Mensual</option>
                                 <option value="yearly">Anual</option>
                                 <option value="after_completion">Días después de completar</option>
-                                <option value="custom">Personalizada (Meses)</option>
+                                <option value="custom">Mensual extendida (Personalizada)</option>
                             </select>
                         </div>
                         <div class="flex items-center space-x-3">
