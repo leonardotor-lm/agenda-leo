@@ -789,29 +789,40 @@
         let speechRecognition = null; let isListening = false;
         let confirmCallback = null;
 
-        // INICIALIZACIÓN
+        // INICIALIZACIÓN SECUENCIAL
         window.onload = async () => { 
             initSpeechRecognition(); 
-            migrateAndNormalizeTasks(); 
             updateDateDisplay(); 
             document.getElementById('settingsDbUrlInput').value = dbUrl;
             document.getElementById('settingsApiKeyInput').value = customApiKey;
-            if (dbUrl) { await loadDataFromCloud(); } 
-            else { showSyncStatus('none'); refreshAllDropdowns(); updateUI(); }
+            
+            let loadedFromCloud = false;
+            if (dbUrl) { 
+                loadedFromCloud = await loadDataFromCloud(); 
+            } else { 
+                showSyncStatus('none'); 
+            }
+
+            const hadMutations = migrateAndNormalizeTasks(); 
+            if (hadMutations && dbUrl && loadedFromCloud) {
+                await saveData();
+            }
+
+            refreshAllDropdowns(); 
+            updateUI(); 
         };
 
-        // FUNCIONES DE CATEGORIAS FALTANTES
         function saveCategories() {
             localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas));
             localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts));
         }
 
-        // MIGRACIÓN Y NORMALIZACIÓN DE ESQUEMAS
+        // MIGRACIÓN Y NORMALIZACIÓN
         function migrateAndNormalizeTasks() { 
-            if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); }
+            let changed = false;
+            if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); changed = true; }
             const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
             const now = Date.now();
-            let changed = false;
             
             function walk(nodes, parentArea) {
                 if (!Array.isArray(nodes)) return;
@@ -828,7 +839,6 @@
                     if (n.context === undefined) { n.context = ''; changed = true; }
                     if (n.time === undefined) { n.time = ''; changed = true; }
                     
-                    // Migrar recurrencia plana a recurrenceRule estructurado
                     if (n.recurrence && n.recurrence !== 'none' && !n.recurrenceRule) {
                         n.recurrenceRule = {
                             frequency: n.recurrence === 'diario' ? 'daily' : n.recurrence === 'semanal' ? 'weekly' : 'monthly',
@@ -846,39 +856,64 @@
                     if (n.subtasks) walk(n.subtasks, n.area);
                 }
             }
-            if (Array.isArray(tasks)) { walk(tasks, null); if (changed) saveData(); } else { tasks = []; }
+            if (Array.isArray(tasks)) { walk(tasks, null); } else { tasks = []; changed = true; }
+            if (changed) { localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); }
+            return changed;
         }
 
         // COMUNICACIÓN CLOUD Y PERSISTENCIA
         async function saveData() {
             localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks));
-            if (dbUrl) {
-                showSyncStatus('saving');
-                try {
-                    const response = await fetch(dbUrl, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(tasks) 
-                    });
-                    if (response.ok) showSyncStatus('synced'); else throw new Error('Respuesta HTTP no exitosa');
-                } catch (e) { console.error(e); showSyncStatus('offline'); }
+            if (!dbUrl) return;
+            showSyncStatus('saving');
+            try {
+                const response = await fetch(dbUrl, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(tasks),
+                    redirect: 'follow'
+                });
+                if (!response.ok) throw new Error('Respuesta HTTP no exitosa: ' + response.status);
+                const textData = await response.text();
+                if (textData.trim().startsWith('<')) throw new Error('El servidor devolvió HTML (Posible error de permisos)');
+                showSyncStatus('synced');
+            } catch (e) { 
+                console.error("Error al guardar:", e); 
+                showSyncStatus('offline'); 
+                showNotice("Fallo al guardar: " + e.message.substring(0, 40));
             }
         }
+        
         async function loadDataFromCloud() {
-            if (!dbUrl) return;
+            if (!dbUrl) return false;
             showSyncStatus('loading');
             try {
-                const res = await fetch(dbUrl);
+                const res = await fetch(dbUrl, { method: 'GET', redirect: 'follow' });
                 if (!res.ok) throw new Error("Fallo HTTP: " + res.status);
-                const data = await res.json();
-                if (data && data.length >= 0) { 
-                    tasks = data; migrateAndNormalizeTasks(); saveCategories(); localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); showSyncStatus('synced'); showNotice("Sincronizado");
+                const textData = await res.text();
+                
+                if (textData.trim().startsWith('<')) {
+                    throw new Error("La URL devolvió código HTML. Revisá los permisos de tu Apps Script.");
                 }
-            } catch (e) { console.error(e); showSyncStatus('offline'); showNotice("Modo Offline."); }
-            refreshAllDropdowns(); updateUI(); 
+
+                const data = JSON.parse(textData);
+                if (Array.isArray(data)) { 
+                    tasks = data; 
+                    localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); 
+                    showSyncStatus('synced'); 
+                    showNotice("Sincronizado");
+                    return true;
+                }
+                return false;
+            } catch (e) { 
+                console.error("Error al cargar:", e); 
+                showSyncStatus('offline'); 
+                showNotice("Modo Offline: " + e.message.substring(0, 50)); 
+                return false;
+            }
         }
 
-        // LÓGICA DE RECURRENCIA (NUEVO MOTOR)
+        // LÓGICA DE RECURRENCIA
         function parseDateLocal(dateStr) { if (!dateStr) return new Date(); const [y, m, d] = dateStr.split('-').map(Number); return new Date(y, m - 1, d, 0, 0, 0, 0); }
         function formatDateLocal(dateObj) { const y = dateObj.getFullYear(); const m = String(dateObj.getMonth() + 1).padStart(2, '0'); const d = String(dateObj.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
         function isBusinessDay(date) { const day = date.getDay(); return day !== 0 && day !== 6; }
@@ -1064,7 +1099,26 @@
         function getTaskById(id) { let found = null; function walk(nodes) { for (let n of nodes) { if (n.id === id) { found = n; return; } if (n.subtasks && n.subtasks.length > 0) walk(n.subtasks); } } walk(tasks); return found; }
         function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
         function getAllAreasOrdered() { const uniqueTasksAreas = getUniqueValues(tasks, 'area').filter(Boolean); const orphaned = uniqueTasksAreas.filter(a => !customAreas.includes(a)).sort((a, b) => String(a).localeCompare(String(b))); return [...customAreas.filter(Boolean), ...orphaned]; }
-        function focusTaskTree(id) { currentState.focusTargetId = id; navigate('focus'); }
+        
+        // CORRECCIÓN: NAVEGACIÓN Y FOCO
+        function navigate(view, areaName = null, pushHistory = true, focusId = null) { 
+            if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); 
+            currentState.view = view; 
+            currentState.selectedArea = areaName; 
+            currentState.focusTargetId = focusId; 
+            if (window.innerWidth < 768) toggleSidebar(false); 
+            updateUI(); 
+        }
+        function focusTaskTree(id) { 
+            navigate('focus', null, true, id); 
+        }
+        function goBack() { 
+            if (navHistory.length > 0) { 
+                currentState = navHistory.pop(); 
+                updateUI(); 
+            } 
+        }
+
         function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute("href", dataStr); dlAnchorElem.setAttribute("download", "agenda_backup.json"); dlAnchorElem.click(); }
         function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
 
@@ -1076,9 +1130,7 @@
         function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
         function updateEditParentDropdown() { const area = document.getElementById('editAreaInput').value; const taskId = editState.id; const select = document.getElementById('editParentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value || editState.parentId; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
 
-        // NAVIGATION & FILTERS
-        function navigate(view, areaName = null, pushHistory = true) { if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); currentState.view = view; currentState.selectedArea = areaName; currentState.focusTargetId = null; if (window.innerWidth < 768) toggleSidebar(false); updateUI(); }
-        function goBack() { if (navHistory.length > 0) { currentState = navHistory.pop(); updateUI(); } }
+        // NAVIGATION & FILTERS CONTINUATION
         function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
         function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'none-asc'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
         function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
@@ -1138,6 +1190,7 @@
                 else if (currentState.view === 'fortnight') { if (!node.date || node.date > fortnightStr) matches = false; }
                 else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
                 else if (currentState.view === 'focus') { if (!inFocusedSubtree && !containsFocusNode(node, currentState.focusTargetId)) matches = false; }
+                
                 const isNowFocused = inFocusedSubtree || (currentState.view === 'focus' && node.id === currentState.focusTargetId);
                 const prunedSubtasks = pruneTree(node.subtasks || [], isNowFocused);
                 if (matches || prunedSubtasks.length > 0) return { ...node, subtasks: prunedSubtasks, _explicitMatch: matches }; 
@@ -1257,7 +1310,7 @@
         
         function openManageModal() { document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
-        function renderManageItems() { /* Simplified manage items rendering, assume same as before */ document.getElementById('manageModalContent').innerHTML = '<p class="text-xs text-navy-400">Panel de gestión disponible.</p>'; }
+        function renderManageItems() { document.getElementById('manageModalContent').innerHTML = '<p class="text-xs text-navy-400">Panel de gestión disponible.</p>'; }
         
         async function setTaskStatus(id, newStatus) { findAndMutateTask(id, (nodes, i) => { nodes[i].status = newStatus; }); renderTasks(); renderCalendar(); await saveData(); }
         async function restoreTask(id) { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = false; delete nodes[i].deletedAt; })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); } }
