@@ -800,6 +800,12 @@
             else { showSyncStatus('none'); refreshAllDropdowns(); updateUI(); }
         };
 
+        // FUNCIONES DE CATEGORIAS FALTANTES
+        function saveCategories() {
+            localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas));
+            localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts));
+        }
+
         // MIGRACIÓN Y NORMALIZACIÓN DE ESQUEMAS
         function migrateAndNormalizeTasks() { 
             if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); }
@@ -849,7 +855,11 @@
             if (dbUrl) {
                 showSyncStatus('saving');
                 try {
-                    const response = await fetch(dbUrl, { method: 'POST', body: JSON.stringify(tasks) });
+                    const response = await fetch(dbUrl, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(tasks) 
+                    });
                     if (response.ok) showSyncStatus('synced'); else throw new Error('Respuesta HTTP no exitosa');
                 } catch (e) { console.error(e); showSyncStatus('offline'); }
             }
@@ -1054,6 +1064,9 @@
         function getTaskById(id) { let found = null; function walk(nodes) { for (let n of nodes) { if (n.id === id) { found = n; return; } if (n.subtasks && n.subtasks.length > 0) walk(n.subtasks); } } walk(tasks); return found; }
         function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
         function getAllAreasOrdered() { const uniqueTasksAreas = getUniqueValues(tasks, 'area').filter(Boolean); const orphaned = uniqueTasksAreas.filter(a => !customAreas.includes(a)).sort((a, b) => String(a).localeCompare(String(b))); return [...customAreas.filter(Boolean), ...orphaned]; }
+        function focusTaskTree(id) { currentState.focusTargetId = id; navigate('focus'); }
+        function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute("href", dataStr); dlAnchorElem.setAttribute("download", "agenda_backup.json"); dlAnchorElem.click(); }
+        function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
 
         // RENDERING
         function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
@@ -1255,7 +1268,32 @@
         function toggleBulkSelect(id, e) { if (e) e.stopPropagation(); if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); else selectedTaskIds.add(id); document.getElementById('bulkCount').innerText = selectedTaskIds.size; renderTasks(); }
         async function bulkDelete() { if (selectedTaskIds.size === 0) return; showConfirm("Eliminar", `¿Enviar ${selectedTaskIds.size} tareas a la papelera?`, async () => { selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })); toggleBulkMode(); renderTasks(); showNotice("Tareas eliminadas"); await saveData(); }, true); }
         async function bulkComplete() { if (selectedTaskIds.size === 0) return; selectedTaskIds.forEach(id => toggleTaskUniversal(id)); toggleBulkMode(); renderTasks(); showNotice("Tareas actualizadas"); await saveData(); }
-        function openBulkMoveModal() { /* Simplified */ showNotice("Múltiple reubicación disponible."); }
+        
+        function openBulkMoveModal() { 
+            if (selectedTaskIds.size === 0) return;
+            populateSelect('bulkAreaInput', getAllAreasOrdered());
+            const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort();
+            populateSelect('bulkContextInput', allContexts, "Mantener contexto actual", "");
+            document.getElementById('bulkMoveModal').classList.remove('hidden'); 
+        }
+        function closeBulkMoveModal() { document.getElementById('bulkMoveModal').classList.add('hidden'); }
+        async function applyBulkMove() {
+            const newArea = document.getElementById('bulkAreaInput').value;
+            const newContext = document.getElementById('bulkContextInput').value;
+            selectedTaskIds.forEach(id => {
+                findAndMutateTask(id, (nodes, i) => {
+                    nodes[i].area = newArea;
+                    if (newContext !== "") nodes[i].context = newContext;
+                });
+            });
+            toggleBulkMode();
+            closeBulkMoveModal();
+            refreshAllDropdowns();
+            renderTasks();
+            showNotice("Tareas reubicadas");
+            await saveData();
+        }
+
         function openPostponeModal(id, e) { if (e) e.stopPropagation(); postponeState = { id }; document.getElementById('postponeModal').classList.remove('hidden'); }
         function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
         async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
@@ -1264,6 +1302,9 @@
         function renderAttachments(mode) {}
         
         function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
+        function processOmnibarCommand() { showNotice("Comando procesado localmente (Simulación)."); document.getElementById('omnibarInput').value = ''; }
+        function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
+        function breakdownTaskWithAI() { showNotice("Funcionalidad de IA en desarrollo."); }
     </script>
 </body>
 </html>
