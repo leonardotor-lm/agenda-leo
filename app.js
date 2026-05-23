@@ -11,6 +11,7 @@ function safeParse(key, fallback) {
     catch (e) { return fallback; }
 }
 
+// Inicialización de la base local
 let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
 let customAreas = safeParse('leo_custom_areas', ["Inbox", "Trabajo", "Personal", "Estudios"]);
@@ -317,7 +318,18 @@ async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task
 // MODALS LIFECYCLE
 function openAddTaskModal() { 
     document.getElementById('taskInput').value = ''; 
-    document.getElementById('dateInput').value = ''; 
+    
+    // CAMBIO: Evalúa la vista temporal para predefinir la fecha si corresponde
+    let defaultDate = '';
+    if (currentState.view === 'today') {
+        defaultDate = formatDateLocal(new Date());
+    } else if (currentState.view === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        defaultDate = formatDateLocal(tomorrow);
+    }
+    document.getElementById('dateInput').value = defaultDate;
+    
     document.getElementById('timeInput').value = ''; 
     document.getElementById('notesInput').value = ''; 
     document.getElementById('priorityInput').value = 'baja';
@@ -573,21 +585,20 @@ function buildTaskRows(nodes, path = []) {
 function renderTasks() {
     const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
     let nodesToRender = [];
-    let taskCount = 0; // NUEVO: Inicializar contador
+    let taskCount = 0; 
     
     if (currentState.view === 'trash') {
         function collectDeleted(nodes) { nodes.forEach(n => { if (n.isDeleted) nodesToRender.push(n); else if (n.subtasks) collectDeleted(n.subtasks); }); }
         collectDeleted(tasks); nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
-        taskCount = nodesToRender.length; // NUEVO: Contar elementos en papelera
+        taskCount = nodesToRender.length; 
     } else {
         const pruned = pruneTree(tasks);
-        const flatMatches = flattenMatches(pruned); // OPTIMIZADO: Captura todas las coincidencias exactas post-filtros
+        const flatMatches = flattenMatches(pruned); 
         const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
         nodesToRender = isFlatView ? flatMatches : pruned;
-        taskCount = flatMatches.length; // NUEVO: El array aplanado tiene la cuenta exacta
+        taskCount = flatMatches.length; 
     }
 
-    // NUEVO: Inyección de contador en el título de la vista (actualización en tiempo real)
     const titleEl = document.getElementById('view-title');
     if (titleEl) {
         const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
