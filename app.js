@@ -566,13 +566,26 @@ function buildTaskRows(nodes, path = []) {
 function renderTasks() {
     const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
     let nodesToRender = [];
+    let taskCount = 0; // NUEVO: Inicializar contador
+    
     if (currentState.view === 'trash') {
         function collectDeleted(nodes) { nodes.forEach(n => { if (n.isDeleted) nodesToRender.push(n); else if (n.subtasks) collectDeleted(n.subtasks); }); }
         collectDeleted(tasks); nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+        taskCount = nodesToRender.length; // NUEVO: Contar elementos en papelera
     } else {
         const pruned = pruneTree(tasks);
+        const flatMatches = flattenMatches(pruned); // OPTIMIZADO: Captura todas las coincidencias exactas post-filtros
         const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
-        nodesToRender = isFlatView ? flattenMatches(pruned) : pruned;
+        nodesToRender = isFlatView ? flatMatches : pruned;
+        taskCount = flatMatches.length; // NUEVO: El array aplanado tiene la cuenta exacta
+    }
+
+    // NUEVO: Inyección de contador en el título de la vista (actualización en tiempo real)
+    const titleEl = document.getElementById('view-title');
+    if (titleEl) {
+        const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
+        let baseTitle = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+        titleEl.innerText = `${baseTitle} (${taskCount})`;
     }
 
     if (nodesToRender.length === 0) { list.innerHTML = ''; empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales."; empty.classList.remove('hidden'); return; }
