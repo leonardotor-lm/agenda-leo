@@ -241,7 +241,7 @@
                 </select>
                 <select onchange="updateSort()" id="sortSelect" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[120px] sm:max-w-none text-ellipsis">
                     <option value="none-asc">Ordenar por...</option>
-                    <option value="date-asc">Fecha (ascendente)</option>
+                    <option value="date-asc" selected>Fecha (ascendente)</option>
                     <option value="date-desc">Fecha (descendente)</option>
                     <option value="priority-desc">Prioridad (mayor a menor)</option>
                     <option value="priority-asc">Prioridad (menor a mayor)</option>
@@ -378,7 +378,7 @@
                         <div class="relative">
                             <input type="file" id="attachFileInput" class="hidden" onchange="handleFileUpload(event, 'add')">
                             <button onclick="document.getElementById('attachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                 Añadir Archivo
                             </button>
                         </div>
@@ -550,7 +550,7 @@
                         <div class="relative">
                             <input type="file" id="editAttachFileInput" class="hidden" onchange="handleFileUpload(event, 'edit')">
                             <button onclick="document.getElementById('editAttachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                 Añadir Archivo
                             </button>
                         </div>
@@ -754,7 +754,7 @@
 
         let currentState = { view: 'today', selectedArea: null, focusTargetId: null };
         let currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
-        let currentSort = { by: 'none', order: 'asc' };
+        let currentSort = { by: 'date', order: 'asc' }; // CORRECCIÓN: Orden predeterminado por fecha de vencimiento
         let navHistory = [];
 
         let isBulkMode = false;
@@ -1052,7 +1052,7 @@
         // MODALS LIFECYCLE
         function openAddTaskModal() { 
             document.getElementById('taskInput').value = ''; 
-            document.getElementById('dateInput').value = ''; // CORRECCIÓN: La fecha base para nuevas tareas se inicializa en blanco por defecto.
+            document.getElementById('dateInput').value = ''; 
             document.getElementById('timeInput').value = ''; 
             document.getElementById('notesInput').value = ''; 
             document.getElementById('priorityInput').value = 'baja';
@@ -1088,7 +1088,7 @@
         function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
         // UTILIDADES Y RENDERIZADO VISUAL
-        function showConfirm(title, message, onConfirm, isDanger = false) { document.getElementById('confirmModalTitle').innerText = title; document.getElementById('confirmModalMessage').innerText = message; confirmCallback = onConfirm; const btnConfirm = document.getElementById('confirmModalBtnAction'); if (isDanger) btnConfirm.className = "w-1/2 bg-danger-500 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-danger-600 focus:outline-none"; else btnConfirm.className = "w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 focus:outline-none"; document.getElementById('confirmModal').classList.remove('hidden'); }
+        function showConfirm(title, message, onConfirm, isDanger = false) { document.getElementById('confirmModalTitle').innerText = title; document.getElementById('confirmModalMessage').innerText = message; confirmCallback = onConfirm; const btnConfirm = document.getElementById('confirmModalBtnAction'); if (isDanger) btnConfirm.className = "w-1/2 bg-danger-500 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-danger-600 focus:outline-none"; else btnConfirm.className = "w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none"; document.getElementById('confirmModal').classList.remove('hidden'); }
         function closeConfirmModal(accepted) { document.getElementById('confirmModal').classList.add('hidden'); if (accepted && confirmCallback) confirmCallback(); confirmCallback = null; }
         function showSyncStatus(status) { const dot = document.getElementById('sync-status-dot'); const text = document.getElementById('sync-status-text'); if (!dot || !text) return; dot.className = "w-1.5 h-1.5 rounded-full transition-all"; switch(status) { case 'saving': dot.classList.add('bg-blue-500', 'animate-pulse'); text.innerText = "Guardando..."; text.className = "text-blue-400"; break; case 'synced': dot.classList.add('bg-emerald-500'); text.innerText = "Sincronizado"; text.className = "text-emerald-400"; break; case 'loading': dot.classList.add('bg-brand-500', 'animate-pulse'); text.innerText = "Cargando..."; text.className = "text-brand-400"; break; case 'offline': dot.classList.add('bg-yellow-500'); text.innerText = "Modo Offline"; text.className = "text-yellow-400"; break; case 'error': dot.classList.add('bg-red-500'); text.innerText = "Fallo de Red"; text.className = "text-red-400"; break; default: dot.classList.add('bg-navy-500'); text.innerText = "Nube Desconectada"; text.className = "text-navy-400"; break; } }
         function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
@@ -1111,7 +1111,7 @@
         function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
         function getAllAreasOrdered() { const uniqueTasksAreas = getUniqueValues(tasks, 'area').filter(Boolean); const orphaned = uniqueTasksAreas.filter(a => !customAreas.includes(a)).sort((a, b) => String(a).localeCompare(String(b))); return [...customAreas.filter(Boolean), ...orphaned]; }
         
-        // CORRECCIÓN: NAVEGACIÓN Y FOCO
+        // NAVEGACIÓN Y FOCO
         function navigate(view, areaName = null, pushHistory = true, focusId = null) { 
             if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); 
             currentState.view = view; 
@@ -1143,7 +1143,7 @@
 
         // NAVIGATION & FILTERS CONTINUATION
         function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
-        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'none-asc'; currentSort = { by: 'none', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
+        function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'date-asc'; currentSort = { by: 'date', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
         function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
 
         function updateUI() {
@@ -1210,6 +1210,7 @@
             return sortTasks(filtered);
         }
 
+        // FLATTEN MATCHES
         function flattenMatches(prunedNodes, path = []) {
             let flat = []; if (!Array.isArray(prunedNodes)) return flat;
             prunedNodes.forEach(node => {
@@ -1219,6 +1220,7 @@
             }); return flat;
         }
 
+        // BUILD TASK ROWS
         function buildTaskRows(nodes, path = []) {
             if (!nodes || nodes.length === 0) return '';
             const isTrash = currentState.view === 'trash';
@@ -1234,7 +1236,8 @@
                 const isCompleted = task.status === 'completed';
                 const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
-                let dateDisplayHTML = `<span class="text-brand-500/80 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-brand-500/80 inline-block"></span> Sin fecha</span>`;
+                // CORRECCIÓN: El indicador de "Sin fecha" se muestra ahora en un tono grisáceo neutro (text-navy-400) en lugar de color destacado
+                let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
                 if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
 
                 const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
