@@ -321,7 +321,14 @@ function openAddTaskModal() {
     document.getElementById('timeInput').value = ''; 
     document.getElementById('notesInput').value = ''; 
     document.getElementById('priorityInput').value = 'baja';
-    document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
+    
+    // CAMBIO: Selecciona automáticamente el área si el usuario está visualizando una específica.
+    if (currentState.view === 'area' && currentState.selectedArea) {
+        document.getElementById('areaInput').value = currentState.selectedArea;
+    } else {
+        document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
+    }
+    
     document.getElementById('contextInput').value = ''; 
     currentAttachments = []; 
     renderAttachments('add'); 
