@@ -39,73 +39,7 @@
             }
         }
     </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; background-color: theme('colors.navy.800'); color: theme('colors.navy.50'); -webkit-font-smoothing: antialiased; }
-        
-        /* Checkbox Multi-Estado */
-        input[type="checkbox"].task-cb {
-            appearance: none; background-color: transparent; margin: 0;
-            border: 2px solid #8A9DB5; border-radius: 4px;
-            width: 1.1rem; height: 1.1rem; display: grid; place-content: center;
-            cursor: pointer; transition: all 0.2s ease-in-out;
-        }
-        
-        input[type="checkbox"].task-cb::before {
-            content: ""; width: 0.65em; height: 0.65em; transform: scale(0);
-            transition: 120ms transform ease-in-out;
-            box-shadow: inset 1em 1em #122028;
-            background-color: #122028;
-            transform-origin: center;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-        }
-
-        input[type="checkbox"].task-cb.is-in-progress {
-            border-color: #50A3AB;
-            background-color: rgba(80, 163, 171, 0.1);
-        }
-        input[type="checkbox"].task-cb.is-in-progress::before {
-            content: ""; width: 0.4em; height: 0.4em; transform: scale(1);
-            background-color: #50A3AB;
-            box-shadow: none; clip-path: none; border-radius: 1px;
-        }
-        
-        input[type="checkbox"].task-cb:checked { 
-            background-color: #324252; 
-            border-color: #324252;
-        }
-        input[type="checkbox"].task-cb:checked::before { 
-            transform: scale(1); 
-            box-shadow: inset 1em 1em #122028;
-            background-color: #122028;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-            border-radius: 0;
-        }
-
-        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238A9DB5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1rem; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1 / 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; position: relative; border: 1px solid transparent; }
-        .calendar-day:hover { background-color: theme('colors.navy.700'); border-color: theme('colors.navy.600'); }
-        .calendar-day.today { background-color: theme('colors.brand.500'); color: theme('colors.navy.900'); font-weight: 600; }
-        
-        .modal-overlay { background-color: rgba(10, 19, 24, 0.7); backdrop-filter: blur(4px); }
-        .slide-up { animation: slideUp 0.2s ease-out forwards; }
-        @keyframes slideUp { from { transform: translateY(5px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        @keyframes pulse-ring { 0%, 100% { background-color: rgba(246, 114, 58, 0.1); } 50% { background-color: rgba(246, 114, 58, 0.3); } }
-        .highlight-focus { animation: pulse-ring 0.8s ease-in-out 3; transition: background-color 0.3s ease-in-out; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .ai-loading-gradient { background: linear-gradient(90deg, theme('colors.navy.800') 0%, theme('colors.navy.700') 50%, theme('colors.navy.800') 100%); background-size: 200% 100%; animation: aiGradientMove 2s infinite linear; }
-        @keyframes aiGradientMove { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        
-        /* Estilos para el selector de días de la semana */
-        .day-btn { width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border: 1px solid theme('colors.navy.600'); color: theme('colors.navy.300'); }
-        .day-btn.selected { background-color: theme('colors.brand.500'); color: theme('colors.navy.900'); border-color: theme('colors.brand.500'); transform: scale(1.1); }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body class="flex h-screen overflow-hidden text-navy-50 bg-navy-800 relative">
 
@@ -754,7 +688,7 @@
 
         let currentState = { view: 'today', selectedArea: null, focusTargetId: null };
         let currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
-        let currentSort = { by: 'date', order: 'asc' }; // CORRECCIÓN: Orden predeterminado por fecha de vencimiento
+        let currentSort = { by: 'date', order: 'asc' }; // Orden predeterminado por fecha de vencimiento
         let navHistory = [];
 
         let isBulkMode = false;
@@ -783,7 +717,7 @@
             emerald: { dot: 'bg-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
             fuchsia: { dot: 'bg-fuchsia-500', text: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20' }
         };
-        
+
         let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
         let draggedAreaIndex = null;
         let speechRecognition = null; let isListening = false;
@@ -883,7 +817,7 @@
                 showNotice("Fallo al guardar: " + e.message.substring(0, 40));
             }
         }
-        
+
         async function loadDataFromCloud() {
             if (!dbUrl) return false;
             showSyncStatus('loading');
@@ -1236,7 +1170,7 @@
                 const isCompleted = task.status === 'completed';
                 const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
-                // CORRECCIÓN: El indicador de "Sin fecha" se muestra ahora en un tono grisáceo neutro (text-navy-400) en lugar de color destacado
+                // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
                 let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
                 if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
 
@@ -1322,21 +1256,22 @@
         function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
         function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg></div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
-        
+
         function openManageModal() { document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
         function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
         function renderManageItems() { document.getElementById('manageModalContent').innerHTML = '<p class="text-xs text-navy-400">Panel de gestión disponible.</p>'; }
-        
+
         async function setTaskStatus(id, newStatus) { findAndMutateTask(id, (nodes, i) => { nodes[i].status = newStatus; }); renderTasks(); renderCalendar(); await saveData(); }
         async function restoreTask(id) { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = false; delete nodes[i].deletedAt; })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); } }
         async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definitivamente?", async () => { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { refreshAllDropdowns(); renderTasks(); showNotice("Eliminada"); await saveData(); } }, true); }
         async function emptyTrash() { showConfirm("Vaciar Papelera", "¿Vaciar toda la papelera?", async () => { let changed = false; function walk(nodes) { for (let i = nodes.length - 1; i >= 0; i--) { if (nodes[i].isDeleted) { nodes.splice(i, 1); changed = true; } else if (nodes[i].subtasks) walk(nodes[i].subtasks); } } walk(tasks); if (changed) { renderTasks(); showNotice("Papelera vaciada"); await saveData(); } }, true); }
-        
+
+        // BULK ACTIONS
         function toggleBulkMode() { isBulkMode = !isBulkMode; selectedTaskIds.clear(); document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); document.getElementById('bulkCount').innerText = '0'; renderTasks(); }
         function toggleBulkSelect(id, e) { if (e) e.stopPropagation(); if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); else selectedTaskIds.add(id); document.getElementById('bulkCount').innerText = selectedTaskIds.size; renderTasks(); }
         async function bulkDelete() { if (selectedTaskIds.size === 0) return; showConfirm("Eliminar", `¿Enviar ${selectedTaskIds.size} tareas a la papelera?`, async () => { selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })); toggleBulkMode(); renderTasks(); showNotice("Tareas eliminadas"); await saveData(); }, true); }
         async function bulkComplete() { if (selectedTaskIds.size === 0) return; selectedTaskIds.forEach(id => toggleTaskUniversal(id)); toggleBulkMode(); renderTasks(); showNotice("Tareas actualizadas"); await saveData(); }
-        
+
         function openBulkMoveModal() { 
             if (selectedTaskIds.size === 0) return;
             populateSelect('bulkAreaInput', getAllAreasOrdered());
@@ -1362,13 +1297,16 @@
             await saveData();
         }
 
+        // POSTPONE ACTIONS
         function openPostponeModal(id, e) { if (e) e.stopPropagation(); postponeState = { id }; document.getElementById('postponeModal').classList.remove('hidden'); }
         function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
         async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
-        
+
+        // FILE UPLOAD AND ATTACHMENTS
         async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
         function renderAttachments(mode) {}
-        
+
+        // STUBS / SIMULATION IA
         function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
         function processOmnibarCommand() { showNotice("Comando procesado localmente (Simulación)."); document.getElementById('omnibarInput').value = ''; }
         function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
