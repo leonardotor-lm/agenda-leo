@@ -1,148 +1,175 @@
-# agenda-leo
-Agenda LMT
+# Gestor de Tareas Personal - Arquitectura Desacoplada e Integración de Servicios
 
-Gestor de Tareas Personal
+Este proyecto consiste en una aplicación web autoportante diseñada para la gestión y organización avanzada de tareas cotidianas y profesionales. Su diseño arquitectónico prioriza la velocidad de ejecución, la estabilidad del entorno y la simplicidad estructural. El sistema ejecuta la totalidad de su lógica de interfaz en el cliente mediante tecnologías web estándar y delega la persistencia de datos y la automatización de servicios en la nube de Google, utilizando una pasarela intermedia construida en Google Apps Script.
 
-Este proyecto consiste en una aplicación web autoportante para la gestión y organización de tareas cotidianas y profesionales. Su diseño prioriza la velocidad de ejecución y la simplicidad arquitectónica: se ejecuta por completo en el cliente mediante tecnologías web estándar y delega la persistencia de datos en una hoja de cálculo de Google Sheets a través de una pasarela intermedia construida en Google Apps Script.
+La presente documentación funciona como un mapa técnico exhaustivo para el desarrollo, el mantenimiento futuro y la inducción de asistentes de Inteligencia Artificial que colaboren activamente en la evolución y escalabilidad del software.
 
-La presente documentación sirve como mapa técnico para el desarrollo, mantenimiento futuro e inducción de asistentes de Inteligencia Artificial que colaboren en la evolución del software.
+---
 
-1. Arquitectura y Tecnologías
+## Arquitectura y Tecnologías
 
-El sistema adopta una arquitectura desacoplada cliente-servidor de alta fidelidad y bajo acoplamiento:
+El sistema adopta una arquitectura desacoplada de tipo cliente-servidor, caracterizada por una alta fidelidad funcional y un bajo acoplamiento entre sus componentes:
 
-Frontend (Cliente): * HTML5 y Tailwind CSS: Utilizados para la estructuración y el diseño de la interfaz gráfica de usuario. El estilo visual aprovecha variables de Tailwind para mantener una estética unificada.
+### Frontend (Cliente)
+* **HTML5 y Tailwind CSS:** Utilizados de manera exclusiva para la estructuración semántica y el diseño responsivo de la interfaz gráfica de usuario. El estilo visual aprovecha las variables y clases utilitarias de Tailwind para consolidar una estética limpia, minimalista y unificada.
+* **Vanilla JavaScript (ES6+):** Constituye el motor principal de ejecución en el navegador. La aplicación se adhiere firmemente a una filosofía *frameworkless* (sin dependencias externas), lo que asegura una carga instantánea, un rendimiento óptimo en el renderizado del DOM y la eliminación absoluta de conflictos de compatibilidad por librerías desactualizadas.
 
-Vanilla JavaScript (ES6+): Motor principal de ejecución. No se emplean dependencias de frameworks (frameworkless), lo que garantiza una carga instantánea y la ausencia de problemas de compatibilidad por dependencias desactualizadas.
+### Backend y Servicios en la Nube (Persistencia y Automatización)
+* **Google Sheets:** Funciona como la base de datos principal del sistema. Utiliza un modelo no relacional simplificado de un solo registro para almacenar el estado global de la agenda.
+* **Google Drive:** Actúa como el repositorio de almacenamiento para los archivos adjuntos vinculados a las tareas, organizándolos dentro de una carpeta dedicada y gestionando los permisos de visibilidad de manera automatizada.
+* **Google Calendar:** Opera como un receptor pasivo y unidireccional de eventos temporales. El sistema interactúa con este servicio a través de la API nativa de Google para registrar alertas en la agenda del usuario sin permitir flujos inversos de modificación.
+* **Google Apps Script (GAS):** Entorno de ejecución basado en la nube que expone un servicio web mediante los métodos estándar `doGet` y `doPost`. Funciona como el nexo lógico indispensable que recibe, procesa, valida y sirve las peticiones HTTP originadas por el cliente.
 
-Backend (Persistencia y Almacenamiento):
+---
 
-Google Sheets: Funciona como base de datos relacional simplificada de un solo registro.
+## Estructura de Archivos del Proyecto
 
-Google Drive: Almacena los archivos adjuntos vinculados a las tareas en una carpeta dedicada.
+La distribución de componentes en el repositorio se organiza de forma modular para garantizar la mantenibilidad del código:
 
-Google Apps Script (GAS): Expone un servicio web mediante métodos doGet y doPost, actuando como el nexo que recibe, procesa y sirve las peticiones HTTP del cliente.
+* **`index.html`:** Estructura fundamental de la aplicación web y puntos de montaje para la interfaz de usuario. Alberga los formularios de captura, los contenedores de las distintas vistas y los modales de configuración técnica.
+* **`app.js`:** Núcleo de la lógica del cliente. Administra el estado global de la aplicación, las mutaciones del árbol de tareas, los algoritmos de ordenamiento, el filtrado en tiempo real, el renderizado dinámico en el DOM y el despacho asincrónico de payloads hacia el servidor.
+* **`Codigo.gs`:** Script principal del backend en Google Apps Script. Controla el enrutamiento de las peticiones HTTP (`doGet` y `doPost`), la persistencia en la hoja de cálculo y la recepción de archivos multimedia destinados a Google Drive.
+* **`calendar.gs`:** Módulo exclusivo y aislado dentro del backend que encapsula la lógica de comunicación con la API de Google Calendar. Contiene las funciones de instanciación de eventos y las rutinas de diagnóstico técnico.
+* **`appsscript.json`:** Archivo de manifiesto de configuración del entorno de Apps Script. Declara formalmente las directivas del motor de ejecución (V8), la zona horaria del sistema y los alcances explícitos de seguridad OAuth (`oauthScopes`) requeridos para operar sobre Sheets, Drive y Calendar.
+* **Guías Auxiliares (`github_setup_guide.md`, `gemini_api_guide.md`, `apps_script_guide.md`):** Documentos técnicos que detallan los protocolos de despliegue, aprovisionamiento de credenciales de seguridad y sincronización para el usuario final.
 
-2. Estructura de Archivos del Proyecto
+---
 
-La distribución de componentes en el repositorio se organiza de la siguiente manera:
+## Flujo de Sincronización con Google Sheets
 
-index.html: Estructura de la aplicación web y puntos de montaje para la interfaz gráfica. Contiene los formularios, vistas y modales de configuración.
+La persistencia remota evita deliberadamente la complejidad de gestionar múltiples filas y columnas para cada tarea individual. En su lugar, implementa una estrategia de almacenamiento centralizada mediante un único bloque de texto serializado:
 
-app.js: Núcleo lógico del cliente. Gestiona el estado global de la aplicación, las mutaciones de tareas, los algoritmos de filtrado, renderizado en el DOM y la comunicación asincrónica con el servidor.
-
-Codigo.gs (o codigo_script.js): Código de ejecución para Google Apps Script que procesa los eventos HTTP del backend.
-
-appsscript.json: Manifiesto de configuración de Apps Script que declara los permisos Oauth necesarios para interactuar con Google Drive y Sheets.
-
-Guías Auxiliares (github_setup_guide.md, gemini_api_guide.md, apps_script_guide.md): Instrucciones detalladas de despliegue y aprovisionamiento de credenciales para el usuario final.
-
-3. Flujo de Sincronización con Google Sheets
-
-La persistencia de datos evita la complejidad de múltiples filas para cada tarea mediante una estrategia de almacenamiento en un único bloque de texto serializado:
-
+```
 [ Cliente (app.js) ]                             [ Google Apps Script (doPost) ]          [ Google Sheets ]
-        |                                                       |                                |
-        | -- POST (JSON completo en texto plano) -------------> | -- Escribe JSON en Celda A1 -> |
-        |                                                       |                                |
-        | -- GET (Petición de lectura) -----------------------> | <--- Lee Celda A1 -------------|
-        | <------ Devuelve array JSON parsed ------------------ |                                |
+|                                                       |                                |
+| -- POST (JSON completo en texto plano) -------------> | -- Escribe JSON en Celda A1 -> |
+|                                                       |                                |
+| -- GET (Petición de lectura) -----------------------> | <--- Lee Celda A1 -------------|
+| <------ Devuelve array JSON parsed ------------------ |                                |
+```
 
+### Operaciones de Lectura (GET)
+1. Al inicializar la aplicación en el navegador, si se detecta una URL de base de datos válida en el almacenamiento local, se invoca de forma automática la función `loadDataFromCloud()`.
+2. El cliente realiza una petición HTTP `GET` dirigida al endpoint público de la aplicación web de Apps Script.
+3. El método `doGet()` del script lee el valor textual crudo contenido en la celda A1 de la hoja interna denominada 'BaseDeDatos'.
+4. El servidor responde enviando dicho bloque de texto plano bajo el formato MIME `application/json`.
+5. El cliente procesa el string mediante `JSON.parse()`, actualiza las variables de estado e instruye el refresco de la interfaz gráfica. Si la petición falla por problemas de red, el sistema activa de manera transparente el modo de contingencia local leyendo las estructuras resguardadas en el `localStorage`.
 
-Operaciones de Lectura (GET):
+### Operaciones de Escritura (POST)
+1. Cada alteración del estado de las tareas (creación, edición, borrado o cambio de estado) gatilla la función asincrónica `saveData()`.
+2. Esta rutina actualiza inmediatamente el `localStorage` para asegurar la respuesta local y despacha una petición HTTP `POST` hacia la URL de Apps Script.
+3. El cuerpo del mensaje (`payload`) transporta el árbol jerárquico completo de tareas serializado en formato JSON string.
+4. El método `doPost()` recibe el flujo de datos, ejecuta las validaciones correspondientes y sobrescribe por completo la celda A1, garantizando que el almacenamiento en la nube refleje con fidelidad absoluta el estado del cliente.
 
-Al iniciar la aplicación, si existe una URL de base de datos configurada, se ejecuta loadDataFromCloud().
+---
 
-El cliente realiza una petición HTTP GET a la dirección web del Apps Script.
+## Flujo de Integración Unidireccional con Google Calendar
 
-El método doGet() del script lee el valor textual contenido exclusivamente en la celda A1 de la hoja 'BaseDeDatos'.
+El sistema cuenta con un mecanismo automatizado para agendar compromisos en la agenda personal del usuario, diseñado bajo el principio de intervención mínima y estabilidad del frontend.
 
-El script responde al cliente enviando ese bloque de texto plano con formato MIME application/json.
+### Principios del Diseño Unidireccional
+* **Aislamiento del Frontend:** El archivo `app.js` desconoce por completo la existencia de Google Calendar. No realiza llamadas directas a su API ni añade sobrecarga de scripts en el cliente, manteniendo intacta la estabilidad de la aplicación web.
+* **Inyección Pasiva en el Servidor:** La lógica de detección y despacho se ejecuta del lado del servidor dentro de `doPost()` antes de efectuar la escritura final en la hoja de cálculo.
+* **Inmutabilidad Inversa:** Google Calendar actúa como un receptor ciego de información. No existe sincronización bidireccional; las modificaciones manuales realizadas directamente sobre la interfaz de Google Calendar jamás alterarán la base de datos de la aplicación.
 
-El cliente procesa el JSON (JSON.parse) y refresca la interfaz. Si la petición falla, se activa de manera transparente el modo de contingencia local (offline) leyendo de localStorage.
+### Criterios de Disparo y Procesamiento Recursivo
+Cuando el backend recibe el JSON con el árbol de tareas, ejecuta una función de exploración recursiva denominada `procesarEventosCalendario()`. Esta rutina inspecciona cada nodo y subtarea evaluando estrictamente tres condiciones simultáneas:
 
-Operaciones de Escritura (POST):
+1.  La tarea posee una fecha de vencimiento definida (`task.date`).
+2.  La opción de notificación se encuentra activa en el modelo de datos (`task.reminder === true`).
+3.  La tarea carece de un registro de sincronización previa (`!task.eventCreated`).
 
-Cada alteración del estado local (creación, edición, cambio de estado o eliminación de tareas) gatilla la función saveData().
+```
+           [ payload JSON recibido en doPost() ]
+                             |
+                             v
+               ¿Tiene fecha + recordatorio?
+                       /           \
+                    (Sí)           (No) ---> Ignorar nodo
+                     /
+                    v
+          ¿Ya fue procesada antes? (task.eventCreated)
+                       /           \
+                    (No)           (Sí) ---> Ignorar nodo
+                     /
+                    v
+       [ Invocar crearEventoSimple() ]
+                     |
+                     v
+    [ Mutación: task.eventCreated = true ]
+                     |
+                     v
+   [ Resguardo final del JSON en Sheets (A1) ]
+```
 
-Esta función actualiza la clave en el almacenamiento local (localStorage) e inicia una petición asincrónica HTTP POST hacia la URL del Apps Script.
+Si el nodo cumple con los tres requisitos, se invoca al módulo `calendar.gs`, el cual utiliza el servicio nativo `CalendarApp` para instanciar el evento en el calendario predeterminado del usuario. Si la tarea incluye un horario (`task.time`), se genera un bloque con una duración fija de una hora; en caso contrario, se asienta como un evento de día completo.
 
-El cuerpo del mensaje contiene el árbol completo de tareas serializado en formato JSON.
+### Prevención Absoluta de Duplicados
+Para evitar que una misma tarea genere múltiples eventos en el calendario durante los sucesivos ciclos de guardado general, el script realiza una **mutación silente** sobre el objeto en memoria tras confirmar la creación exitosa del evento, añadiendo la propiedad `task.eventCreated = true`. Al reempaquetar el JSON que se guardará en la celda A1, esa bandera queda grabada de forma permanente. En el próximo ciclo de guardado, la tarea será omitida por el filtro de seguridad.
 
-El método doPost() de Apps Script recibe el texto y sobrescribe por completo el contenido de la celda A1, garantizando que el almacenamiento remoto refleje fielmente el estado del cliente.
+---
 
-4. Funcionalidades del Core Logic
+## Funcionalidades del Core Logic
 
-Sistema de Navegación y Vistas:
+### Sistema de Navegación y Vistas (SPA)
+La aplicación se comporta como una *Single Page Application* gobernada de forma estricta por la variable de estado global `currentState`:
+* **Vistas Temporales (`today`, `tomorrow`, `week`, `fortnight`):** Filtran dinámicamente el árbol de tareas pendientes comparando la fecha actual con el campo `date` de cada registro.
+* **Vista por Áreas (`area`):** Agrupa y aísla las tareas según el área funcional asignada. Al abrir el panel de creación desde esta vista, el campo del formulario correspondiente al área se preselecciona automáticamente.
+* **Historial de Navegación (`navHistory`):** Array que almacena el recorrido de estados del usuario, permitiendo un retorno seguro hacia la pantalla anterior mediante controles internos sin romper el ciclo de vida de la aplicación.
 
-La aplicación se comporta como una SPA (Single Page Application) controlada por la variable de estado global currentState:
+### Estructura de Tareas en Árbol
+Los registros de las tareas no adoptan una estructura plana, sino un modelo de árbol jerárquico recursivo. Cada tarea constituye un nodo que puede albergar de forma indefinida un arreglo de subtareas (`subtasks`), las cuales heredan las propiedades de filtrado y contexto de sus nodos superiores pero mantienen estados de completado independientes.
 
-Vistas Temporales (today, tomorrow, week, fortnight): Filtran dinámicamente el listado de tareas pendientes según su fecha de vencimiento (date).
+---
 
-Vista por Áreas (area): Agrupa las tareas según el área funcional a la que pertenecen. Al abrir el creador de tareas desde aquí, el campo de área se preselecciona automáticamente.
+## El Motor de Recurrencias
 
-Historial (navHistory): Array de estados que permite una navegación segura hacia atrás mediante el botón de retroceso sin recargar la aplicación.
+El sistema integra un algoritmo de proyección temporal personalizado ubicado en `app.js`, encargado de calcular con precisión matemática la siguiente ocurrencia de una tarea repetitiva dentro del huso horario local del navegador, neutralizando cualquier tipo de deriva horaria.
 
-Estructura de Tareas en Árbol:
+### Propiedades de la Regla de Recurrencia (`recurrenceRule`)
+* `frequency`: Define la periodicidad de la serie (`daily` | `weekly` | `monthly` | `yearly` | `after_completion` | `custom`).
+* `interval`: Multiplicador numérico que determina la cadencia (por ejemplo, "cada 3 días" o "cada 2 semanas").
+* `baseOnCompletion`: Variable booleana que dicta el comportamiento del cálculo. Si es `false`, la nueva fecha de vencimiento toma como pivote la fecha de vencimiento original; si es `true`, calcula la nueva ocurrencia tomando como punto de partida la fecha real en la que el usuario completó la tarea.
 
-Las tareas no son registros planos; soportan una estructura anidada recursiva (árbol jerárquico de tareas y subtareas). Cada nodo cuenta con un arreglo opcional subtasks que puede albergar a su vez otras subtareas.
+### Mecánica de Resolución Histórica
+Cuando una tarea con una regla de recurrencia activa es marcada como completada mediante la función `toggleTaskUniversal()`:
+1. El motor calcula la fecha de la próxima ocurrencia invocando a `calculateNextOccurrence()`.
+2. Se genera una copia idéntica e inmutable de la tarea en su estado de resolución actual: se le asigna el estado `'completed'`, se estampa la fecha y hora exacta en `completedAt` y se le extirpa la propiedad `recurrenceRule` para transformarla en un registro estático.
+3. Esta copia histórica se inserta inmediatamente antes de la tarea original en la base de datos para preservar la trazabilidad de las acciones pasadas.
+4. La tarea original actualiza su propiedad `date` con el valor futuro proyectado por el motor, restablece su estado operativo a `'pending'` y limpia de forma recursiva los estados de todas sus subtareas anidadas para dejarlas listas para el nuevo ciclo.
 
-5. El Motor de Recurrencias
+---
 
-El sistema integra un motor de proyección temporal personalizado ubicado en app.js (basado en el diseño detallado en recurrent_tasks_proposal.md y probado en recurrence_engine.js). Este algoritmo calcula de forma exacta la siguiente ocurrencia de una tarea en el huso horario local del navegador, evitando derivas horarias.
+## Protocolo de Despliegue y Configuración Segura
 
-Propiedades de la Regla de Recurrencia (recurrenceRule):
+Para enlazar la interfaz web de GitHub Pages con los servicios del backend sin provocar fallos de red o bloqueos de seguridad de tipo CORS, se debe seguir rigurosamente el siguiente orden metodológico:
 
-frequency: Tipo de serie ('daily' | 'weekly' | 'monthly' | 'yearly' | 'after_completion' | 'custom').
+1.  **Habilitación de Permisos:** En el editor de Google Apps Script, se debe acceder al archivo de manifiesto `appsscript.json` (activando la opción de visibilidad en la configuración del proyecto si no se encuentra expuesto) y verificar que el arreglo `oauthScopes` incluya la directiva `"https://www.googleapis.com/auth/calendar"`.
+2.  **Aprobación de la Capa de Seguridad (OAuth):** Antes de ejecutar llamadas desde la aplicación web, es obligatorio seleccionar la función de diagnóstico `testCrearEvento` en el menú superior del editor de Apps Script y hacer clic en **Ejecutar**. Esto forzará a la plataforma de Google a desplegar la ventana emergente de seguridad para autorizar el acceso del script al calendario de la cuenta.
+3.  **Publicación del Endpoint:** Cada vez que se guarde un cambio en `Codigo.gs` o `calendar.gs`, se debe crear una **Nueva implementación** desde el botón azul del editor.
+    * *Tipo de extensión:* Aplicación web.
+    * *Ejecutar como:* Yo (Tu cuenta de correo).
+    * *Quién tiene acceso:* **Cualquier persona**. Esta selección es crítica; si se restringe a usuarios con cuenta de Google, el navegador interceptará la redirección de login invisible y abortará la comunicación emitiendo un `TypeError: NetworkError`.
+4.  **Vinculación del Cliente:** La URL provista por el asistente de despliegue (cuya terminación debe ser estrictamente `/exec`) debe ser copiada e introducida en el panel de configuración de la agenda web (ícono del engranaje) para establecer el canal de comunicación persistente.
 
-interval: Multiplicador numérico (ej. "cada 3 días" o "cada 2 semanas").
+---
 
-baseOnCompletion: Boolean que determina si la siguiente fecha de vencimiento se calcula tomando como pivote la fecha de vencimiento original (false) o la fecha real en la que el usuario marcó la tarea como completada (true).
+## Componentes Sensibles (Zonas de cuidado)
 
-Mecánica de Resolución:
+Existen estructuras algorítmicas nucleares que no deben ser modificadas bajo ninguna circunstancia sin un análisis de impacto previo, dado que cualquier alteración menor romperá la integridad de la base de datos:
 
-Cuando una tarea que cuenta con una recurrenceRule activa es completada (toggleTaskUniversal):
+* **`findAndMutateTask(taskId, mutationFn)`:** Función recursiva encargada de perforar el árbol jerárquico de tareas para localizar y alterar un nodo específico. Un cambio en su lógica anulará la capacidad de editar o completar subtareas.
+* **`pruneTree(nodeList, inFocusedSubtree)` y `flattenMatches(prunedNodes)`:** Algoritmos que resuelven en tiempo real el filtrado combinado de la interfaz (texto, prioridades, contextos y estados). Si se alteran, las subtareas dejarán de renderizarse de manera consistente o los contadores numéricos de las vistas devolverán métricas erróneas.
+* **`migrateAndNormalizeTasks()`:** Rutina de sanitización que se ejecuta en cada inicio del sistema. Adapta las estructuras antiguas al modelo de datos vigente y purga los elementos de la papelera de reciclaje que superen los 10 días de antigüedad. Alterar este bloque provocará fallos críticos de tipo *Runtime Error* al intentar leer registros antiguos que carezcan de las nuevas propiedades estandarizadas (como las banderas de calendario).
+* **Bloque de Intercepción en `doPost(e)`:** El bucle recursivo encargado de procesar los eventos de calendario antes del guardado en Sheets es una zona crítica. No se deben añadir allí funciones de salida de texto que alteren los encabezados del objeto `ContentService`, ya que este no tolera métodos como `.setHeader()`, lo que causaría el colapso inmediato del servicio web.
 
-El motor calcula la próxima fecha de vencimiento mediante calculateNextOccurrence().
+---
 
-Se genera una copia inmutable de la tarea en su estado actual, se le asigna el estado 'completed', se marca la fecha de resolución en completedAt y se elimina su regla de recurrencia para que quede fijada en el historial.
+## Recomendaciones de Integración para IA
 
-Esta copia histórica se inserta inmediatamente antes de la tarea original en la base de datos para preservar el registro histórico.
+Cuando se utilice un asistente de Inteligencia Artificial para dar soporte, corregir anomalías o desarrollar extensiones funcionales sobre esta aplicación, se le deben imponer las siguientes directrices operativas dentro del prompt:
 
-La tarea original actualiza su fecha programada al valor proyectado por el motor y restablece su estado a 'pending'. Además, todas sus subtareas anidadas vuelven recursivamente al estado pendiente.
-
-6. Flujo de Trabajo Seguro para Modificaciones
-
-Si estás planificando realizar modificaciones sobre el código de la aplicación, o si le estás pidiendo asistencia a un modelo de IA para hacerlo, asegurate de seguir el siguiente protocolo de seguridad:
-
-Respaldar Datos: Antes de efectuar cambios de código que alteren la lógica de inicialización, utilizá el botón de exportación en la barra lateral para descargar un backup en formato .json de tus tareas actuales.
-
-Ciclo de Pruebas Locales:
-
-Probá que el renderizado de la interfaz (renderTasks()) no presente retrasos perceptibles.
-
-Confirmá que las subtareas creadas hereden el comportamiento de sus padres en cascada.
-
-Comprobá la inicialización de formularios en distintas vistas temporales y de áreas.
-
-Control de Commits: Realizá confirmaciones incrementales de cambios enfocados en un único archivo a la vez. No mezcles modificaciones de interfaz de usuario con alteraciones del motor lógico de persistencia.
-
-7. Componentes Sensibles (Zonas de cuidado)
-
-Existen estructuras algorítmicas dentro de app.js que no deben ser modificadas de manera descuidada, ya que un cambio menor puede corromper la consistencia de toda la base de datos:
-
-findAndMutateTask(taskId, mutationFn): Es la función recursiva encargada de recorrer todo el árbol de tareas para aplicar cambios en un nodo específico sin importar su nivel de anidamiento. Cualquier alteración a su algoritmo de búsqueda romperá la edición y el completado de subtareas.
-
-pruneTree(nodeList, inFocusedSubtree) y flattenMatches(prunedNodes): Estos algoritmos filtran en tiempo real el árbol de tareas evaluando los filtros de texto, contextos, prioridad y estados activos. Alterarlos causará que las subtareas dejen de visualizarse adecuadamente o que los contadores de tareas devuelvan números inconsistentes.
-
-migrateAndNormalizeTasks(): Se ejecuta en cada inicio del sistema. Se encarga de adecuar las estructuras antiguas al esquema moderno y de eliminar elementos de la papelera que superen los 10 días de antigüedad. Si se modifica o se elude este paso, los clientes con bases de datos preexistentes podrían sufrir fallos críticos de tipo Runtime Error por llamadas a propiedades inexistentes o tipos indefinidos.
-
-8. Recomendaciones de Integración para IA
-
-Cuando uses un asistente de IA para expandir o dar soporte a esta aplicación, proporcionale las siguientes directrices operativas dentro del prompt:
-
-Preservación del Modelo Unificado: La aplicación se despliega como un archivo monolítico en producción para simplificar el hosting. Todo el Javascript debe estar unificado dentro de app.js.
-
-Uso de Variables de Estado: Cualquier nueva propiedad de visualización debe integrarse dentro de las variables globales de estado existentes (currentState, currentFilters, currentSort). Evitá la declaración de variables globales dispersas que puedan provocar colisiones de ámbito.
-
-Sincronización Transparente: Todas las funciones de creación, eliminación y mutación de tareas deben finalizar llamando a renderTasks() y await saveData() de forma secuencial, garantizando la consistencia del almacenamiento local y en la nube en todo momento.
+1.  **Preservación del Enfoque Monolítico en el Cliente:** Para garantizar la simplicidad del despliegue y evitar problemas de hosting, la interfaz gráfica debe permanecer consolidada en un único archivo de ejecución (`app.js`). No se debe fragmentar el código del frontend en múltiples scripts de tipo módulo.
+2.  **Uso Estricto del Estado Global:** Cualquier variable asociada a la visualización, ordenamiento o captura de datos debe incorporarse como una propiedad dentro de las estructuras globales existentes (`currentState`, `currentFilters`, `currentSort`). Queda prohibida la creación de variables globales dispersas que puedan generar colisiones en el ámbito compartido de ejecución.
+3.  **Modularidad en el Backend:** La lógica de servicios avanzados de Google debe mantenerse estrictamente separada. Las funciones de comunicación con las APIs específicas de Google deben residir de forma exclusiva en sus archivos dedicados (como `calendar.gs`), limitando la intervención en `Codigo.gs` al punto de intercepción exacto dentro del flujo del `doPost`.
+4.  **Sincronización Secuencial Obligatoria:** Todas las funciones desarrolladas que muten el estado de una tarea deben finalizar invocando de manera secuencial y obligatoria a `renderTasks()` y `await saveData()`, asegurando que el almacenamiento local y el registro remoto en la nube permanezcan perfectamente sincronizados ante cualquier evento.
