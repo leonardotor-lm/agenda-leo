@@ -28,1590 +28,648 @@ let selectedTaskIds = new Set();
 let currentAttachments = []; 
 let manageSelectedColor = 'blue';
 
-// RECURRENCIA - ESTADOS GLOBALES PARA DIÁLOGOS
+// RECURRENCIA - ESTADOS GLOBALES PARA MODALS
 let addSelectedDays = [1];
 let editSelectedDays = [1];
 
-const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-brand-400', baja: 'text-navy-500' };
-
+const priorityColors = { urgente: 'text-danger-500', alta: 'text-brand-500', media: 'text-yellow-500', baja: 'text-navy-500' };
 const contextColorMap = { 
-    blue: { dot: 'bg-blue-500', text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }, 
-    purple: { dot: 'bg-purple-500', text: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' }, 
-    green: { dot: 'bg-green-500', text: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20' }, 
-    red: { dot: 'bg-red-500', text: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
-    yellow: { dot: 'bg-yellow-500', text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-    teal: { dot: 'bg-teal-500', text: 'text-teal-400', bg: 'bg-teal-500/10', border: 'border-teal-500/20' },
-    orange: { dot: 'bg-orange-500', text: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }
+    blue: { dot: 'bg-blue-500', text: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }, 
+    purple: { dot: 'bg-purple-500', text: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/20' }, 
+    green: { dot: 'bg-green-500', text: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' }, 
+    red: { dot: 'bg-red-500', text: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' }, 
+    orange: { dot: 'bg-orange-500', text: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' }, 
+    gray: { dot: 'bg-gray-500', text: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500/20' }, 
+    pink: { dot: 'bg-pink-500', text: 'text-pink-500', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }, 
+    teal: { dot: 'bg-teal-500', text: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/20' },
+    yellow: { dot: 'bg-yellow-500', text: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+    cyan: { dot: 'bg-cyan-500', text: 'text-cyan-500', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
+    indigo: { dot: 'bg-indigo-500', text: 'text-indigo-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
+    rose: { dot: 'bg-rose-500', text: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
+    emerald: { dot: 'bg-emerald-500', text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+    fuchsia: { dot: 'bg-fuchsia-500', text: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/20' }
 };
 
-// ============================================================================
-// FUNCIONES NUCLEARES - SISTEMA DE ALMACENAMIENTO Y SINCRONIZACIÓN
-// ============================================================================
+let editState = { id: null, parentId: 'root' }; let postponeState = { id: null };
+let draggedAreaIndex = null;
+let speechRecognition = null; let isListening = false;
+let confirmCallback = null;
 
-async function saveData() {
-    localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks));
+// INICIALIZACIÓN SECUENCIAL
+window.onload = async () => { 
+    initSpeechRecognition(); 
+    updateDateDisplay(); 
+    document.getElementById('settingsDbUrlInput').value = dbUrl;
+    document.getElementById('settingsApiKeyInput').value = customApiKey;
+    
+    let loadedFromCloud = false;
+    if (dbUrl) { 
+        loadedFromCloud = await loadDataFromCloud(); 
+    } else { 
+        showSyncStatus('none'); 
+    }
+
+    const hadMutations = migrateAndNormalizeTasks(); 
+    if (hadMutations && dbUrl && loadedFromCloud) {
+        await saveData();
+    }
+
+    refreshAllDropdowns(); 
+    updateUI(); 
+};
+
+function saveCategories() {
     localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas));
     localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts));
-    localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates));
+}
+
+// MIGRACIÓN Y NORMALIZACIÓN
+function migrateAndNormalizeTasks() { 
+    let changed = false;
+    if (!customAreas.includes("Inbox")) { customAreas.unshift("Inbox"); saveCategories(); changed = true; }
+    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
     
-    updateCounters();
-    
-    if (dbUrl) {
-        setSyncStatus('syncing');
-        try {
-            const response = await fetch(dbUrl, {
-                method: 'POST',
-                body: JSON.stringify(tasks),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                setSyncStatus('online');
-            } else {
-                setSyncStatus('offline');
-                console.error("Error remoto:", result.message);
+    function walk(nodes, parentArea) {
+        if (!Array.isArray(nodes)) return;
+        for (let i = nodes.length - 1; i >= 0; i--) {
+            let n = nodes[i];
+            if (n.isDeleted && n.deletedAt && (now - n.deletedAt > tenDaysMs)) { nodes.splice(i, 1); changed = true; continue; }
+            
+            if (n.status === undefined) { n.status = n.completed ? 'completed' : 'pending'; delete n.completed; changed = true; }
+            if (!n.priority) { n.priority = 'baja'; changed = true; }
+            if (!n.subtasks) { n.subtasks = []; changed = true; }
+            if (n.notes === undefined) { n.notes = ''; changed = true; }
+            if (n.attachments === undefined) { n.attachments = []; changed = true; }
+            if (!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
+            if (n.context === undefined) { n.context = ''; changed = true; }
+            if (n.time === undefined) { n.time = ''; changed = true; }
+            
+            if (n.recurrence && n.recurrence !== 'none' && !n.recurrenceRule) {
+                n.recurrenceRule = {
+                    frequency: n.recurrence === 'diario' ? 'daily' : n.recurrence === 'semanal' ? 'weekly' : 'monthly',
+                    interval: 1,
+                    baseOnCompletion: !!n.completionBased,
+                    ...(n.recurrence === 'semanal' && { daysOfWeek: [1] }),
+                    ...(n.recurrence === 'mensual' && { dayOfMonth: parseInt(n.date?.split('-')[2]) || 1 }),
+                    ...(n.recurrence === 'dia_habil' && { nthBusinessDay: parseInt(n.businessDayNum) || 5 })
+                };
+                if (n.recurrence === 'dia_habil') { n.recurrenceRule.frequency = 'monthly'; }
+                changed = true;
             }
-        } catch (error) {
-            setSyncStatus('offline');
-            console.error("Fallo de red:", error);
+            if (n.recurrence !== undefined) { delete n.recurrence; delete n.businessDayNum; delete n.completionBased; changed = true; }
+            
+            if (n.subtasks) walk(n.subtasks, n.area);
         }
-    } else {
-        setSyncStatus('offline');
+    }
+    if (Array.isArray(tasks)) { walk(tasks, null); } else { tasks = []; changed = true; }
+    if (changed) { localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); }
+    return changed;
+}
+
+// COMUNICACIÓN CLOUD Y PERSISTENCIA
+async function saveData() {
+    localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks));
+    if (!dbUrl) return;
+    showSyncStatus('saving');
+    try {
+        const response = await fetch(dbUrl, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(tasks),
+            redirect: 'follow'
+        });
+        if (!response.ok) throw new Error('Respuesta HTTP no exitosa: ' + response.status);
+        const textData = await response.text();
+        if (textData.trim().startsWith('<')) throw new Error('El servidor devolvió HTML (Posible error de permisos)');
+        showSyncStatus('synced');
+    } catch (e) { 
+        console.error("Error al guardar:", e); 
+        showSyncStatus('offline'); 
+        showNotice("Fallo al guardar: " + e.message.substring(0, 40));
     }
 }
 
 async function loadDataFromCloud() {
-    if (!dbUrl) return;
-    setSyncStatus('syncing');
+    if (!dbUrl) return false;
+    showSyncStatus('loading');
     try {
-        const response = await fetch(dbUrl);
-        const data = await response.json();
-        if (data && Array.isArray(data)) {
-            tasks = data;
-            migrateAndNormalizeTasks();
-            localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks));
-            renderTasks();
-            setSyncStatus('online');
+        const res = await fetch(dbUrl, { method: 'GET', redirect: 'follow' });
+        if (!res.ok) throw new Error("Fallo HTTP: " + res.status);
+        const textData = await res.text();
+        
+        if (textData.trim().startsWith('<')) {
+            throw new Error("La URL devolvió código HTML. Revisá los permisos de tu Apps Script.");
         }
-    } catch (error) {
-        setSyncStatus('offline');
-        console.error("Error al cargar datos remotos:", error);
-    }
-}
 
-function setSyncStatus(status) {
-    const dot = document.getElementById('sync-status-dot');
-    const text = document.getElementById('sync-status-text');
-    if (!dot || !text) return;
-    
-    dot.className = 'w-1.5 h-1.5 rounded-full';
-    
-    if (status === 'online') {
-        dot.classList.add('bg-green-500', 'shadow-[0_0_8px_rgba(34,197,94,0.6)]');
-        text.textContent = 'Sincronizado';
-        text.className = 'text-[10px] font-bold text-green-400 uppercase tracking-wider';
-    } else if (status === 'offline') {
-        dot.classList.add('bg-navy-500');
-        text.textContent = 'Modo Offline (Local)';
-        text.className = 'text-[10px] font-bold text-navy-400 uppercase tracking-wider';
-    } else if (status === 'syncing') {
-        dot.classList.add('bg-brand-500', 'animate-pulse');
-        text.textContent = 'Guardando...';
-        text.className = 'text-[10px] font-bold text-brand-400 uppercase tracking-wider animate-pulse';
-    }
-}
-
-// INICIALIZACIÓN
-document.addEventListener('DOMContentLoaded', () => {
-    migrateAndNormalizeTasks();
-    updateDateDisplay();
-    populateSidebar();
-    renderTasks();
-    if (dbUrl) loadDataFromCloud();
-    else setSyncStatus('offline');
-});
-
-// ============================================================================
-// FUNCIONES NUCLEARES - RECURSIVIDAD Y BÚSQUEDA
-// ============================================================================
-
-function findAndMutateTask(taskId, mutationFn, nodeList = tasks) {
-    for (let i = 0; i < nodeList.length; i++) {
-        if (nodeList[i].id === taskId) {
-            mutationFn(nodeList, i);
+        const data = JSON.parse(textData);
+        if (Array.isArray(data)) { 
+            tasks = data; 
+            localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); 
+            showSyncStatus('synced'); 
+            showNotice("Sincronizado");
             return true;
         }
-        if (nodeList[i].subtasks && nodeList[i].subtasks.length > 0) {
-            if (findAndMutateTask(taskId, mutationFn, nodeList[i].subtasks)) {
-                return true;
-            }
-        }
+        return false;
+    } catch (e) { 
+        console.error("Error al cargar:", e); 
+        showSyncStatus('offline'); 
+        showNotice("Modo Offline: " + e.message.substring(0, 50)); 
+        return false;
     }
-    return false;
 }
 
-function findTaskById(taskId, nodeList = tasks) {
-    for (let node of nodeList) {
-        if (node.id === taskId) return node;
-        if (node.subtasks && node.subtasks.length > 0) {
-            const found = findTaskById(taskId, node.subtasks);
-            if (found) return found;
-        }
-    }
-    return null;
-}
+// LÓGICA DE RECURRENCIA
+function parseDateLocal(dateStr) { if (!dateStr) return new Date(); const [y, m, d] = dateStr.split('-').map(Number); return new Date(y, m - 1, d, 0, 0, 0, 0); }
+function formatDateLocal(dateObj) { const y = dateObj.getFullYear(); const m = String(dateObj.getMonth() + 1).padStart(2, '0'); const d = String(dateObj.getDate()).padStart(2, '0'); return `${y}-${m}-${d}`; }
+function isBusinessDay(date) { const day = date.getDay(); return day !== 0 && day !== 6; }
+function calculateNthBusinessDay(year, month, n) { let count = 0; let date = new Date(year, month, 1, 0, 0, 0, 0); let lastBd = null; while (date.getMonth() === month) { if (isBusinessDay(date)) { count++; lastBd = new Date(date); if (count === n) return date; } date.setDate(date.getDate() + 1); } return lastBd; }
+function addMonthsSafely(baseDate, monthsToAdd, targetDay) { const result = new Date(baseDate); const expectedMonth = (baseDate.getMonth() + monthsToAdd) % 12; const expectedYear = baseDate.getFullYear() + Math.floor((baseDate.getMonth() + monthsToAdd) / 12); result.setDate(1); result.setFullYear(expectedYear); result.setMonth(expectedMonth); const daysInTargetMonth = new Date(expectedYear, expectedMonth + 1, 0, 0, 0, 0, 0).getDate(); const dayToSet = targetDay !== undefined ? targetDay : baseDate.getDate(); result.setDate(Math.min(dayToSet, daysInTargetMonth)); return result; }
+function getStartOfWeek(date) { const result = new Date(date); const day = result.getDay(); const diff = result.getDate() - day + (day === 0 ? -6 : 1); result.setDate(diff); return result; }
+function getDaysDifference(d1, d2) { const t1 = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate()); const t2 = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()); return Math.round((t2 - t1) / 86400000); }
 
-// Migración de esquemas antiguos y limpieza de papelera (> 10 días)
-function migrateAndNormalizeTasks() {
-    const tenDaysAgo = new Date();
-    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-
-    function traverseAndClean(nodes) {
-        for (let i = nodes.length - 1; i >= 0; i--) {
-            let task = nodes[i];
-            
-            // Normalización de modelo
-            if (!task.id) task.id = crypto.randomUUID();
-            if (!task.area) task.area = 'Inbox';
-            if (!task.priority) task.priority = 'media';
-            if (!task.subtasks) task.subtasks = [];
-            if (task.reminder === undefined) task.reminder = false;
-            // Nueva propiedad estructural
-            if (!task.reminderAlerts) task.reminderAlerts = []; 
-            if (task.eventCreated === undefined) task.eventCreated = false;
-            if (task.completedAt) task.completedAt = new Date(task.completedAt).toISOString();
-            if (task.deletedAt) task.deletedAt = new Date(task.deletedAt).toISOString();
-            if (task.createdAt === undefined) task.createdAt = new Date().toISOString();
-
-            // Purga de papelera
-            if (task.status === 'deleted' && task.deletedAt) {
-                if (new Date(task.deletedAt) < tenDaysAgo) {
-                    nodes.splice(i, 1);
-                    continue; 
-                }
-            }
-            if (task.subtasks.length > 0) {
-                traverseAndClean(task.subtasks);
-            }
-        }
-    }
-    traverseAndClean(tasks);
-}
-
-// ============================================================================
-// MOTOR LÓGICO - SISTEMA DE FECHAS Y RECURRENCIAS
-// ============================================================================
-
-function calculateNextOccurrence(task) {
-    if (!task.date || !task.recurrenceRule) return null;
-    
-    const rule = task.recurrenceRule;
-    
-    // Pivote: Fecha original programada o Fecha real de completado
-    let baseDate = new Date(task.date + 'T12:00:00'); // Hora media para evitar desvíos UTC
-    
-    if (rule.baseOnCompletion && task.completedAt) {
-        baseDate = new Date(task.completedAt);
-        baseDate.setHours(12, 0, 0, 0);
-    }
-    
-    const nextDate = new Date(baseDate);
-    const interval = parseInt(rule.interval) || 1;
-
+function calculateNextOccurrence(task, completionDateStr = null) {
+    const rule = task.recurrenceRule; if (!rule || rule.frequency === 'none') return '';
+    const scheduledDate = parseDateLocal(task.date); const completionDate = completionDateStr ? parseDateLocal(completionDateStr) : new Date();
+    const baseDate = rule.baseOnCompletion ? completionDate : scheduledDate; const interval = Math.max(1, rule.interval || 1);
+    if (rule.frequency === 'after_completion') { const next = new Date(completionDate); next.setDate(next.getDate() + interval); return formatDateLocal(next); }
     switch (rule.frequency) {
-        case 'daily':
-            nextDate.setDate(nextDate.getDate() + interval);
-            break;
-            
-        case 'weekly':
-            // Lógica iterativa para encontrar el siguiente día marcado en el arreglo
-            let daysAdded = 0;
-            let found = false;
-            let currentDayOfWeek = nextDate.getDay();
-            
-            // Buscar en los próximos 7 días (multiplicado por el intervalo de semanas)
-            for (let i = 1; i <= 7; i++) {
-                nextDate.setDate(nextDate.getDate() + 1);
-                currentDayOfWeek = nextDate.getDay();
-                if (rule.daysOfWeek.includes(currentDayOfWeek)) {
-                    found = true;
-                    // Si el intervalo es > 1, sumamos semanas completas
-                    if (interval > 1) {
-                        nextDate.setDate(nextDate.getDate() + ((interval - 1) * 7));
-                    }
-                    break;
-                }
-            }
-            // Fallback si no hay días seleccionados
-            if (!found) nextDate.setDate(nextDate.getDate() + (7 * interval));
-            break;
-            
-        case 'monthly':
-            if (rule.monthlyMode === 'fixed') {
-                const targetDay = rule.dayOfMonth || 1;
-                nextDate.setMonth(nextDate.getMonth() + interval);
-                
-                // Control de fin de mes (ej. Febrero 30 -> Feb 28/29)
-                const lastDayOfNextMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
-                nextDate.setDate(Math.min(targetDay, lastDayOfNextMonth));
-                
-            } else if (rule.monthlyMode === 'business') {
-                // Cálculo complejo de día hábil
-                nextDate.setMonth(nextDate.getMonth() + interval);
-                nextDate.setDate(1); // Ir al inicio del mes
-                
-                let businessDaysCount = 0;
-                const targetBusinessDay = rule.nthBusinessDay || 1;
-                const tempDate = new Date(nextDate);
-                
-                // Recorrer el mes contando días hábiles
-                while (businessDaysCount < targetBusinessDay) {
-                    const day = tempDate.getDay();
-                    if (day !== 0 && day !== 6) { // 0: Dom, 6: Sab
-                        businessDaysCount++;
-                    }
-                    if (businessDaysCount < targetBusinessDay) {
-                        tempDate.setDate(tempDate.getDate() + 1);
-                    }
-                    // Si pasamos al siguiente mes, abortamos y nos quedamos con el último hábil
-                    if (tempDate.getMonth() !== nextDate.getMonth()) {
-                        tempDate.setDate(tempDate.getDate() - 1);
-                        while(tempDate.getDay() === 0 || tempDate.getDay() === 6) {
-                            tempDate.setDate(tempDate.getDate() - 1);
-                        }
-                        break;
-                    }
-                }
-                nextDate.setTime(tempDate.getTime());
-            }
-            break;
-            
-        case 'yearly':
-            nextDate.setFullYear(nextDate.getFullYear() + interval);
-            const tDay = rule.dayOfMonth || 1;
-            const tMonth = (rule.monthOfYear || 1) - 1; // JS months 0-11
-            nextDate.setMonth(tMonth);
-            
-            const lastDay = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
-            nextDate.setDate(Math.min(tDay, lastDay));
-            break;
-            
-        case 'after_completion':
-            nextDate.setDate(nextDate.getDate() + interval);
-            break;
-            
-        case 'custom':
-            nextDate.setMonth(nextDate.getMonth() + interval);
-            nextDate.setDate(rule.dayOfMonth || 1);
-            break;
-    }
-
-    return nextDate.toISOString().split('T')[0];
-}
-
-// ============================================================================
-// NAVEGACIÓN Y VISTAS (SPA)
-// ============================================================================
-
-function navigate(viewId, areaName = null, bypassHistory = false) {
-    if (!bypassHistory) {
-        navHistory.push(JSON.parse(JSON.stringify(currentState)));
-        document.getElementById('btnBack').classList.remove('hidden');
-    }
-    
-    currentState.view = viewId;
-    currentState.selectedArea = areaName;
-    currentState.focusTargetId = null;
-    
-    // Resetear filtros
-    currentFilters.search = '';
-    currentFilters.status = viewId === 'trash' ? 'all' : 'pending';
-    document.getElementById('searchInput').value = '';
-    document.getElementById('filterStatus').value = currentFilters.status;
-    
-    updateHeaderTitle();
-    toggleCalendarView(viewId === 'calendar');
-    
-    if (viewId === 'calendar') renderCalendar();
-    else renderTasks();
-    
-    if (window.innerWidth < 768) toggleSidebar(false);
-}
-
-function goBack() {
-    if (navHistory.length > 0) {
-        currentState = navHistory.pop();
-        if (navHistory.length === 0) document.getElementById('btnBack').classList.add('hidden');
-        
-        currentFilters.status = currentState.view === 'trash' ? 'all' : 'pending';
-        document.getElementById('filterStatus').value = currentFilters.status;
-        
-        updateHeaderTitle();
-        toggleCalendarView(currentState.view === 'calendar');
-        if (currentState.view === 'calendar') renderCalendar();
-        else renderTasks();
-    }
-}
-
-function updateHeaderTitle() {
-    const titleEl = document.getElementById('view-title');
-    document.getElementById('btnEmptyTrash').classList.add('hidden');
-    
-    if (currentState.view === 'today') titleEl.textContent = 'Hoy y Atrasadas';
-    else if (currentState.view === 'tomorrow') titleEl.textContent = 'Mañana';
-    else if (currentState.view === 'week') titleEl.textContent = 'Esta Semana';
-    else if (currentState.view === 'fortnight') titleEl.textContent = 'Próximos 15 Días';
-    else if (currentState.view === 'all') titleEl.textContent = 'Todas las Tareas';
-    else if (currentState.view === 'calendar') titleEl.textContent = 'Calendario Mensual';
-    else if (currentState.view === 'area') titleEl.textContent = `Área: ${currentState.selectedArea}`;
-    else if (currentState.view === 'trash') {
-        titleEl.textContent = 'Papelera de Reciclaje';
-        document.getElementById('btnEmptyTrash').classList.remove('hidden');
-    }
-}
-
-function updateDateDisplay() {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('current-date-display').textContent = new Date().toLocaleDateString('es-ES', options);
-}
-
-function toggleSidebar(show) {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('mobile-overlay');
-    if (show) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-    } else {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
-}
-
-function toggleCalendarView(show) {
-    if (show) {
-        document.getElementById('view-list').classList.add('hidden');
-        document.getElementById('filters-container').classList.add('hidden');
-        document.getElementById('view-calendar').classList.remove('hidden');
-    } else {
-        document.getElementById('view-list').classList.remove('hidden');
-        document.getElementById('filters-container').classList.remove('hidden');
-        document.getElementById('view-calendar').classList.add('hidden');
-    }
-}
-
-// ============================================================================
-// ALGORITMOS DE FILTRADO Y PODA (PRUNING) - ZONA CRÍTICA
-// ============================================================================
-
-function isTaskInCurrentView(task) {
-    if (task.status === 'deleted') return currentState.view === 'trash';
-    if (currentState.view === 'trash') return false;
-
-    if (currentState.view === 'area') {
-        return task.area === currentState.selectedArea;
-    }
-
-    if (currentState.view === 'all' || currentState.view === 'calendar') return true;
-
-    // Filtros temporales
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
-    const fortnightEnd = new Date(today); fortnightEnd.setDate(fortnightEnd.getDate() + 15);
-
-    let taskDate = task.date ? new Date(task.date + 'T12:00:00') : null;
-    if (taskDate) taskDate.setHours(0,0,0,0);
-
-    if (currentState.view === 'today') {
-        return taskDate && taskDate <= today;
-    } else if (currentState.view === 'tomorrow') {
-        return taskDate && taskDate.getTime() === tomorrow.getTime();
-    } else if (currentState.view === 'week') {
-        return taskDate && taskDate >= today && taskDate <= weekEnd;
-    } else if (currentState.view === 'fortnight') {
-        return taskDate && taskDate >= today && taskDate <= fortnightEnd;
-    }
-    return true;
-}
-
-function evaluateFilters(task) {
-    if (currentFilters.status !== 'all' && currentState.view !== 'trash') {
-        if (task.status !== currentFilters.status) return false;
-    }
-    if (currentFilters.priority !== 'all') {
-        if (task.priority !== currentFilters.priority) return false;
-    }
-    if (currentFilters.context !== 'all') {
-        if (task.context !== currentFilters.context) return false;
-    }
-    if (currentFilters.search.trim() !== '') {
-        const query = currentFilters.search.toLowerCase();
-        const tName = task.name ? task.name.toLowerCase() : '';
-        const tNotes = task.notes ? task.notes.toLowerCase() : '';
-        if (!tName.includes(query) && !tNotes.includes(query)) return false;
-    }
-    return true;
-}
-
-function pruneTree(nodeList, inFocusedSubtree = false) {
-    let prunedNodes = [];
-    for (let node of nodeList) {
-        let newNode = { ...node, subtasks: [] };
-        
-        let viewMatch = isTaskInCurrentView(node);
-        let filterMatch = evaluateFilters(node);
-        let nodeIsMatch = viewMatch && filterMatch;
-
-        // Si tenemos un foco específico, forzamos el match para la raíz y procesamos todos los hijos
-        let isFocusedRoot = currentState.focusTargetId && node.id === currentState.focusTargetId;
-        
-        if (node.subtasks && node.subtasks.length > 0) {
-            newNode.subtasks = pruneTree(node.subtasks, inFocusedSubtree || isFocusedRoot);
+        case 'daily': { const next = new Date(baseDate); next.setDate(next.getDate() + interval); return formatDateLocal(next); }
+        case 'weekly': {
+            const daysOfWeek = rule.daysOfWeek; if (!daysOfWeek || daysOfWeek.length === 0) { const next = new Date(baseDate); next.setDate(next.getDate() + (interval * 7)); return formatDateLocal(next); }
+            const anchorDate = task.startDate ? parseDateLocal(task.startDate) : scheduledDate; const anchorWeekStart = getStartOfWeek(anchorDate);
+            const sortedDays = [...daysOfWeek].sort((a, b) => a - b);
+            let candidate = new Date(baseDate); let found = false; let safetyCounter = 0;
+            while (!found && safetyCounter < 1000) {
+                safetyCounter++; candidate.setDate(candidate.getDate() + 1); const candidateDay = candidate.getDay();
+                if (sortedDays.includes(candidateDay)) { const candidateWeekStart = getStartOfWeek(candidate); const weekDiff = Math.floor(getDaysDifference(anchorWeekStart, candidateWeekStart) / 7); if (weekDiff % interval === 0) found = true; }
+            } return formatDateLocal(candidate);
         }
-
-        // Retenemos el nodo si: hace match, o tiene hijos que hacen match, o estamos dentro de un subárbol enfocado
-        if (nodeIsMatch || newNode.subtasks.length > 0 || inFocusedSubtree || isFocusedRoot) {
-            prunedNodes.push(newNode);
+        case 'monthly': {
+            if (rule.nthBusinessDay !== undefined) { const targetMonthDate = addMonthsSafely(baseDate, interval, 1); return formatDateLocal(calculateNthBusinessDay(targetMonthDate.getFullYear(), targetMonthDate.getMonth(), rule.nthBusinessDay)); }
+            const targetDay = rule.dayOfMonth !== undefined ? rule.dayOfMonth : baseDate.getDate(); return formatDateLocal(addMonthsSafely(baseDate, interval, targetDay));
         }
-    }
-    return prunedNodes;
-}
-
-function sortNodes(nodes) {
-    nodes.sort((a, b) => {
-        if (currentSort.by === 'date') {
-            const dA = a.date ? new Date(a.date).getTime() : Infinity;
-            const dB = b.date ? new Date(b.date).getTime() : Infinity;
-            return currentSort.order === 'asc' ? dA - dB : dB - dA;
-        } else if (currentSort.by === 'priority') {
-            const pMap = { 'urgente': 4, 'alta': 3, 'media': 2, 'baja': 1 };
-            const pA = pMap[a.priority] || 0;
-            const pB = pMap[b.priority] || 0;
-            return pB - pA; // Siempre descendente para prioridad
-        } else if (currentSort.by === 'name') {
-            return a.name.localeCompare(b.name);
+        case 'yearly': {
+            const next = new Date(baseDate); const targetMonth = rule.monthOfYear !== undefined ? (rule.monthOfYear - 1) : baseDate.getMonth(); const targetDay = rule.dayOfMonth !== undefined ? rule.dayOfMonth : baseDate.getDate();
+            next.setFullYear(next.getFullYear() + interval); next.setDate(1); next.setMonth(targetMonth); const maxDays = new Date(next.getFullYear(), targetMonth + 1, 0, 0, 0, 0, 0).getDate(); next.setDate(Math.min(targetDay, maxDays)); return formatDateLocal(next);
         }
-        return 0;
-    });
-
-    nodes.forEach(n => {
-        if (n.subtasks && n.subtasks.length > 0) sortNodes(n.subtasks);
-    });
-    return nodes;
-}
-
-// ============================================================================
-// RENDERIZADO DEL DOM
-// ============================================================================
-
-function renderTasks() {
-    const listEl = document.getElementById('taskList');
-    const emptyEl = document.getElementById('emptyState');
-    listEl.innerHTML = '';
-
-    // Poda y filtrado
-    let displayTree = pruneTree(tasks);
-
-    // Enfoque (Drill-down)
-    if (currentState.focusTargetId) {
-        let focusedNode = null;
-        function findFocus(nodes) {
-            for (let n of nodes) {
-                if (n.id === currentState.focusTargetId) { focusedNode = n; return; }
-                if (n.subtasks.length > 0) findFocus(n.subtasks);
-            }
-        }
-        findFocus(displayTree);
-        if (focusedNode) displayTree = [focusedNode];
-    }
-
-    // Ordenamiento
-    displayTree = sortNodes(displayTree);
-
-    if (displayTree.length === 0) {
-        emptyEl.textContent = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas con los filtros actuales.";
-        emptyEl.classList.remove('hidden');
-    } else {
-        emptyEl.classList.add('hidden');
-        renderNodeList(displayTree, listEl, 0);
+        case 'custom': { const targetDay = rule.dayOfMonth !== undefined ? rule.dayOfMonth : baseDate.getDate(); return formatDateLocal(addMonthsSafely(baseDate, interval, targetDay)); }
+        default: return '';
     }
 }
 
-function renderNodeList(nodes, container, depth) {
-    nodes.forEach(task => {
-        const isTrash = task.status === 'deleted';
-        const isRootFocus = currentState.focusTargetId === task.id;
-        
-        const taskEl = document.createElement('div');
-        taskEl.className = `group flex flex-col p-3 border-b border-navy-700/50 hover:bg-navy-800 transition-colors ${isRootFocus ? 'bg-navy-800 ring-1 ring-brand-500/30' : ''}`;
-        
-        const paddingLeft = depth > 0 ? `${depth * 1.5}rem` : '0';
-        
-        let ctxBadge = '';
-        if (task.context) {
-            const ctxObj = customContexts.find(c => c.name === task.context) || { name: task.context, color: 'blue' };
-            const cm = contextColorMap[ctxObj.color] || contextColorMap.blue;
-            ctxBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${cm.bg} ${cm.text} border ${cm.border} uppercase tracking-wider">${task.context}</span>`;
-        }
-
-        let recurrenceBadge = '';
-        if (task.recurrenceRule) {
-            recurrenceBadge = `<svg class="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`;
-        }
-
-        let reminderBadge = '';
-        if (task.reminder) {
-            reminderBadge = `<svg class="w-3.5 h-3.5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Notificación Calendar (Etapa 1)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`;
-        }
-
-        let isExpanded = expandedStates[task.id];
-        let hasChildren = task.subtasks && task.subtasks.length > 0;
-        let expandChevron = '';
-        if (hasChildren && !isRootFocus) {
-            expandChevron = `
-                <button onclick="toggleExpand('${task.id}')" class="p-1 text-navy-400 hover:text-navy-50 focus:outline-none transition-transform ${isExpanded ? 'rotate-90' : ''}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </button>
-            `;
-        } else if (!isRootFocus) {
-            expandChevron = `<div class="w-6"></div>`; // Placeholder
-        }
-
-        let dateStr = '';
-        let isOverdue = false;
-        if (task.date) {
-            const parts = task.date.split('-');
-            dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-            if (task.time) dateStr += ` ${task.time}`;
-            
-            const today = new Date(); today.setHours(0,0,0,0);
-            const tDate = new Date(task.date + 'T12:00:00'); tDate.setHours(0,0,0,0);
-            if (tDate < today && task.status !== 'completed' && task.status !== 'deleted') {
-                isOverdue = true;
-            }
-        }
-
-        const pColor = priorityColors[task.priority] || 'text-navy-500';
-        const checkboxState = task.status === 'completed' ? 'checked' : '';
-        const checkboxClass = task.status === 'in_progress' ? 'is-in-progress' : '';
-        const textClass = task.status === 'completed' ? 'line-through text-navy-500' : 'text-navy-50';
-
-        let primaryActionArea = '';
-        if (isTrash) {
-            primaryActionArea = `<button onclick="restoreTask('${task.id}')" class="p-1.5 bg-navy-700 hover:bg-navy-600 rounded text-navy-300 hover:text-green-400 transition-colors" title="Restaurar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>`;
-        } else if (isBulkMode) {
-            const isSel = selectedTaskIds.has(task.id) ? 'checked' : '';
-            primaryActionArea = `<input type="checkbox" onchange="toggleSelection('${task.id}')" class="task-cb" ${isSel}>`;
-        } else {
-            primaryActionArea = `<input type="checkbox" onclick="toggleTaskUniversal('${task.id}')" class="task-cb ${checkboxClass}" ${checkboxState} title="Click para alternar estado">`;
-        }
-
-        let titleContent = `
-            <span class="text-sm font-semibold tracking-wide ${textClass} break-words cursor-pointer" onclick="${isTrash ? '' : `openEditModal('${task.id}')`}">
-                ${task.name}
-            </span>
-        `;
-        if (task.subtasks.length > 0 && !isRootFocus) {
-             titleContent += `<button onclick="focusTask('${task.id}')" class="ml-2 px-1.5 py-0.5 bg-navy-700 hover:bg-navy-600 rounded text-[9px] text-brand-400 font-bold uppercase tracking-wider transition-colors" title="Enfocar subárbol">Enfocar</button>`;
-        }
-
-        taskEl.innerHTML = `
-            <div class="flex items-start gap-3" style="padding-left: ${paddingLeft};">
-                <div class="flex items-center gap-1 mt-0.5">
-                    ${expandChevron}
-                    ${primaryActionArea}
-                </div>
-                
-                <div class="flex-1 min-w-0">
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        ${titleContent}
-                        ${ctxBadge}
-                        ${recurrenceBadge}
-                        ${reminderBadge}
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-semibold uppercase tracking-wider">
-                        <span class="${pColor}">${task.priority}</span>
-                        ${task.area ? `<span class="text-navy-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>${task.area}</span>` : ''}
-                        ${dateStr ? `<span class="${isOverdue ? 'text-danger-500 font-bold' : 'text-navy-400'}">${dateStr}</span>` : ''}
-                        ${task.status === 'in_progress' ? `<span class="text-info-500 animate-pulse">En curso</span>` : ''}
-                    </div>
-                    
-                    ${task.notes ? `<p class="mt-1.5 text-xs text-navy-400 line-clamp-2">${task.notes}</p>` : ''}
-                </div>
-
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    ${!isTrash && !isBulkMode ? `
-                        <button onclick="openPostponeModal('${task.id}')" class="p-1.5 text-navy-400 hover:text-brand-500 rounded transition-colors" title="Posponer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </button>
-                        <button onclick="openEditModal('${task.id}')" class="p-1.5 text-navy-400 hover:text-brand-500 rounded transition-colors" title="Editar">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        </button>
-                    ` : ''}
-                    <button onclick="${isTrash ? `permanentlyDelete('${task.id}')` : `deleteTaskUniversal('${task.id}')`}" class="p-1.5 text-navy-400 hover:text-danger-500 rounded transition-colors" title="Eliminar">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(taskEl);
-
-        // Render recursivo si está expandido
-        if (hasChildren && (isExpanded || isRootFocus)) {
-            const subContainer = document.createElement('div');
-            subContainer.className = 'flex flex-col';
-            renderNodeList(task.subtasks, subContainer, depth + 1);
-            container.appendChild(subContainer);
-        }
-    });
-}
-
-function updateCounters() {
-    let counts = { today: 0, tomorrow: 0, week: 0, fortnight: 0, all: 0, trash: 0 };
-    const areasCount = {};
-    customAreas.forEach(a => areasCount[a] = 0);
-
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
-    const fortnightEnd = new Date(today); fortnightEnd.setDate(fortnightEnd.getDate() + 15);
-
-    function traverse(nodes) {
-        nodes.forEach(task => {
-            if (task.status === 'deleted') { counts.trash++; } 
-            else if (task.status !== 'completed') {
-                counts.all++;
-                if (task.area && areasCount[task.area] !== undefined) areasCount[task.area]++;
-                
-                if (task.date) {
-                    const tDate = new Date(task.date + 'T12:00:00'); tDate.setHours(0,0,0,0);
-                    if (tDate <= today) counts.today++;
-                    else if (tDate.getTime() === tomorrow.getTime()) counts.tomorrow++;
-                    
-                    if (tDate >= today && tDate <= weekEnd) counts.week++;
-                    if (tDate >= today && tDate <= fortnightEnd) counts.fortnight++;
-                }
-            }
-            if (task.subtasks.length > 0) traverse(task.subtasks);
-        });
-    }
-    traverse(tasks);
-
-    // Actualizar badges en la barra lateral
-    const addBadge = (btnId, count) => {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-        const existing = btn.querySelector('.nav-badge');
-        if (existing) existing.remove();
-        if (count > 0) {
-            const badge = document.createElement('span');
-            badge.className = 'nav-badge ml-auto bg-navy-900 text-brand-500 py-0.5 px-2 rounded-full text-[9px] font-black';
-            badge.textContent = count;
-            btn.appendChild(badge);
-        }
-    };
-
-    addBadge('nav-today', counts.today);
-    addBadge('nav-tomorrow', counts.tomorrow);
-    addBadge('nav-week', counts.week);
-    addBadge('nav-fortnight', counts.fortnight);
-    addBadge('nav-all', counts.all);
-    addBadge('nav-trash', counts.trash);
-
-    // Reconstruir áreas en la sidebar
-    const areaListContainer = document.getElementById('sidebar-areas-list');
-    areaListContainer.innerHTML = '';
-    customAreas.forEach(area => {
-        const c = areasCount[area] || 0;
-        const isActive = currentState.view === 'area' && currentState.selectedArea === area;
-        
-        const btn = document.createElement('button');
-        btn.onclick = () => navigate('area', area);
-        btn.className = `w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm font-medium transition-all focus:outline-none ${isActive ? 'bg-navy-700 text-brand-400 border-r-2 border-brand-500' : 'text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent'}`;
-        
-        btn.innerHTML = `
-            <div class="flex items-center gap-2">
-                <svg class="w-3.5 h-3.5 text-navy-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                <span class="truncate">${area}</span>
-            </div>
-            ${c > 0 ? `<span class="bg-navy-900 text-navy-400 py-0.5 px-2 rounded-full text-[9px] font-bold">${c}</span>` : ''}
-        `;
-        areaListContainer.appendChild(btn);
-    });
-}
-
-function updateFilters() {
-    currentFilters.search = document.getElementById('searchInput').value;
-    currentFilters.status = document.getElementById('filterStatus').value;
-    currentFilters.priority = document.getElementById('filterPriority').value;
-    currentFilters.context = document.getElementById('filterContext').value;
-    renderTasks();
-}
-
-function updateSort() {
-    const val = document.getElementById('sortSelect').value;
-    const [by, order] = val.split('-');
-    currentSort = { by, order };
-    renderTasks();
-}
-
-function resetFilters() {
-    currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
-    document.getElementById('searchInput').value = '';
-    document.getElementById('filterStatus').value = 'pending';
-    document.getElementById('filterPriority').value = 'all';
-    document.getElementById('filterContext').value = 'all';
-    renderTasks();
-}
-
-function toggleExpand(taskId) {
-    expandedStates[taskId] = !expandedStates[taskId];
-    renderTasks();
-    saveData();
-}
-
-function focusTask(taskId) {
-    if (!bypassHistory) navHistory.push(JSON.parse(JSON.stringify(currentState)));
-    currentState.focusTargetId = taskId;
-    document.getElementById('btnBack').classList.remove('hidden');
-    renderTasks();
-}
-
-// ============================================================================
-// MUTACIONES DE ESTADO (CREAR, EDITAR, COMPLETAR, BORRAR)
-// ============================================================================
-
-function extractFormRecurrence(mode) {
-    const hasRec = document.getElementById(`${mode}HasRecurrence`).checked;
-    if (!hasRec) return null;
-
-    const freq = document.getElementById(`${mode}Frequency`).value;
-    const interval = parseInt(document.getElementById(`${mode}Interval`).value) || 1;
-    const baseOnComp = document.getElementById(`${mode}BaseOnCompletion`).checked;
-
-    let rule = { frequency: freq, interval: interval, baseOnCompletion: baseOnComp };
-
-    if (freq === 'weekly') {
-        rule.daysOfWeek = mode === 'add' ? [...addSelectedDays] : [...editSelectedDays];
-        if (rule.daysOfWeek.length === 0) return null;
-    } else if (freq === 'monthly') {
-        rule.monthlyMode = document.querySelector(`input[name="${mode}MonthlyMode"]:checked`).value;
-        if (rule.monthlyMode === 'fixed') {
-            rule.dayOfMonth = parseInt(document.getElementById(`${mode}DayOfMonth`).value) || 1;
-        } else {
-            rule.nthBusinessDay = parseInt(document.getElementById(`${mode}NthBusinessDay`).value) || 1;
-        }
-    } else if (freq === 'yearly') {
-        rule.dayOfMonth = parseInt(document.getElementById(`${mode}YearDay`).value) || 1;
-        rule.monthOfYear = parseInt(document.getElementById(`${mode}YearMonth`).value) || 1;
-    } else if (freq === 'custom') {
-        rule.dayOfMonth = parseInt(document.getElementById(`${mode}CustomDay`).value) || 1;
-    }
-
-    return rule;
-}
-
-// SISTEMA AMPLIADO DE RECORDATORIOS (Lectura de DOM)
-function getSelectedReminderAlerts(mode) {
-    const alerts = [];
-    const container = document.getElementById(`${mode}ReminderAlerts`);
-    if (container) {
-        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
-        checkboxes.forEach(cb => alerts.push(cb.value));
-    }
-    return alerts;
-}
-
-// SISTEMA AMPLIADO DE RECORDATORIOS (Seteo de DOM)
-function setReminderAlertsUI(mode, alertsArray) {
-    const container = document.getElementById(`${mode}ReminderAlerts`);
-    if (container) {
-        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => {
-            cb.checked = alertsArray && alertsArray.includes(cb.value);
-        });
-    }
-}
-
-async function addTask() {
-    const name = document.getElementById('taskInput').value.trim();
-    if (!name) return showNotice('El nombre de la tarea es obligatorio', 'error');
-
-    const area = document.getElementById('areaInput').value;
-    const context = document.getElementById('contextInput').value;
-    const priority = document.getElementById('priorityInput').value;
-    const date = document.getElementById('dateInput').value;
-    const time = document.getElementById('timeInput').value;
-    const notes = document.getElementById('notesInput').value.trim();
-    const parentId = document.getElementById('parentInput').value;
-    
-    // Captura de múltiples opciones de recordatorio
-    const reminderAlerts = getSelectedReminderAlerts('add');
-    const reminder = reminderAlerts.length > 0; // Trigger para GAS
-
-    const recurrenceRule = extractFormRecurrence('add');
-
-    const newTask = {
-        id: crypto.randomUUID(),
-        name,
-        area,
-        context: context === 'none' ? null : context,
-        priority,
-        date: date || null,
-        time: time || null,
-        notes,
-        status: 'pending',
-        subtasks: [],
-        createdAt: new Date().toISOString(),
-        reminder: reminder,
-        reminderAlerts: reminderAlerts,
-        eventCreated: false, // Flag inicial para evitar duplicados en Calendar
-        recurrenceRule: recurrenceRule,
-        attachments: [...currentAttachments]
-    };
-
-    if (parentId === 'root') {
-        tasks.push(newTask);
-    } else {
-        const added = findAndMutateTask(parentId, (nodes, i) => {
-            nodes[i].subtasks.push(newTask);
-            expandedStates[nodes[i].id] = true;
-        });
-        if (!added) tasks.push(newTask); // Fallback
-    }
-
-    closeAddTaskModal();
-    renderTasks();
-    await saveData();
-    showNotice('Tarea registrada con éxito');
-}
-
-let editingTaskId = null;
-
-function openEditModal(taskId) {
-    const task = findTaskById(taskId);
-    if (!task) return;
-    
-    editingTaskId = taskId;
-    document.getElementById('editNameInput').value = task.name;
-    document.getElementById('editStatusInput').value = task.status === 'deleted' ? 'pending' : task.status;
-    document.getElementById('editPriorityInput').value = task.priority;
-    document.getElementById('editDateInput').value = task.date || '';
-    document.getElementById('editTimeInput').value = task.time || '';
-    document.getElementById('editNotesInput').value = task.notes || '';
-    
-    populateDropdowns('edit');
-    document.getElementById('editAreaInput').value = task.area;
-    document.getElementById('editContextInput').value = task.context || 'none';
-
-    updateEditParentDropdown(taskId);
-    
-    let parentFound = false;
-    function findParent(nodes, parentId) {
-        for (let n of nodes) {
-            if (n.subtasks.some(sub => sub.id === taskId)) {
-                document.getElementById('editParentInput').value = n.id;
-                parentFound = true;
-                return;
-            }
-            if (n.subtasks.length > 0) findParent(n.subtasks, n.id);
-        }
-    }
-    findParent(tasks, 'root');
-    if (!parentFound) document.getElementById('editParentInput').value = 'root';
-
-    // Rellenar opciones de recordatorio
-    setReminderAlertsUI('edit', task.reminderAlerts || []);
-
-    currentAttachments = task.attachments ? [...task.attachments] : [];
-    renderAttachments('edit');
-
-    // Recurrencia
-    if (task.recurrenceRule) {
-        document.getElementById('editHasRecurrence').checked = true;
-        document.getElementById('editFrequency').value = task.recurrenceRule.frequency;
-        document.getElementById('editInterval').value = task.recurrenceRule.interval || 1;
-        document.getElementById('editBaseOnCompletion').checked = !!task.recurrenceRule.baseOnCompletion;
-        
-        const freq = task.recurrenceRule.frequency;
-        if (freq === 'weekly') {
-            editSelectedDays = task.recurrenceRule.daysOfWeek || [1];
-        } else if (freq === 'monthly') {
-            document.querySelector(`input[name="editMonthlyMode"][value="${task.recurrenceRule.monthlyMode}"]`).checked = true;
-            document.getElementById('editDayOfMonth').value = task.recurrenceRule.dayOfMonth || 1;
-            document.getElementById('editNthBusinessDay').value = task.recurrenceRule.nthBusinessDay || 1;
-        } else if (freq === 'yearly') {
-            document.getElementById('editYearDay').value = task.recurrenceRule.dayOfMonth || 1;
-            document.getElementById('editYearMonth').value = task.recurrenceRule.monthOfYear || 1;
-        } else if (freq === 'custom') {
-            document.getElementById('editCustomDay').value = task.recurrenceRule.dayOfMonth || 1;
-        }
-    } else {
-        document.getElementById('editHasRecurrence').checked = false;
-        editSelectedDays = [1];
-    }
-    
-    toggleRecurrenceUI('edit');
-    
-    document.getElementById('editModal').classList.remove('hidden');
-}
-
-async function saveEdit() {
-    if (!editingTaskId) return;
-
-    const newName = document.getElementById('editNameInput').value.trim();
-    if (!newName) return showNotice('El nombre no puede estar vacío', 'error');
-    
-    const newArea = document.getElementById('editAreaInput').value;
-    const newContext = document.getElementById('editContextInput').value;
-    const newParentId = document.getElementById('editParentInput').value;
-    
-    const reminderAlerts = getSelectedReminderAlerts('edit');
-    const newReminder = reminderAlerts.length > 0;
-
-    let taskData = null;
-    let oldParentId = 'root';
-
-    // 1. Extraer la tarea de su ubicación actual
-    function extractTask(nodes) {
-        for (let i = 0; i < nodes.length; i++) {
-            if (nodes[i].id === editingTaskId) {
-                taskData = nodes.splice(i, 1)[0];
-                return true;
-            }
-            if (nodes[i].subtasks.length > 0) {
-                if (extractTask(nodes[i].subtasks)) {
-                    oldParentId = nodes[i].id;
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    extractTask(tasks);
-
-    if (taskData) {
-        // 2. Actualizar datos
-        taskData.name = newName;
-        taskData.area = newArea;
-        taskData.context = newContext === 'none' ? null : newContext;
-        taskData.priority = document.getElementById('editPriorityInput').value;
-        
-        const oldDate = taskData.date;
-        const newDate = document.getElementById('editDateInput').value;
-        const newTime = document.getElementById('editTimeInput').value;
-        
-        taskData.date = newDate || null;
-        taskData.time = newTime || null;
-        
-        // Si cambia la fecha y tenía un evento de calendar, lo desvinculamos para que GAS cree uno nuevo
-        if (oldDate !== newDate) taskData.eventCreated = false;
-        
-        taskData.notes = document.getElementById('editNotesInput').value.trim();
-        taskData.reminder = newReminder;
-        taskData.reminderAlerts = reminderAlerts;
-        taskData.recurrenceRule = extractFormRecurrence('edit');
-        taskData.attachments = [...currentAttachments];
-
-        const newStatus = document.getElementById('editStatusInput').value;
-        
-        // Si se completa en la edición y tiene recurrencia
-        if (newStatus === 'completed' && taskData.status !== 'completed' && taskData.recurrenceRule) {
-            handleRecurrenceOnComplete(taskData); // Genera la copia histórica y proyecta
-        } else {
-             taskData.status = newStatus;
-             if (newStatus === 'completed') taskData.completedAt = new Date().toISOString();
-        }
-
-        // 3. Reinsertar en la nueva jerarquía
-        if (newParentId === 'root') {
-            tasks.push(taskData);
-        } else {
-            const added = findAndMutateTask(newParentId, (nodes, i) => {
-                nodes[i].subtasks.push(taskData);
-                expandedStates[nodes[i].id] = true;
-            });
-            if (!added) tasks.push(taskData); // Fallback
-        }
-    }
-
-    closeEditModal();
-    renderTasks();
-    await saveData();
-    showNotice('Cambios guardados con éxito');
-}
-
-// LOGICA DE COMPLETADO CON RECURRENCIA (El corazón del sistema)
-function handleRecurrenceOnComplete(taskData) {
-    taskData.completedAt = new Date().toISOString();
-    const nextDate = calculateNextOccurrence(taskData);
-    
-    // 1. Crear clon histórico
-    const historyClone = JSON.parse(JSON.stringify(taskData));
-    historyClone.id = crypto.randomUUID();
-    historyClone.status = 'completed';
-    historyClone.eventCreated = true; // Evitar que el clon dispare calendar
-    delete historyClone.recurrenceRule; // El clon es estático
-    
-    // 2. Encontrar dónde está la original para insertar el clon justo antes
-    function insertClone(nodes) {
-        for (let i = 0; i < nodes.length; i++) {
-            if (nodes[i].id === taskData.id) {
-                nodes.splice(i, 0, historyClone);
-                return true;
-            }
-            if (nodes[i].subtasks && nodes[i].subtasks.length > 0) {
-                if (insertClone(nodes[i].subtasks)) return true;
-            }
-        }
-        return false;
-    }
-    insertClone(tasks);
-    
-    // 3. Proyectar la tarea original hacia el futuro
-    taskData.status = 'pending';
-    taskData.date = nextDate;
-    taskData.eventCreated = false; // Permitir nuevo evento de calendar
-    
-    // 4. Resetear recursivamente las subtareas
-    function resetSubtasks(nodes) {
-        nodes.forEach(n => {
-            n.status = 'pending';
-            n.eventCreated = false;
-            if (n.subtasks.length > 0) resetSubtasks(n.subtasks);
-        });
-    }
-    if (taskData.subtasks && taskData.subtasks.length > 0) {
-        resetSubtasks(taskData.subtasks);
-    }
-}
-
-async function toggleTaskUniversal(taskId) {
-    let changed = false;
-    findAndMutateTask(taskId, (nodes, i) => {
-        let t = nodes[i];
-        if (t.status === 'pending') t.status = 'in_progress';
-        else if (t.status === 'in_progress') {
-            if (t.recurrenceRule) {
-                handleRecurrenceOnComplete(t);
-            } else {
-                t.status = 'completed';
-                t.completedAt = new Date().toISOString();
-            }
-        }
-        else t.status = 'pending';
-        changed = true;
-    });
-    if (changed) {
-        renderTasks();
-        await saveData();
-    }
-}
-
-async function deleteTaskUniversal(taskId) {
-    confirmAction('Mover a la papelera', '¿Seguro que querés eliminar esta tarea?', async () => {
-        findAndMutateTask(taskId, (nodes, i) => {
-            nodes[i].status = 'deleted';
-            nodes[i].deletedAt = new Date().toISOString();
-        });
-        renderTasks();
-        await saveData();
-        showNotice('Movido a la papelera');
-    });
-}
-
-async function permanentlyDelete(taskId) {
-    confirmAction('Borrado Definitivo', 'Esta acción es irreversible.', async () => {
-        findAndMutateTask(taskId, (nodes, i) => { nodes.splice(i, 1); });
-        renderTasks();
-        await saveData();
-        showNotice('Eliminado permanentemente');
-    });
-}
-
-async function restoreTask(taskId) {
-    findAndMutateTask(taskId, (nodes, i) => {
-        nodes[i].status = 'pending';
-        delete nodes[i].deletedAt;
-    });
-    renderTasks();
-    await saveData();
-    showNotice('Tarea restaurada');
-}
-
-async function emptyTrash() {
-    confirmAction('Vaciar Papelera', 'Se eliminarán todas las tareas de forma irreversible.', async () => {
-        function cleanRecursively(nodes) {
-            for (let i = nodes.length - 1; i >= 0; i--) {
-                if (nodes[i].status === 'deleted') nodes.splice(i, 1);
-                else if (nodes[i].subtasks.length > 0) cleanRecursively(nodes[i].subtasks);
-            }
-        }
-        cleanRecursively(tasks);
-        renderTasks();
-        await saveData();
-        showNotice('Papelera vaciada');
-    });
-}
-
-// ============================================================================
-// LÓGICA DE UI Y FORMULARIOS (POPULATE)
-// ============================================================================
-
-function populateDropdowns(mode) {
-    const areaSelect = document.getElementById(`${mode}AreaInput`);
-    const ctxSelect = document.getElementById(`${mode}ContextInput`);
-    
-    if (areaSelect) {
-        areaSelect.innerHTML = '';
-        customAreas.forEach(a => areaSelect.add(new Option(a, a)));
-        if (currentState.view === 'area' && mode === 'add') {
-            areaSelect.value = currentState.selectedArea;
-        }
-    }
-    
-    if (ctxSelect) {
-        ctxSelect.innerHTML = '<option value="none">Ninguno</option>';
-        customContexts.forEach(c => ctxSelect.add(new Option(c.name, c.name)));
-    }
-}
-
-function updateAddParentDropdown() {
-    const parentSelect = document.getElementById('parentInput');
-    const currentArea = document.getElementById('areaInput').value;
-    parentSelect.innerHTML = '<option value="root">Ninguna (Tarea Principal)</option>';
-    
-    function addOptions(nodes, depth) {
-        nodes.forEach(n => {
-            if (n.status !== 'deleted' && n.status !== 'completed' && n.area === currentArea) {
-                const prefix = '- '.repeat(depth);
-                parentSelect.add(new Option(`${prefix}${n.name}`, n.id));
-                if (n.subtasks.length > 0) addOptions(n.subtasks, depth + 1);
-            }
-        });
-    }
-    addOptions(tasks, 0);
-    if (currentState.focusTargetId) parentSelect.value = currentState.focusTargetId;
-}
-
-function updateEditParentDropdown(excludeId) {
-    const parentSelect = document.getElementById('editParentInput');
-    const currentArea = document.getElementById('editAreaInput').value;
-    parentSelect.innerHTML = '<option value="root">Ninguna (Tarea Principal)</option>';
-    
-    function addOptions(nodes, depth) {
-        nodes.forEach(n => {
-            if (n.id !== excludeId && n.status !== 'deleted' && n.status !== 'completed' && n.area === currentArea) {
-                const prefix = '- '.repeat(depth);
-                parentSelect.add(new Option(`${prefix}${n.name}`, n.id));
-                if (n.subtasks.length > 0) addOptions(n.subtasks, depth + 1);
-            }
-        });
-    }
-    addOptions(tasks, 0);
-}
-
-// ============================================================================
-// CONTROL DE MODALES
-// ============================================================================
-
-function openAddTaskModal() {
-    // BUG FIX: Reset explícito de los selectores múltiples de alerta
-    setReminderAlertsUI('add', []);
-
-    document.getElementById('taskInput').value = '';
-    document.getElementById('dateInput').value = '';
-    document.getElementById('timeInput').value = '';
-    document.getElementById('notesInput').value = '';
-    
-    populateDropdowns('add');
-    updateAddParentDropdown();
-    
-    // Reset Recurrencia
-    document.getElementById('addHasRecurrence').checked = false;
-    addSelectedDays = [1];
-    toggleRecurrenceUI('add');
-    
-    currentAttachments = [];
-    renderAttachments('add');
-    
-    document.getElementById('addTaskModal').classList.remove('hidden');
-    setTimeout(() => document.getElementById('taskInput').focus(), 100);
-}
-
-function closeAddTaskModal() { document.getElementById('addTaskModal').classList.add('hidden'); }
-function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editingTaskId = null; }
-
-function openSettingsModal() { 
-    document.getElementById('settingsDbUrlInput').value = dbUrl;
-    document.getElementById('settingsApiKeyInput').value = customApiKey;
-    document.getElementById('settingsModal').classList.remove('hidden'); 
-    toggleConfigMenu();
-}
-function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
-function saveSettings() {
-    const newUrl = document.getElementById('settingsDbUrlInput').value.trim();
-    const newKey = document.getElementById('settingsApiKeyInput').value.trim();
-    dbUrl = newUrl;
-    customApiKey = newKey;
-    localStorage.setItem(DB_URL_KEY, dbUrl);
-    localStorage.setItem(API_KEY_STORAGE_KEY, customApiKey);
-    closeSettingsModal();
-    if (dbUrl) loadDataFromCloud();
-    showNotice('Configuración guardada');
-}
-
-function toggleConfigMenu() {
-    const m = document.getElementById('configMenuContent');
-    const c = document.getElementById('configMenuChevron');
-    if (m.classList.contains('hidden')) { m.classList.remove('hidden'); c.classList.add('rotate-180'); }
-    else { m.classList.add('hidden'); c.classList.remove('rotate-180'); }
-}
-
-function confirmAction(title, message, actionFn) {
-    document.getElementById('confirmModalTitle').textContent = title;
-    document.getElementById('confirmModalMessage').textContent = message;
-    
-    const btn = document.getElementById('confirmModalBtnAction');
-    btn.onclick = () => { closeConfirmModal(); actionFn(); };
-    
-    document.getElementById('confirmModal').classList.remove('hidden');
-}
-function closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); }
-
-function showNotice(msg, type = 'success') {
-    const box = document.getElementById('notification-box');
-    const div = document.createElement('div');
-    const colors = type === 'error' ? 'bg-danger-500 text-navy-50' : 'bg-brand-500 text-navy-900';
-    div.className = `${colors} px-4 py-2 rounded-md shadow-lg text-xs font-bold slide-up flex items-center gap-2`;
-    div.innerHTML = `<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type==='error'?'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z':'M5 13l4 4L19 7'}"/></svg> <span>${msg}</span>`;
-    box.appendChild(div);
-    setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 3000);
-}
-
-// ============================================================================
-// RECURRENCIA - UI CONTROLS
-// ============================================================================
-
+// FUNCIONES DE INTERFAZ RECURRENCIA (MODALS)
 function toggleRecurrenceUI(mode) {
-    const isChecked = document.getElementById(`${mode}HasRecurrence`).checked;
-    const container = document.getElementById(`${mode}RecurrenceContainer`);
-    if (isChecked) {
-        container.classList.remove('hidden');
-        refreshRecurrenceUI(mode);
-    } else {
-        container.classList.add('hidden');
-    }
+    const checked = document.getElementById(`${mode}HasRecurrence`).checked;
+    document.getElementById(`${mode}RecurrenceContainer`).classList.toggle('hidden', !checked);
+    refreshRecurrenceUI(mode);
 }
-
+function toggleDay(mode, dayVal) {
+    const arr = mode === 'add' ? addSelectedDays : editSelectedDays;
+    if (arr.includes(dayVal)) { const idx = arr.indexOf(dayVal); arr.splice(idx, 1); } else { arr.push(dayVal); arr.sort((a, b) => a - b); }
+    for (let i=0; i<7; i++) {
+        const btn = document.getElementById(`${mode}-day-${i}`);
+        if (arr.includes(i)) { btn.classList.add('bg-brand-500', 'text-navy-900', 'border-brand-500', 'scale-110'); btn.classList.remove('bg-navy-800'); }
+        else { btn.classList.remove('bg-brand-500', 'text-navy-900', 'border-brand-500', 'scale-110'); btn.classList.add('bg-navy-800'); }
+    }
+    validateAndProjectRecurrence(mode);
+}
 function refreshRecurrenceUI(mode) {
     const freq = document.getElementById(`${mode}Frequency`).value;
-    const intLabel = document.getElementById(`${mode}IntervalLabel`);
-    
-    document.getElementById(`${mode}WeeklyBlock`).classList.add('hidden');
-    document.getElementById(`${mode}MonthlyBlock`).classList.add('hidden');
-    document.getElementById(`${mode}YearlyBlock`).classList.add('hidden');
-    document.getElementById(`${mode}CustomBlock`).classList.add('hidden');
-    document.getElementById(`${mode}CompletionBaseBlock`).classList.remove('hidden');
-
-    if (freq === 'daily' || freq === 'after_completion') { intLabel.textContent = 'días'; }
-    else if (freq === 'weekly') { 
-        intLabel.textContent = 'semanas'; 
-        document.getElementById(`${mode}WeeklyBlock`).classList.remove('hidden');
-        updateDaysUI(mode);
+    document.getElementById(`${mode}IntervalLabel`).innerText = freq === 'daily' ? 'días' : freq === 'weekly' ? 'semanas' : freq === 'monthly' ? 'meses' : freq === 'yearly' ? 'años' : freq === 'after_completion' ? 'días post-resolución' : 'meses';
+    document.getElementById(`${mode}WeeklyBlock`).classList.toggle('hidden', freq !== 'weekly');
+    document.getElementById(`${mode}MonthlyBlock`).classList.toggle('hidden', freq !== 'monthly');
+    document.getElementById(`${mode}YearlyBlock`).classList.toggle('hidden', freq !== 'yearly');
+    document.getElementById(`${mode}CustomBlock`).classList.toggle('hidden', freq !== 'custom');
+    document.getElementById(`${mode}CompletionBaseBlock`).classList.toggle('hidden', freq === 'after_completion');
+    if (freq === 'monthly') {
+        const isFixed = document.querySelector(`input[name="${mode}MonthlyMode"]:checked`).value === 'fixed';
+        document.getElementById(`${mode}MonthlyFixedBlock`).classList.toggle('hidden', !isFixed);
+        document.getElementById(`${mode}MonthlyBusinessBlock`).classList.toggle('hidden', isFixed);
     }
+    validateAndProjectRecurrence(mode);
+}
+function buildRuleFromUI(mode) {
+    if (!document.getElementById(`${mode}HasRecurrence`).checked) return null;
+    const freq = document.getElementById(`${mode}Frequency`).value;
+    const interval = parseInt(document.getElementById(`${mode}Interval`).value) || 1;
+    const baseOnComp = freq === 'after_completion' ? true : document.getElementById(`${mode}BaseOnCompletion`).checked;
+    let rule = { frequency: freq, interval, baseOnCompletion: baseOnComp };
+    if (freq === 'weekly') rule.daysOfWeek = mode === 'add' ? [...addSelectedDays] : [...editSelectedDays];
     else if (freq === 'monthly') {
-        intLabel.textContent = 'meses';
-        document.getElementById(`${mode}MonthlyBlock`).classList.remove('hidden');
-        const mMode = document.querySelector(`input[name="${mode}MonthlyMode"]:checked`).value;
-        if (mMode === 'fixed') {
-            document.getElementById(`${mode}MonthlyFixedBlock`).classList.remove('hidden');
-            document.getElementById(`${mode}MonthlyBusinessBlock`).classList.add('hidden');
-        } else {
-            document.getElementById(`${mode}MonthlyFixedBlock`).classList.add('hidden');
-            document.getElementById(`${mode}MonthlyBusinessBlock`).classList.remove('hidden');
-        }
+        const isFixed = document.querySelector(`input[name="${mode}MonthlyMode"]:checked`).value === 'fixed';
+        if (isFixed) rule.dayOfMonth = parseInt(document.getElementById(`${mode}DayOfMonth`).value) || 1;
+        else rule.nthBusinessDay = parseInt(document.getElementById(`${mode}NthBusinessDay`).value) || 5;
     }
-    else if (freq === 'yearly') {
-        intLabel.textContent = 'años';
-        document.getElementById(`${mode}YearlyBlock`).classList.remove('hidden');
-    }
-    else if (freq === 'custom') {
-        intLabel.textContent = 'meses';
-        document.getElementById(`${mode}CustomBlock`).classList.remove('hidden');
-        document.getElementById(`${mode}CompletionBaseBlock`).classList.add('hidden'); // Custom asume base fija
-    }
-    
-    validateAndProjectRecurrence(mode);
+    else if (freq === 'yearly') { rule.dayOfMonth = parseInt(document.getElementById(`${mode}YearDay`).value) || 1; rule.monthOfYear = parseInt(document.getElementById(`${mode}YearMonth`).value) || 1; }
+    else if (freq === 'custom') { rule.dayOfMonth = parseInt(document.getElementById(`${mode}CustomDay`).value) || 1; }
+    return rule;
 }
-
-function toggleDay(mode, dayNum) {
-    let arr = mode === 'add' ? addSelectedDays : editSelectedDays;
-    const idx = arr.indexOf(dayNum);
-    if (idx > -1) { if (arr.length > 1) arr.splice(idx, 1); } 
-    else { arr.push(dayNum); }
-    updateDaysUI(mode);
-    validateAndProjectRecurrence(mode);
-}
-
-function updateDaysUI(mode) {
-    let arr = mode === 'add' ? addSelectedDays : editSelectedDays;
-    for (let i = 0; i < 7; i++) {
-        const btn = document.getElementById(`${mode}-day-${i}`);
-        if (btn) {
-            if (arr.includes(i)) btn.classList.add('selected');
-            else btn.classList.remove('selected');
-        }
-    }
-}
-
 function validateAndProjectRecurrence(mode) {
-    const projEl = document.getElementById(`${mode}RecurrenceProjection`);
-    const dateVal = document.getElementById(`${mode}DateInput`).value;
-    
-    if (!document.getElementById(`${mode}HasRecurrence`).checked) {
-        projEl.textContent = ""; return;
-    }
-    
-    if (!dateVal) {
-        projEl.innerHTML = `<span class="text-danger-500">Se requiere 'Fecha programada'</span>`;
-        return;
-    }
+    const rule = buildRuleFromUI(mode); const projEl = document.getElementById(`${mode}RecurrenceProjection`);
+    if (!rule) { projEl.innerText = ''; return; }
+    const tDate = document.getElementById(mode === 'add' ? 'dateInput' : 'editDateInput').value;
+    if (!tDate) { projEl.innerText = 'Seleccioná una fecha base para simular.'; return; }
+    if (rule.frequency === 'weekly' && (!rule.daysOfWeek || rule.daysOfWeek.length === 0)) { projEl.innerText = 'Seleccioná al menos un día.'; return; }
+    try { const simTask = { date: tDate, startDate: tDate, recurrenceRule: rule }; const nextDate = calculateNextOccurrence(simTask); projEl.innerText = nextDate ? `Próxima ejecución: ${nextDate}` : 'Configuración inválida.'; } 
+    catch (e) { projEl.innerText = 'Error algorítmico.'; }
+}
 
-    const mockTask = { date: dateVal, recurrenceRule: extractFormRecurrence(mode) };
-    const nextDateStr = calculateNextOccurrence(mockTask);
+// LÓGICA DE TAREAS (CREATE / UPDATE / DELETE / COMPLETE)
+async function addTask() { 
+    const name = document.getElementById('taskInput').value.trim(); if (!name) return; 
+    const area = document.getElementById('areaInput').value; const context = document.getElementById('contextInput').value; const priority = document.getElementById('priorityInput').value; 
+    const dateInput = document.getElementById('dateInput').value; const timeInput = document.getElementById('timeInput').value; const notes = document.getElementById('notesInput').value.trim(); 
+    const reminder = document.getElementById('reminderToggle').checked; const rule = buildRuleFromUI('add');
+    const parentIdRaw = document.getElementById('parentInput').value; const parentId = parentIdRaw === 'root' ? 'root' : Number(parentIdRaw);
+    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
+    if (parentId === 'root') tasks.unshift(newTask); else insertTask(newTask, parentId);
+    closeAddTaskModal(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea guardada"); await saveData(); 
+}
+async function saveEdit() {
+    const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
+    const status = document.getElementById('editStatusInput').value; const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; 
+    const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; 
+    const notes = document.getElementById('editNotesInput').value.trim(); const reminder = document.getElementById('editReminderToggle').checked; const rule = buildRuleFromUI('edit');
+    const newParentIdRaw = document.getElementById('editParentInput').value; const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
+    let targetTask = null; if (newParentId !== editState.parentId) targetTask = extractTask(id);
+    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
+    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
+    closeEditModal(); refreshAllDropdowns(); renderTasks(); showNotice("Guardado exitosamente"); await saveData(); 
+}
+async function toggleTaskUniversal(id) {
+    findAndMutateTask(id, (nodes, i) => {
+        const t = nodes[i];
+        if (t.status !== 'completed' && t.recurrenceRule) {
+            const todayStr = formatDateLocal(new Date());
+            const nextDate = calculateNextOccurrence(t, todayStr);
+            const historicalCopy = JSON.parse(JSON.stringify(t));
+            historicalCopy.id = Date.now() + Math.random(); historicalCopy.status = 'completed'; historicalCopy.completedAt = todayStr; historicalCopy.recurrenceRule = null;
+            t.date = nextDate; t.status = 'pending'; 
+            function resetCompletion(task) { task.status = 'pending'; if (task.subtasks) task.subtasks.forEach(resetCompletion); }
+            if(t.subtasks) t.subtasks.forEach(resetCompletion);
+            nodes.splice(i, 0, historicalCopy);
+        } else { t.status = t.status === 'completed' ? 'pending' : 'completed'; }
+    });
+    renderTasks(); renderCalendar(); await saveData();
+}
+async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task) return; const performDelete = async () => { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData(); } }; if (task.subtasks && task.subtasks.length > 0) { showConfirm("Eliminar con subtareas", `¿Enviar a papelera con sus ${task.subtasks.length} subtareas?`, performDelete, true); } else { await performDelete(); } }
+
+// MODALS LIFECYCLE
+function openAddTaskModal() { 
+    document.getElementById('taskInput').value = ''; 
     
-    if (nextDateStr) {
-        const parts = nextDateStr.split('-');
-        projEl.textContent = `Próxima: ${parts[2]}/${parts[1]}/${parts[0]}`;
+    // CAMBIO: Evalúa la vista temporal para predefinir la fecha si corresponde
+    let defaultDate = '';
+    if (currentState.view === 'today') {
+        defaultDate = formatDateLocal(new Date());
+    } else if (currentState.view === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        defaultDate = formatDateLocal(tomorrow);
+    }
+    document.getElementById('dateInput').value = defaultDate;
+    
+    document.getElementById('timeInput').value = ''; 
+    document.getElementById('notesInput').value = ''; 
+    document.getElementById('priorityInput').value = 'baja';
+    
+    // CAMBIO: Selecciona automáticamente el área si el usuario está visualizando una específica.
+    if (currentState.view === 'area' && currentState.selectedArea) {
+        document.getElementById('areaInput').value = currentState.selectedArea;
     } else {
-        projEl.textContent = "Regla inválida";
-    }
-}
-
-// ============================================================================
-// FUNCIONES MASIVAS Y CALENDARIO
-// ============================================================================
-function toggleBulkMode() {
-    isBulkMode = !isBulkMode;
-    selectedTaskIds.clear();
-    const bar = document.getElementById('bulkActionBar');
-    if (isBulkMode) { bar.classList.remove('translate-y-32', 'opacity-0'); } 
-    else { bar.classList.add('translate-y-32', 'opacity-0'); }
-    renderTasks();
-    updateBulkCount();
-}
-
-function toggleSelection(taskId) {
-    if (selectedTaskIds.has(taskId)) selectedTaskIds.delete(taskId);
-    else selectedTaskIds.add(taskId);
-    updateBulkCount();
-}
-
-function updateBulkCount() { document.getElementById('bulkCount').textContent = selectedTaskIds.size; }
-
-async function bulkComplete() {
-    if (selectedTaskIds.size === 0) return;
-    selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => {
-        if (nodes[i].recurrenceRule) handleRecurrenceOnComplete(nodes[i]);
-        else { nodes[i].status = 'completed'; nodes[i].completedAt = new Date().toISOString(); }
-    }));
-    toggleBulkMode(); await saveData(); renderTasks();
-}
-
-async function bulkDelete() {
-    if (selectedTaskIds.size === 0) return;
-    confirmAction('Borrado masivo', `¿Mover ${selectedTaskIds.size} tareas a la papelera?`, async () => {
-        selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].status = 'deleted'; }));
-        toggleBulkMode(); await saveData(); renderTasks();
-    });
-}
-
-function openBulkMoveModal() {
-    if (selectedTaskIds.size === 0) return;
-    const aSelect = document.getElementById('bulkAreaInput');
-    const cSelect = document.getElementById('bulkContextInput');
-    aSelect.innerHTML = ''; customAreas.forEach(a => aSelect.add(new Option(a, a)));
-    cSelect.innerHTML = '<option value="none">Ninguno / Quitar Contexto</option>';
-    customContexts.forEach(c => cSelect.add(new Option(c.name, c.name)));
-    document.getElementById('bulkMoveModal').classList.remove('hidden');
-}
-
-function closeBulkMoveModal() { document.getElementById('bulkMoveModal').classList.add('hidden'); }
-
-async function applyBulkMove() {
-    const newA = document.getElementById('bulkAreaInput').value;
-    const newC = document.getElementById('bulkContextInput').value;
-    selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => {
-        nodes[i].area = newA;
-        nodes[i].context = newC === 'none' ? null : newC;
-    }));
-    closeBulkMoveModal(); toggleBulkMode(); await saveData(); renderTasks();
-}
-
-let postponeState = { id: null };
-function openPostponeModal(taskId) {
-    postponeState.id = taskId;
-    document.getElementById('postponeCustomDate').value = '';
-    document.getElementById('postponeModal').classList.remove('hidden');
-}
-function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
-
-async function postponeAction(type) {
-    let fd = '';
-    if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } 
-    else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } 
-    else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; }
-    
-    findAndMutateTask(postponeState.id, (nodes, i) => { 
-        nodes[i].date = fd; 
-        nodes[i].eventCreated = false; // Permitir que GAS cree nuevo evento
-    });
-    
-    closePostponeModal(); renderTasks(); await saveData();
-}
-
-// CALENDARIO RENDER
-function renderCalendar() {
-    const g = document.getElementById('calendar-grid');
-    const m = document.getElementById('calendar-month');
-    g.innerHTML = '';
-    
-    const y = calendarDate.getFullYear();
-    const mo = calendarDate.getMonth();
-    
-    const options = { month: 'long', year: 'numeric' };
-    m.textContent = calendarDate.toLocaleDateString('es-ES', options);
-    
-    const firstDay = new Date(y, mo, 1).getDay();
-    const daysInMonth = new Date(y, mo + 1, 0).getDate();
-    const today = new Date();
-    
-    // Contar tareas por día
-    const dayCounts = {};
-    function countForCal(nodes) {
-        nodes.forEach(t => {
-            if (t.status !== 'deleted' && t.date) {
-                const parts = t.date.split('-');
-                if (parseInt(parts[0]) === y && parseInt(parts[1]) - 1 === mo) {
-                    const d = parseInt(parts[2]);
-                    if (!dayCounts[d]) dayCounts[d] = { p: 0, c: 0 };
-                    if (t.status === 'completed') dayCounts[d].c++; else dayCounts[d].p++;
-                }
-            }
-            if (t.subtasks.length > 0) countForCal(t.subtasks);
-        });
-    }
-    countForCal(tasks);
-    
-    for (let i = 0; i < firstDay; i++) {
-        const d = document.createElement('div');
-        d.className = 'calendar-day opacity-20';
-        g.appendChild(d);
+        document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     }
     
-    for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() && mo === today.getMonth() && y === today.getFullYear();
-        const d = document.createElement('div');
-        d.className = `calendar-day ${isToday ? 'today' : 'text-navy-50 bg-navy-900 border border-navy-700/50'}`;
+    document.getElementById('contextInput').value = ''; 
+    currentAttachments = []; 
+    renderAttachments('add'); 
+    updateAddParentDropdown();
+    document.getElementById('addHasRecurrence').checked = false; 
+    addSelectedDays = [1]; 
+    toggleDay('add', 1); 
+    toggleRecurrenceUI('add');
+    document.getElementById('addTaskModal').classList.remove('hidden'); 
+    setTimeout(() => document.getElementById('taskInput').focus(), 100); 
+}
+function closeAddTaskModal() { document.getElementById('addTaskModal').classList.add('hidden'); }
+function openEditModal(id) { 
+    editState = { id, parentId: getParentId(id) }; let target = null;
+    function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } } traverse(tasks); if (!target) return;
+    document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); document.getElementById('editStatusInput').value = target.status || 'pending';
+    document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || ''; document.getElementById('editPriorityInput').value = target.priority || 'baja'; 
+    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; document.getElementById('editNotesInput').value = target.notes || '';
+    currentAttachments = target.attachments ? [...target.attachments] : []; renderAttachments('edit'); updateEditParentDropdown();
+    if (target.recurrenceRule) {
+        const r = target.recurrenceRule; document.getElementById('editHasRecurrence').checked = true; document.getElementById('editFrequency').value = r.frequency; document.getElementById('editInterval').value = r.interval; document.getElementById('editBaseOnCompletion').checked = !!r.baseOnCompletion;
+        if (r.frequency === 'weekly') { editSelectedDays = r.daysOfWeek || [1]; for(let i=0;i<7;i++){ if(editSelectedDays.includes(i)){ toggleDay('edit', i); toggleDay('edit', i); } else { const btn = document.getElementById(`edit-day-${i}`); btn.classList.remove('bg-brand-500', 'text-navy-900', 'border-brand-500', 'scale-110'); btn.classList.add('bg-navy-800'); } } }
+        if (r.frequency === 'monthly') { if (r.nthBusinessDay !== undefined) { document.querySelector('input[name="editMonthlyMode"][value="business"]').checked = true; document.getElementById('editNthBusinessDay').value = r.nthBusinessDay; } else { document.querySelector('input[name="editMonthlyMode"][value="fixed"]').checked = true; document.getElementById('editDayOfMonth').value = r.dayOfMonth || 1; } }
+        if (r.frequency === 'yearly') { document.getElementById('editYearDay').value = r.dayOfMonth || 1; document.getElementById('editYearMonth').value = r.monthOfYear || 1; }
+        if (r.frequency === 'custom') { document.getElementById('editCustomDay').value = r.dayOfMonth || 1; }
+    } else { document.getElementById('editHasRecurrence').checked = false; }
+    toggleRecurrenceUI('edit'); document.getElementById('editModal').classList.remove('hidden'); 
+}
+function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+
+// UTILIDADES Y RENDERIZADO VISUAL
+function showConfirm(title, message, onConfirm, isDanger = false) { document.getElementById('confirmModalTitle').innerText = title; document.getElementById('confirmModalMessage').innerText = message; confirmCallback = onConfirm; const btnConfirm = document.getElementById('confirmModalBtnAction'); if (isDanger) btnConfirm.className = "w-1/2 bg-danger-500 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-danger-600 focus:outline-none"; else btnConfirm.className = "w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none"; document.getElementById('confirmModal').classList.remove('hidden'); }
+function closeConfirmModal(accepted) { document.getElementById('confirmModal').classList.add('hidden'); if (accepted && confirmCallback) confirmCallback(); confirmCallback = null; }
+function showSyncStatus(status) { const dot = document.getElementById('sync-status-dot'); const text = document.getElementById('sync-status-text'); if (!dot || !text) return; dot.className = "w-1.5 h-1.5 rounded-full transition-all"; switch(status) { case 'saving': dot.classList.add('bg-blue-500', 'animate-pulse'); text.innerText = "Guardando..."; text.className = "text-blue-400"; break; case 'synced': dot.classList.add('bg-emerald-500'); text.innerText = "Sincronizado"; text.className = "text-emerald-400"; break; case 'loading': dot.classList.add('bg-brand-500', 'animate-pulse'); text.innerText = "Cargando..."; text.className = "text-brand-400"; break; case 'offline': dot.classList.add('bg-yellow-500'); text.innerText = "Modo Offline"; text.className = "text-yellow-400"; break; case 'error': dot.classList.add('bg-red-500'); text.innerText = "Fallo de Red"; text.className = "text-red-400"; break; default: dot.classList.add('bg-navy-500'); text.innerText = "Nube Desconectada"; text.className = "text-navy-400"; break; } }
+function showNotice(msg) { const box = document.getElementById('notification-box'); const notice = document.createElement('div'); notice.className = "bg-brand-500 text-navy-900 px-6 py-4 rounded-md text-xs font-bold animate-in select-none pointer-events-auto border border-brand-600"; notice.innerText = msg; box.appendChild(notice); setTimeout(() => { notice.style.opacity = '0'; notice.style.transition = 'opacity 0.3s'; setTimeout(() => notice.remove(), 300); }, 2500); }
+function openSettingsModal() { document.getElementById('settingsDbUrlInput').value = dbUrl; document.getElementById('settingsApiKeyInput').value = customApiKey; document.getElementById('settingsModal').classList.remove('hidden'); }
+function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+async function saveSettings() { dbUrl = document.getElementById('settingsDbUrlInput').value.trim(); customApiKey = document.getElementById('settingsApiKeyInput').value.trim(); if (dbUrl) localStorage.setItem(DB_URL_KEY, dbUrl); else localStorage.removeItem(DB_URL_KEY); if (customApiKey) localStorage.setItem(API_KEY_STORAGE_KEY, customApiKey); else localStorage.removeItem(API_KEY_STORAGE_KEY); closeSettingsModal(); showNotice("Configuración actualizada."); if (dbUrl) await loadDataFromCloud(); else { showSyncStatus('none'); updateUI(); } }
+function updateDateDisplay() { document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }); }
+function toggleSidebar(force) { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('mobile-overlay'); const isOpen = !sidebar.classList.contains('-translate-x-full'); if (force === false || isOpen) { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); } else { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); } }
+function toggleConfigMenu() { const content = document.getElementById('configMenuContent'); const chevron = document.getElementById('configMenuChevron'); if (content.classList.contains('hidden')) { content.classList.remove('hidden'); chevron.classList.add('rotate-180'); } else { content.classList.add('hidden'); chevron.classList.remove('rotate-180'); } }
+function getContextStyles(contextName) { const found = customContexts.find(c => c.name === contextName); const color = found ? found.color : 'gray'; return contextColorMap[color] || contextColorMap['gray']; }
+function formatDateAR(dateStr, timeStr) { if (!dateStr) return ''; const parts = dateStr.split('-'); if (parts.length !== 3) return dateStr; const formattedDate = `${parts[2]}/${parts[1]}`; return timeStr ? `${formattedDate}` : formattedDate; }
+
+// CORE ENGINE HELPERS
+function findAndMutateTask(taskId, mutationFn) { function traverse(nodes) { for (let i = 0; i < nodes.length; i++) { if (nodes[i].id === taskId) { mutationFn(nodes, i); return true; } if (nodes[i].subtasks && traverse(nodes[i].subtasks)) return true; } return false; } return traverse(tasks); }
+function extractTask(taskId) { let extracted = null; function walk(nodes) { for (let i = 0; i < nodes.length; i++) { if (nodes[i].id === taskId) { extracted = nodes.splice(i, 1)[0]; return true; } if (nodes[i].subtasks && walk(nodes[i].subtasks)) return true; } return false; } walk(tasks); return extracted; }
+function insertTask(taskObj, parentId) { if (parentId === 'root') tasks.unshift(taskObj); else findAndMutateTask(parentId, (nodes, i) => { if (!nodes[i].subtasks) nodes[i].subtasks = []; nodes[i].subtasks.push(taskObj); expandedStates[parentId] = true; }); }
+function getParentId(taskId) { let pId = 'root'; function search(nodes, currentParent) { for (let n of nodes) { if (n.id === taskId) { pId = currentParent; return true; } if (n.subtasks && search(n.subtasks, n.id)) return true; } return false; } search(tasks, 'root'); return pId; }
+function isDescendant(ancestorId, targetId) { if (ancestorId === targetId) return true; let ancestorNode = null; function findAnc(nodes) { for(let n of nodes) { if (n.id === ancestorId) { ancestorNode = n; return; } if (n.subtasks) findAnc(n.subtasks); } } findAnc(tasks); if (!ancestorNode || !ancestorNode.subtasks) return false; let found = false; function checkTarget(nodes) { for(let n of nodes) { if (n.id === targetId) { found = true; return; } if (n.subtasks) checkTarget(n.subtasks); } } checkTarget(ancestorNode.subtasks); return found; }
+function getTaskById(id) { let found = null; function walk(nodes) { for (let n of nodes) { if (n.id === id) { found = n; return; } if (n.subtasks && n.subtasks.length > 0) walk(n.subtasks); } } walk(tasks); return found; }
+function getUniqueValues(nodes, key) { let vals = new Set(); function walk(ns) { if(!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n[key]) vals.add(n[key]); if(n.subtasks) walk(n.subtasks); }); } walk(nodes); return Array.from(vals); }
+function getAllAreasOrdered() { const uniqueTasksAreas = getUniqueValues(tasks, 'area').filter(Boolean); const orphaned = uniqueTasksAreas.filter(a => !customAreas.includes(a)).sort((a, b) => String(a).localeCompare(String(b))); return [...customAreas.filter(Boolean), ...orphaned]; }
+
+// NAVEGACIÓN Y FOCO
+function navigate(view, areaName = null, pushHistory = true, focusId = null) { 
+    if (pushHistory) navHistory.push(JSON.parse(JSON.stringify(currentState))); 
+    currentState.view = view; 
+    currentState.selectedArea = areaName; 
+    currentState.focusTargetId = focusId; 
+    if (window.innerWidth < 768) toggleSidebar(false); 
+    updateUI(); 
+}
+function focusTaskTree(id) { 
+    navigate('focus', null, true, id); 
+}
+function goBack() { 
+    if (navHistory.length > 0) { 
+        currentState = navHistory.pop(); 
+        updateUI(); 
+    } 
+}
+
+function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute("href", dataStr); dlAnchorElem.setAttribute("download", "agenda_backup.json"); dlAnchorElem.click(); }
+function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
+
+// RENDERING
+function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) { el.value = currentVal; } else if (defaultLabel !== null) { el.value = defaultValue; } }
+function refreshAllDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('areaInput', allAreas); populateSelect('contextInput', allContexts, "Sin contexto", ""); populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); renderSidebarAreas(); }
+function refreshEditDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('editAreaInput', allAreas); populateSelect('editContextInput', allContexts, "Sin contexto", ""); }
+function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
+function updateEditParentDropdown() { const area = document.getElementById('editAreaInput').value; const taskId = editState.id; const select = document.getElementById('editParentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value || editState.parentId; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
+
+// NAVIGATION & FILTERS CONTINUATION
+function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
+function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'date-asc'; currentSort = { by: 'date', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
+function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
+
+function updateUI() {
+    const btnBack = document.getElementById('btnBack'); if (navHistory.length > 0) btnBack.classList.remove('hidden'); else btnBack.classList.add('hidden');
+    const titleEl = document.getElementById('view-title');
+    const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
+    titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+    const isTrash = currentState.view === 'trash';
+    ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { const el = document.getElementById(id); if (id === `nav-${currentState.view}`) { el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.remove('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.remove('text-danger-500'); } else { el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.add('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.add('text-danger-500'); } });
+    document.querySelectorAll('.sidebar-area-item').forEach(el => { if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.remove('border-transparent', 'text-navy-300'); } else { el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.add('border-transparent', 'text-navy-300'); } });
+    document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); 
+    if (currentState.view === 'calendar') { document.getElementById('omnibar-container').classList.add('hidden'); document.getElementById('btnAIToggle').classList.remove('text-brand-500', 'bg-navy-700'); document.getElementById('btnAIToggle').classList.add('text-navy-400'); }
+    document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); 
+    document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
+    document.getElementById('btnEmptyTrash').classList.toggle('hidden', !isTrash);
+    document.getElementById('searchWrap').classList.toggle('hidden', isTrash);
+    document.getElementById('filterStatus').classList.toggle('hidden', isTrash);
+    document.getElementById('filterPriority').classList.toggle('hidden', isTrash);
+    document.getElementById('filterContext').classList.toggle('hidden', isTrash);
+    document.getElementById('sortSelect').classList.toggle('hidden', isTrash);
+    document.getElementById('btnBulkMode').classList.toggle('hidden', isTrash);
+    document.getElementById('btnResetFilters').classList.toggle('hidden', isTrash);
+    document.getElementById('btnAIToggle').classList.toggle('hidden', isTrash);
+    document.getElementById('filtersDivider').classList.toggle('hidden', isTrash);
+    const fab = document.getElementById('mainFab');
+    if (isTrash) fab.classList.add('hidden'); else { fab.classList.remove('hidden'); if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); else fab.classList.remove('translate-y-24', 'opacity-0'); }
+    if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
+    if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
+}
+
+// TREE AND LIST RENDER LOGIC
+function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
+function sortTasks(taskList) { if (currentSort.by === 'none') return taskList; const priorityWeight = { urgente: 4, alta: 3, media: 2, baja: 1 }; return taskList.sort((a, b) => { let valA, valB; if (currentSort.by === 'priority') { valA = priorityWeight[a.priority] || 0; valB = priorityWeight[b.priority] || 0; } else if (currentSort.by === 'date') { valA = a.date || '9999-12-31'; valB = b.date || '9999-12-31'; } else if (currentSort.by === 'name') { valA = (a.name || '').toLowerCase(); valB = (b.name || '').toLowerCase(); } else if (currentSort.by === 'context') { valA = (a.context || '\uFFFF').toLowerCase(); valB = (b.context || '\uFFFF').toLowerCase(); } let comparison = 0; if (valA < valB) comparison = -1; if (valA > valB) comparison = 1; return currentSort.order === 'desc' ? -comparison : comparison; }); }
+
+function pruneTree(nodeList, inFocusedSubtree = false) {
+    if (!Array.isArray(nodeList)) return [];
+    const todayStr = formatDateLocal(new Date());
+    const tomorrowObj = new Date(); tomorrowObj.setDate(tomorrowObj.getDate() + 1); const tomorrowStr = formatDateLocal(tomorrowObj);
+    const daysToSunday = tomorrowObj.getDay() === 0 ? 0 : 7 - tomorrowObj.getDay();
+    const endOfWeekObj = new Date(); endOfWeekObj.setDate(endOfWeekObj.getDate() + daysToSunday); const endOfWeekStr = formatDateLocal(endOfWeekObj);
+    const fortnightObj = new Date(); fortnightObj.setDate(fortnightObj.getDate() + 15); const fortnightStr = formatDateLocal(fortnightObj);
+    
+    let filtered = nodeList.map(node => {
+        if (node.isDeleted) return null; 
+        let matches = true;
+        if (currentFilters.search !== '') { const sTerm = currentFilters.search.toLowerCase(); const textMatch = node.name.toLowerCase().includes(sTerm) || (node.area || '').toLowerCase().includes(sTerm) || (node.context || '').toLowerCase().includes(sTerm); if (!textMatch) matches = false; }
+        if (currentFilters.status === 'pending' && node.status === 'completed') matches = false; 
+        if (currentFilters.status === 'in_progress' && node.status !== 'in_progress') matches = false; 
+        if (currentFilters.status === 'completed' && node.status !== 'completed') matches = false; 
+        if (currentFilters.priority !== 'all' && node.priority !== currentFilters.priority) matches = false; 
+        if (currentFilters.context !== 'all' && node.context !== currentFilters.context) matches = false;
+        if (currentState.view === 'today') { if (!node.date || node.date > todayStr) matches = false; }
+        else if (currentState.view === 'tomorrow') { if (!node.date || node.date !== tomorrowStr) matches = false; }
+        else if (currentState.view === 'week') { if (!node.date || node.date > endOfWeekStr) matches = false; }
+        else if (currentState.view === 'fortnight') { if (!node.date || node.date > fortnightStr) matches = false; }
+        else if (currentState.view === 'area') { if (node.area !== currentState.selectedArea) matches = false; }
+        else if (currentState.view === 'focus') { if (!inFocusedSubtree && !containsFocusNode(node, currentState.focusTargetId)) matches = false; }
         
-        let html = `<span class="mb-1">${i}</span>`;
-        if (dayCounts[i]) {
-            html += `<div class="flex gap-1">`;
-            if (dayCounts[i].p > 0) html += `<span class="w-2 h-2 rounded-full bg-brand-500" title="${dayCounts[i].p} pendientes"></span>`;
-            if (dayCounts[i].c > 0) html += `<span class="w-2 h-2 rounded-full bg-green-500" title="${dayCounts[i].c} completadas"></span>`;
-            html += `</div>`;
+        const isNowFocused = inFocusedSubtree || (currentState.view === 'focus' && node.id === currentState.focusTargetId);
+        const prunedSubtasks = pruneTree(node.subtasks || [], isNowFocused);
+        if (matches || prunedSubtasks.length > 0) return { ...node, subtasks: prunedSubtasks, _explicitMatch: matches }; 
+        return null;
+    }).filter(Boolean);
+    return sortTasks(filtered);
+}
+
+// FLATTEN MATCHES
+function flattenMatches(prunedNodes, path = []) {
+    let flat = []; if (!Array.isArray(prunedNodes)) return flat;
+    prunedNodes.forEach(node => {
+        const currentPath = [...path, { id: node.id, name: node.name }];
+        if (node._explicitMatch) flat.push({ ...node, _parentPath: path, subtasks: [] });
+        if (node.subtasks && node.subtasks.length > 0) flat = flat.concat(flattenMatches(node.subtasks, currentPath));
+    }); return flat;
+}
+
+// BUILD TASK ROWS
+function buildTaskRows(nodes, path = []) {
+    if (!nodes || nodes.length === 0) return '';
+    const isTrash = currentState.view === 'trash';
+    const indentMap = { 1: 'pl-3 md:pl-5', 2: 'pl-8 md:pl-10', 3: 'pl-12 md:pl-14', 4: 'pl-16 md:pl-18', 5: 'pl-20 md:pl-22' };
+    const isFiltering = currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status === 'in_progress' || currentFilters.status === 'completed';
+    const todayStr = formatDateLocal(new Date());
+
+    return nodes.map(task => {
+        const hasChildren = task.subtasks && task.subtasks.length > 0;
+        const isExpanded = isTrash || (currentState.view === 'focus' || isFiltering) ? true : (expandedStates[task.id] || false);
+        const logicalDepth = path.length + 1;
+        const indentClass = isTrash ? 'pl-3 md:pl-5' : (indentMap[logicalDepth] || 'pl-20 md:pl-22');
+        const isCompleted = task.status === 'completed';
+        const isOverdue = task.date && task.date < todayStr && !isCompleted;
+
+        // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
+        let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
+        if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
+
+        const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
+
+        let subtasksHtml = (isExpanded && !isTrash) ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
+        const subtaskListHTML = isTrash ? '' : `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
+        
+        const bulkCheckboxHTML = (isBulkMode && !isTrash) ? `<div class="shrink-0 mr-2 flex items-center justify-center cursor-pointer py-1 pr-1" onclick="toggleBulkSelect(${task.id}, event)"><input type="checkbox" class="w-[18px] h-[18px] rounded-sm border border-navy-500 text-brand-500 bg-navy-800 focus:ring-0 cursor-pointer pointer-events-none transition-colors" ${selectedTaskIds.has(task.id) ? 'checked' : ''}></div>` : '';
+        const isInProgress = task.status === 'in_progress'; const isMuted = !task._explicitMatch && isFiltering && !isTrash;
+        
+        let contextHtml = ''; if (task.context && task.context.trim() !== '') { const ctxStyles = getContextStyles(task.context); contextHtml = `<span class="mx-1 shrink-0 text-navy-600">&bull;</span><span class="truncate font-semibold tracking-wide ${ctxStyles.text} max-w-[80px] sm:max-w-[120px]">${task.context}</span>`; }
+        let dependencyHtml = ''; if (task._parentPath && task._parentPath.length > 0) { const immediateParent = task._parentPath[task._parentPath.length - 1]; dependencyHtml = `<span class="mx-1 shrink-0 text-navy-600">&bull;</span><span class="text-navy-400 truncate max-w-[150px] sm:max-w-[250px]" title="Subtarea de: ${immediateParent.name}">Subtarea de: <span class="text-brand-400 font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); focusTaskTree(${immediateParent.id})">${immediateParent.name}</span></span>`; }
+
+        const nameStyle = isCompleted ? 'line-through text-navy-500' : (isOverdue ? 'text-danger-500 font-semibold' : (isInProgress ? 'text-info-500' : (isMuted ? 'text-navy-400 italic opacity-80' : 'text-navy-50')));
+
+        let actionButtonsHtml = '';
+        if (isTrash) { actionButtonsHtml = `<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6"><button onclick="event.stopPropagation(); restoreTask(${task.id})" title="Restaurar" class="p-1 text-emerald-500 hover:text-emerald-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button><button onclick="event.stopPropagation(); hardDeleteTask(${task.id})" title="Eliminar definitivamente" class="p-1 text-danger-500 hover:text-danger-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>`; } 
+        else if (!isBulkMode) {
+            let statusActionHtml = ''; if (isInProgress) statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`; else if (!isCompleted) statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+            actionButtonsHtml = `<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">${statusActionHtml}<button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button><button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button><button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>`;
         }
-        
-        d.innerHTML = html;
-        d.onclick = () => openDayDetail(y, mo, i);
-        g.appendChild(d);
-    }
+
+        return `
+            <div class="task-item" data-id="${task.id}">
+                <div class="group flex flex-col py-1.5 pr-4 border-b border-navy-700 hover:bg-navy-700/50 transition-colors ${indentClass}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            ${bulkCheckboxHTML}
+                            ${(hasChildren && !isTrash) ? `<button onclick="toggleExpand(${task.id}, event)" class="p-0.5 text-navy-400 hover:text-navy-50 transition-transform ${isExpanded ? 'rotate-90' : ''} focus:outline-none shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>` : `<div class="w-4 shrink-0"></div>`}
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''} ${isTrash ? 'disabled' : `onchange="toggleTaskUniversal(${task.id})"`} class="task-cb shrink-0 ${(isBulkMode || isTrash) ? 'opacity-40 pointer-events-none' : ''} ${isInProgress ? 'is-in-progress' : ''}">
+                            <div class="flex flex-col min-w-0 flex-1">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-[14px] font-medium task-name ${nameStyle} truncate ${isTrash ? 'pointer-events-none' : 'cursor-pointer'} select-none leading-none transition-colors" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">${task.name}</span>
+                                    ${(hasChildren && !isTrash) ? `<span class="bg-navy-700 text-navy-400 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 shadow-inner">+${task.subtasks.length} sub.</span>` : ''}
+                                    ${recurrenceBadge}
+                                    ${(task.attachments && task.attachments.length > 0) ? `<svg class="w-3.5 h-3.5 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>` : ''}
+                                    ${(isTrash && hasChildren) ? `<span class="text-[9px] bg-navy-700 text-navy-400 px-1.5 py-0.5 rounded ml-2">+${task.subtasks.length} sub.</span>` : ''}
+                                </div>
+                                <div class="flex items-center text-[11px] mt-1 leading-none min-w-0 select-none">
+                                    <div class="flex items-center text-navy-400 ${isTrash ? '' : 'cursor-pointer hover:text-navy-300'} transition-colors shrink-0 min-w-0" onclick="${isTrash ? '' : (isBulkMode ? `toggleBulkSelect(${task.id}, event)` : `openEditModal(${task.id})`)}">
+                                        <span class="truncate">${task.area}</span>${contextHtml}${dependencyHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0 relative">
+                            ${actionButtonsHtml}
+                            <div class="w-28 flex flex-col items-start justify-center gap-1.5 shrink-0 pl-2">
+                                <svg title="Prioridad: ${task.priority}" class="w-3.5 h-3.5 ${priorityColors[task.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>
+                                ${dateDisplayHTML}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ${subtaskListHTML}
+            </div>
+        `;
+    }).join('');
 }
 
-function changeMonth(delta) {
-    calendarDate.setMonth(calendarDate.getMonth() + delta);
-    renderCalendar();
-}
-
-function openDayDetail(y, mo, d) {
-    const tgt = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dateObj = new Date(y, mo, d);
-    document.getElementById('modalDateTitle').textContent = dateObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+function renderTasks() {
+    const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
+    let nodesToRender = [];
+    let taskCount = 0; 
     
-    const cont = document.getElementById('modalContent');
-    cont.innerHTML = '';
-    
-    let found = [];
-    function findD(nodes) {
-        nodes.forEach(t => {
-            if (t.status !== 'deleted' && t.date === tgt) found.push(t);
-            if (t.subtasks.length > 0) findD(t.subtasks);
-        });
-    }
-    findD(tasks);
-    
-    if (found.length === 0) {
-        cont.innerHTML = '<p class="text-xs text-navy-400 text-center py-4">No hay tareas programadas para este día.</p>';
+    if (currentState.view === 'trash') {
+        function collectDeleted(nodes) { nodes.forEach(n => { if (n.isDeleted) nodesToRender.push(n); else if (n.subtasks) collectDeleted(n.subtasks); }); }
+        collectDeleted(tasks); nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+        taskCount = nodesToRender.length; 
     } else {
-        found.sort((a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0));
-        found.forEach(t => {
-            const el = document.createElement('div');
-            el.className = `p-2 rounded bg-navy-900 border border-navy-700 text-xs flex justify-between items-center ${t.status === 'completed' ? 'opacity-50' : ''}`;
-            el.innerHTML = `
-                <span class="${t.status === 'completed' ? 'line-through text-navy-400' : 'text-navy-50 font-semibold'}">${t.name}</span>
-                <span class="${priorityColors[t.priority]} font-bold text-[9px] uppercase">${t.priority}</span>
-            `;
-            cont.appendChild(el);
-        });
+        const pruned = pruneTree(tasks);
+        const flatMatches = flattenMatches(pruned); 
+        const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
+        nodesToRender = isFlatView ? flatMatches : pruned;
+        taskCount = flatMatches.length; 
     }
-    
-    document.getElementById('dayDetailModal').classList.remove('hidden');
+
+    const titleEl = document.getElementById('view-title');
+    if (titleEl) {
+        const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
+        let baseTitle = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+        titleEl.innerText = `${baseTitle} (${taskCount})`;
+    }
+
+    if (nodesToRender.length === 0) { list.innerHTML = ''; empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales."; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    list.innerHTML = `<div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">${buildTaskRows(nodesToRender)}</div>`;
 }
+
+// VARIOUS OTHER UTILS
+function toggleExpand(id, event) { if (event) event.stopPropagation(); expandedStates[id] = !expandedStates[id]; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates)); renderTasks(); }
+
+function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.isDeleted) continue; if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = formatDateLocal(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
+function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + delta); renderCalendar(); }
+function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg></div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
 function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
 
-// ============================================================================
-// IMPORT / EXPORT DATA
-// ============================================================================
-function exportData() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2));
-    const dn = document.createElement('a');
-    dn.setAttribute("href", dataStr);
-    dn.setAttribute("download", `agenda_leo_backup_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(dn);
-    dn.click();
-    dn.remove();
-    closeSettingsModal();
-    showNotice('Backup descargado');
-}
-
-function importData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const imported = JSON.parse(e.target.result);
-            if (Array.isArray(imported)) {
-                tasks = imported;
-                migrateAndNormalizeTasks();
-                renderTasks();
-                await saveData();
-                closeSettingsModal();
-                showNotice('Datos importados correctamente');
-            } else { showNotice('Formato de archivo inválido', 'error'); }
-        } catch (err) { showNotice('Error al leer archivo', 'error'); }
-    };
-    reader.readAsText(file);
-}
-
-// STUBS - Funciones no implementadas requeridas por UI
-function handleFileUpload(event, mode) { event.target.value = ''; showNotice("Carga simulada"); }
-function renderAttachments(mode) {}
-function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
-function processOmnibarCommand() { document.getElementById('omnibarInput').value = ''; showNotice("Simulación IA"); }
-function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
+function openManageModal() { document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
 function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
+function renderManageItems() { document.getElementById('manageModalContent').innerHTML = '<p class="text-xs text-navy-400">Panel de gestión disponible.</p>'; }
+
+async function setTaskStatus(id, newStatus) { findAndMutateTask(id, (nodes, i) => { nodes[i].status = newStatus; }); renderTasks(); renderCalendar(); await saveData(); }
+async function restoreTask(id) { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = false; delete nodes[i].deletedAt; })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); } }
+async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definitivamente?", async () => { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { refreshAllDropdowns(); renderTasks(); showNotice("Eliminada"); await saveData(); } }, true); }
+async function emptyTrash() { showConfirm("Vaciar Papelera", "¿Vaciar toda la papelera?", async () => { let changed = false; function walk(nodes) { for (let i = nodes.length - 1; i >= 0; i--) { if (nodes[i].isDeleted) { nodes.splice(i, 1); changed = true; } else if (nodes[i].subtasks) walk(nodes[i].subtasks); } } walk(tasks); if (changed) { renderTasks(); showNotice("Papelera vaciada"); await saveData(); } }, true); }
+
+// BULK ACTIONS
+function toggleBulkMode() { isBulkMode = !isBulkMode; selectedTaskIds.clear(); document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); document.getElementById('bulkCount').innerText = '0'; renderTasks(); }
+function toggleBulkSelect(id, e) { if (e) e.stopPropagation(); if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); else selectedTaskIds.add(id); document.getElementById('bulkCount').innerText = selectedTaskIds.size; renderTasks(); }
+async function bulkDelete() { if (selectedTaskIds.size === 0) return; showConfirm("Eliminar", `¿Enviar ${selectedTaskIds.size} tareas a la papelera?`, async () => { selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })); toggleBulkMode(); renderTasks(); showNotice("Tareas eliminadas"); await saveData(); }, true); }
+async function bulkComplete() { if (selectedTaskIds.size === 0) return; selectedTaskIds.forEach(id => toggleTaskUniversal(id)); toggleBulkMode(); renderTasks(); showNotice("Tareas actualizadas"); await saveData(); }
+
+function openBulkMoveModal() { 
+    if (selectedTaskIds.size === 0) return;
+    populateSelect('bulkAreaInput', getAllAreasOrdered());
+    const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort();
+    populateSelect('bulkContextInput', allContexts, "Mantener contexto actual", "");
+    document.getElementById('bulkMoveModal').classList.remove('hidden'); 
+}
+function closeBulkMoveModal() { document.getElementById('bulkMoveModal').classList.add('hidden'); }
+async function applyBulkMove() {
+    const newArea = document.getElementById('bulkAreaInput').value;
+    const newContext = document.getElementById('bulkContextInput').value;
+    selectedTaskIds.forEach(id => {
+        findAndMutateTask(id, (nodes, i) => {
+            nodes[i].area = newArea;
+            if (newContext !== "") nodes[i].context = newContext;
+        });
+    });
+    toggleBulkMode();
+    closeBulkMoveModal();
+    refreshAllDropdowns();
+    renderTasks();
+    showNotice("Tareas reubicadas");
+    await saveData();
+}
+
+// POSTPONE ACTIONS
+function openPostponeModal(id, e) { if (e) e.stopPropagation(); postponeState = { id }; document.getElementById('postponeModal').classList.remove('hidden'); }
+function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
+async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
+
+// FILE UPLOAD AND ATTACHMENTS
+async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
+function renderAttachments(mode) {}
+
+// STUBS / SIMULATION IA
+function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
+function processOmnibarCommand() { showNotice("Comando procesado localmente (Simulación)."); document.getElementById('omnibarInput').value = ''; }
+function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
+function breakdownTaskWithAI() { showNotice("Funcionalidad de IA en desarrollo."); }

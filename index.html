@@ -3,934 +3,669 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda de Leo - Gestor de Tareas</title>
-    <!-- Tailwind CSS CDN para el motor de estilos adaptables -->
+    <title>Gestor de Tareas - Leo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap');
-
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #122028; 
-            color: #FDFDFD; 
-            -webkit-font-smoothing: antialiased; 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#FDFDFD',
+                            100: '#FADAC1',
+                            200: '#B0C4DF',
+                            300: '#8A9DB5',
+                            400: '#667A90',
+                            500: '#4A5B6D',
+                            600: '#324252',
+                            700: '#1D313C',
+                            800: '#122028',
+                            900: '#0A1318',
+                        },
+                        brand: {
+                            400: '#F88D5D',
+                            500: '#F6723A',
+                            600: '#DF5E28',
+                        },
+                        danger: {
+                            500: '#C43B39',
+                            600: '#A6302E',
+                        },
+                        info: {
+                            500: '#50A3AB',
+                        }
+                    }
+                }
+            }
         }
-
-        /* Checkbox Multi-Estado Personalizado */
-        input[type="checkbox"].task-cb {
-            appearance: none; 
-            background-color: transparent; 
-            margin: 0;
-            border: 2px solid #8A9DB5; 
-            border-radius: 4px;
-            width: 1.1rem; 
-            height: 1.1rem; 
-            display: grid; 
-            place-content: center;
-            cursor: pointer; 
-            transition: all 0.2s ease-in-out;
-        }
-
-        input[type="checkbox"].task-cb::before {
-            content: ""; 
-            width: 0.65em; 
-            height: 0.65em; 
-            transform: scale(0);
-            transition: 120ms transform ease-in-out;
-            box-shadow: inset 1em 1em #122028;
-            background-color: #122028;
-            transform-origin: center;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-        }
-
-        input[type="checkbox"].task-cb.is-in-progress {
-            border-color: #50A3AB;
-            background-color: rgba(80, 163, 171, 0.1);
-        }
-        
-        input[type="checkbox"].task-cb.is-in-progress::before {
-            content: ""; 
-            width: 0.4em; 
-            height: 0.4em; 
-            transform: scale(1);
-            background-color: #50A3AB;
-            box-shadow: none; 
-            clip-path: none; 
-            border-radius: 1px;
-        }
-
-        input[type="checkbox"].task-cb:checked { 
-            background-color: #324252; 
-            border-color: #324252;
-        }
-        
-        input[type="checkbox"].task-cb:checked::before { 
-            transform: scale(1); 
-            box-shadow: inset 1em 1em #122028;
-            background-color: #122028;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-            border-radius: 0;
-        }
-
-        /* Estilos para los botones de Alerta Múltiple (Reminder Tags) */
-        .reminder-tag input:checked + div {
-            background-color: #F6723A;
-            color: #0A1318;
-            border-color: #F6723A;
-            font-weight: 700;
-        }
-
-        select { 
-            appearance: none; 
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238A9DB5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); 
-            background-repeat: no-repeat; 
-            background-position: right 0.75rem center; 
-            background-size: 1rem; 
-        }
-
-        .calendar-grid { 
-            display: grid; 
-            grid-template-columns: repeat(7, 1fr); 
-            gap: 4px; 
-        }
-        
-        .calendar-day { 
-            aspect-ratio: 1 / 1.1; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 4px; 
-            font-size: 0.875rem; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-            position: relative; 
-            border: 1px solid transparent; 
-        }
-        
-        .calendar-day:hover { 
-            background-color: #1D313C; 
-            border-color: #324252; 
-        }
-        
-        .calendar-day.today { 
-            background-color: #F6723A; 
-            color: #0A1318; 
-            font-weight: 600; 
-        }
-
-        .modal-overlay { 
-            background-color: rgba(10, 19, 24, 0.7); 
-            backdrop-filter: blur(4px); 
-        }
-        
-        .slide-up { 
-            animation: slideUp 0.2s ease-out forwards; 
-        }
-        
-        @keyframes slideUp { 
-            from { transform: translateY(5px); opacity: 0; } 
-            to { transform: translateY(0); opacity: 1; } 
-        }
-
-        @keyframes pulse-ring { 
-            0%, 100% { background-color: rgba(246, 114, 58, 0.1); } 
-            50% { background-color: rgba(246, 114, 58, 0.3); } 
-        }
-        
-        .highlight-focus { 
-            animation: pulse-ring 0.8s ease-in-out 3; 
-            transition: background-color 0.3s ease-in-out; 
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .day-btn { 
-            width: 2rem; 
-            height: 2rem; 
-            border-radius: 50%; 
-            font-size: 0.75rem; 
-            font-weight: 700; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.2s; 
-            border: 1px solid #324252; 
-            color: #8A9DB5; 
-        }
-        
-        .day-btn.selected { 
-            background-color: #F6723A; 
-            color: #0A1318; 
-            border-color: #F6723A; 
-            transform: scale(1.1); 
-        }
-    </style>
+    </script>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden text-navy-50 bg-navy-800 relative">
 
-    <!-- Encabezado para Dispositivos Móviles -->
-    <div class="md:hidden flex items-center justify-between p-4 bg-navy-800 border-b border-navy-700 shrink-0">
-        <button onclick="toggleSidebar(true)" class="p-1 text-navy-300 hover:text-navy-50 focus:outline-none">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-        <span class="text-sm font-bold text-brand-500 uppercase tracking-widest">Agenda Leo</span>
-        <div class="w-6"></div>
-    </div>
-
-    <div class="flex flex-1 h-full overflow-hidden relative">
-        
-        <!-- Máscara traslúcida para el menú lateral en móviles -->
-        <div id="mobile-overlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-30 hidden md:hidden"></div>
-
-        <!-- Barra Lateral de Navegación -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 -translate-x-full md:relative md:translate-x-0 w-64 bg-navy-800 border-r border-navy-700 flex flex-col h-full z-40 transition-transform duration-300 shrink-0">
-            <!-- Logotipo / Identidad -->
-            <div class="p-5 border-b border-navy-700 flex items-center justify-between">
-                <span class="text-base font-bold text-brand-500 uppercase tracking-wider">Agenda Leo</span>
-                <span class="text-[9px] bg-navy-700 px-2 py-0.5 rounded text-navy-400 font-semibold uppercase font-mono tracking-wider">v11.1</span>
+    <div id="mobile-overlay" class="fixed inset-0 bg-navy-900 bg-opacity-70 z-30 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-navy-800 border-r border-navy-700 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="p-6 pb-2 flex flex-col">
+            <h2 class="text-xl font-bold tracking-tight text-navy-50">Mi Agenda</h2>
+            <p id="current-date-display" class="text-[10px] text-green-400 mt-1 uppercase tracking-[0.15em] font-bold"></p>
+            
+            <div id="sync-status-badge" onclick="openSettingsModal()" class="cursor-pointer inline-flex items-center space-x-1.5 mt-3 px-2.5 py-1 bg-navy-900 border border-navy-700 rounded-md text-[10px] font-bold tracking-wide transition-colors hover:bg-navy-700 select-none w-max">
+                <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
+                <span id="sync-status-text" class="text-navy-300">Nube Desconectada</span>
             </div>
-
-            <!-- Navegación de Vistas Temporales -->
-            <div class="p-4 space-y-1 overflow-y-auto flex-1 no-scrollbar">
-                <span class="block text-[10px] text-navy-400 font-bold uppercase tracking-wider mb-2 px-3">Perspectivas</span>
-                <button id="nav-today" onclick="navigate('today')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Hoy y Atrasadas</span>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-6">
+            <div class="space-y-1">
+                <button onclick="navigate('today')" id="nav-today" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-semibold transition-colors focus:outline-none hover:bg-navy-700">
+                    <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <span>Hoy y atrasadas</span>
                 </button>
-                <button id="nav-tomorrow" onclick="navigate('tomorrow')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <button onclick="navigate('tomorrow')" id="nav-tomorrow" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     <span>Mañana</span>
                 </button>
-                <button id="nav-week" onclick="navigate('week')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <span>Esta Semana</span>
+                <button onclick="navigate('week')" id="nav-week" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Esta semana</span>
                 </button>
-                <button id="nav-fortnight" onclick="navigate('fortnight')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <span>Próximos 15 Días</span>
+                <button onclick="navigate('fortnight')" id="nav-fortnight" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Próximos 15 días</span>
                 </button>
-                <button id="nav-all" onclick="navigate('all')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    <span>Todas las Tareas</span>
+                <button onclick="navigate('all')" id="nav-all" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    <span>Todas las tareas</span>
                 </button>
-                <button id="nav-calendar" onclick="navigate('calendar')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <span>Calendario Mensual</span>
-                </button>
-
-                <div class="pt-4 border-t border-navy-700/50 my-2"></div>
-
-                <!-- Secciones y Áreas -->
-                <span class="block text-[10px] text-navy-400 font-bold uppercase tracking-wider mb-2 px-3">Áreas Operativas</span>
-                <div id="sidebar-areas-list" class="space-y-1"></div>
-
-                <div class="pt-4 border-t border-navy-700/50 my-2"></div>
-
-                <!-- Papelera -->
-                <button id="nav-trash" onclick="navigate('trash')" class="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 hover:bg-navy-700 hover:text-navy-50 border-r-2 border-transparent transition-all focus:outline-none">
-                    <svg class="w-4 h-4 text-danger-500 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    <span class="text-danger-500 font-semibold">Papelera de Reciclaje</span>
+                <button onclick="navigate('calendar')" id="nav-calendar" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Calendario</span>
                 </button>
             </div>
 
-            <!-- Panel de Estado y Herramientas -->
-            <div class="p-4 border-t border-navy-700 bg-navy-900 shrink-0">
-                <!-- Estado de Sincronización -->
-                <div class="flex items-center space-x-2 px-2 py-1 bg-navy-800 rounded border border-navy-700 mb-3">
-                    <span id="sync-status-dot" class="w-1.5 h-1.5 rounded-full bg-navy-500"></span>
-                    <span id="sync-status-text" class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Desconectado</span>
+            <div>
+                <div class="flex items-center justify-between px-3 mb-2">
+                    <span class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Áreas y Proyectos</span>
+                </div>
+                <div id="sidebar-areas-list" class="space-y-0.5"></div>
+            </div>
+
+            <div class="mt-6">
+                <button onclick="navigate('trash')" id="nav-trash" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium text-navy-300 transition-colors focus:outline-none hover:bg-navy-700 hover:text-navy-50">
+                    <svg class="w-5 h-5 opacity-60 text-danger-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <span>Papelera</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="border-t border-navy-700 bg-navy-900/30 shrink-0">
+            <button onclick="toggleConfigMenu()" class="w-full flex items-center justify-between p-4 text-navy-400 hover:text-navy-50 transition-colors focus:outline-none group">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31(2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Ajustes y Datos</span>
+                </div>
+                <svg id="configMenuChevron" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            
+            <div id="configMenuContent" class="hidden px-4 pb-4 flex flex-col gap-4">
+                <div>
+                    <div class="space-y-1">
+                        <button onclick="openManageModal()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            <span>Áreas y Contextos</span>
+                        </button>
+                        <button onclick="openSettingsModal()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                            <span>Configuración Cloud</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Desplegable de Configuración -->
-                <div class="relative">
-                    <button onclick="toggleConfigMenu()" class="w-full flex items-center justify-between px-3 py-2 bg-navy-800 hover:bg-navy-700 text-navy-300 rounded text-xs font-semibold focus:outline-none transition-colors border border-navy-700">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            Mantenimiento
-                        </span>
-                        <svg id="configMenuChevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    
-                    <div id="configMenuContent" class="hidden mt-1.5 p-2 bg-navy-800 border border-navy-700 rounded shadow-xl space-y-1.5">
-                        <button onclick="openSettingsModal()" class="w-full text-left px-2 py-1.5 hover:bg-navy-700 text-[11px] text-navy-300 hover:text-navy-50 rounded transition-colors flex items-center gap-1.5">
-                            Configuración Cloud
+                <div>
+                    <div class="px-3 mb-2 border-t border-navy-700 pt-3">
+                        <span class="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Datos</span>
+                    </div>
+                    <div class="space-y-1">
+                        <button onclick="exportData()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Exportar Datos (.json)</span>
                         </button>
-                        <button onclick="exportData()" class="w-full text-left px-2 py-1.5 hover:bg-navy-700 text-[11px] text-navy-300 hover:text-navy-50 rounded transition-colors flex items-center gap-1.5">
-                            Exportar Backup (.json)
+                        <button onclick="document.getElementById('importFile').click()" class="w-full flex items-center space-x-2 px-3 py-2 rounded-md text-[11px] font-semibold text-navy-400 hover:bg-navy-700 hover:text-navy-50 transition-colors focus:outline-none border border-transparent">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                            <span>Importar Respaldo</span>
                         </button>
-                        <label class="w-full text-left px-2 py-1.5 hover:bg-navy-700 text-[11px] text-navy-300 hover:text-navy-50 rounded transition-colors flex items-center gap-1.5 cursor-pointer">
-                            Importar Backup
-                            <input type="file" accept=".json" onchange="importData(event)" class="hidden">
-                        </label>
+                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
                     </div>
                 </div>
             </div>
-        </aside>
+        </div>
+    </aside>
 
-        <!-- Contenedor Principal -->
-        <main class="flex-1 p-6 md:p-8 overflow-y-auto flex flex-col h-full bg-navy-900 relative">
-            
-            <!-- Barra de Omnicanal / IA (Oculta por defecto) -->
-            <div id="omnibar-container" class="hidden mb-6">
-                <div class="relative flex items-center">
-                    <input type="text" id="omnibarInput" onkeydown="handleOmnibarKeydown(event)" placeholder="Dictá o escribí un comando..." class="w-full bg-navy-700 border border-navy-600 rounded-md py-3 pl-4 pr-24 text-navy-50 placeholder-navy-400 focus:outline-none focus:border-brand-500">
-                    <button onclick="processOmnibarCommand()" class="absolute right-2 px-4 py-1.5 bg-brand-500 text-navy-900 rounded-md text-xs font-bold hover:bg-brand-400">Procesar</button>
-                </div>
-            </div>
-
-            <!-- Cabecera de la Vista -->
-            <header class="mb-6 flex justify-between items-center shrink-0">
-                <div>
-                    <h1 id="view-title" class="text-xl md:text-2xl font-bold tracking-wide text-navy-50">Cargando...</h1>
-                    <p id="current-date-display" class="text-xs text-navy-400 font-semibold mt-0.5 capitalize"></p>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    <button id="btnAIToggle" onclick="toggleAIFilter()" class="p-2 bg-navy-800 hover:bg-navy-700 text-navy-400 hover:text-navy-50 rounded-md border border-navy-700 focus:outline-none transition-colors" title="Asistente IA">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    </button>
-                    <button id="btnBack" onclick="goBack()" class="p-2 bg-navy-800 hover:bg-navy-700 text-navy-300 rounded-md border border-navy-700 focus:outline-none transition-colors hidden" title="Atrás">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                    </button>
-                    <button id="btnEmptyTrash" onclick="emptyTrash()" class="px-3 py-2 bg-danger-500 hover:bg-danger-600 text-navy-50 rounded-md text-xs font-bold shadow-md transition-colors hidden">
-                        Vaciar Papelera
-                    </button>
-                </div>
-            </header>
-
-            <!-- Barra de Filtros y Herramientas -->
-            <div id="filters-container" class="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 bg-navy-800 p-3 rounded-lg border border-navy-700 shadow-sm shrink-0">
-                <div id="searchWrap" class="relative flex-1">
-                    <input type="text" id="searchInput" oninput="updateFilters()" placeholder="Buscar en la agenda..." class="w-full bg-navy-900 border border-navy-700 rounded py-2 pl-9 pr-4 text-xs text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500 transition-colors">
-                    <svg class="absolute left-3 top-2.5 w-4 h-4 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                </div>
-                
-                <div class="flex flex-wrap items-center gap-2">
-                    <select id="filterStatus" onchange="updateFilters()" class="p-2 border border-navy-700 rounded text-xs bg-navy-900 text-navy-300 font-semibold focus:outline-none cursor-pointer">
-                        <option value="pending">Pendientes</option>
-                        <option value="in_progress">En Progreso</option>
-                        <option value="completed">Completadas</option>
-                        <option value="all">Todas</option>
-                    </select>
-                    <select id="filterPriority" onchange="updateFilters()" class="p-2 border border-navy-700 rounded text-xs bg-navy-900 text-navy-300 font-semibold focus:outline-none cursor-pointer">
-                        <option value="all">Prioridad (Cualquiera)</option>
-                        <option value="urgente">Urgente</option>
-                        <option value="alta">Alta</option>
-                        <option value="media">Media</option>
-                        <option value="baja">Baja</option>
-                    </select>
-                    <select id="filterContext" onchange="updateFilters()" class="p-2 border border-navy-700 rounded text-xs bg-navy-900 text-navy-300 font-semibold focus:outline-none cursor-pointer">
-                        <option value="all">Contexto (Todos)</option>
-                    </select>
-                    <select id="sortSelect" onchange="updateSort()" class="p-2 border border-navy-700 rounded text-xs bg-navy-900 text-navy-300 font-semibold focus:outline-none cursor-pointer">
-                        <option value="date-asc">Fecha (Próximos)</option>
-                        <option value="date-desc">Fecha (Lejanos)</option>
-                        <option value="priority-desc">Urgencia</option>
-                        <option value="name-asc">Nombre (A-Z)</option>
-                    </select>
-
-                    <div id="filtersDivider" class="w-[1px] h-6 bg-navy-700 mx-1 hidden sm:block"></div>
-
-                    <button id="btnBulkMode" onclick="toggleBulkMode()" class="p-2 bg-navy-900 hover:bg-navy-700 text-navy-400 rounded border border-navy-700 focus:outline-none transition-colors" title="Acciones masivas">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    </button>
-                    <button id="btnResetFilters" onclick="resetFilters()" class="p-2 bg-navy-900 hover:bg-navy-700 text-navy-400 hover:text-brand-500 rounded border border-navy-700 focus:outline-none transition-colors" title="Limpiar filtros">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Vista de Lista de Tareas -->
-            <div id="view-list" class="flex-1 overflow-y-auto no-scrollbar relative min-h-[200px]">
-                <div id="taskList" class="space-y-0.5"></div>
-                <p id="emptyState" class="hidden text-navy-400 text-sm text-center italic py-24 bg-navy-800/20 border border-dashed border-navy-700 rounded-lg select-none"></p>
-            </div>
-
-            <!-- Vista de Calendario Mensual -->
-            <div id="view-calendar" class="hidden flex-1 overflow-y-auto no-scrollbar bg-navy-800 p-6 rounded-lg border border-navy-700 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-navy-700 rounded text-navy-300 transition-colors">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header class="bg-navy-800 border-b border-navy-700 p-4 md:px-8 md:py-5 flex flex-col justify-start z-20 shrink-0 gap-3">
+            <div class="flex items-center space-x-3 min-w-0">
+                <button onclick="toggleSidebar()" class="md:hidden text-brand-500 hover:text-brand-400 focus:outline-none p-1 shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="flex items-center space-x-2 min-w-0">
+                    <button id="btnBack" onclick="goBack()" class="hidden text-navy-400 hover:text-navy-50 transition-colors focus:outline-none shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <h2 id="calendar-month" class="text-base font-bold text-navy-50 uppercase tracking-wider"></h2>
-                    <button onclick="changeMonth(1)" class="p-2 hover:bg-navy-700 rounded text-navy-300 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </button>
+                    <h1 id="view-title" class="text-xl sm:text-2xl lg:text-3xl font-bold text-navy-50 tracking-tight whitespace-nowrap truncate max-w-[200px] sm:max-w-none">Hoy y atrasadas</h1>
                 </div>
-                <div class="grid grid-cols-7 gap-1 text-center text-xs font-black text-navy-400 uppercase tracking-widest mb-3 select-none">
-                    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
-                </div>
-                <div id="calendar-grid" class="calendar-grid"></div>
             </div>
 
-            <!-- Botón Flotante de Registro Directo -->
-            <button id="mainFab" onclick="openAddTaskModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-brand-500 text-navy-900 rounded-full flex items-center justify-center shadow-lg hover:bg-brand-400 transition-all focus:outline-none z-30">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            </button>
-        </main>
-    </div>
-
-    <!-- Barra de Control Masivo (Inferior) -->
-    <div id="bulkActionBar" class="fixed bottom-0 inset-x-0 bg-navy-800 border-t border-navy-700 p-4 flex items-center justify-between z-40 translate-y-32 opacity-0 transition-all duration-300">
-        <span class="text-xs text-navy-300 font-semibold"><span id="bulkCount" class="text-brand-500 font-bold">0</span> tareas seleccionadas</span>
-        <div class="flex gap-2">
-            <button onclick="openBulkMoveModal()" class="px-3 py-1.5 bg-navy-700 hover:bg-navy-600 rounded text-xs text-navy-50 font-bold transition-colors">Reubicar</button>
-            <button onclick="bulkComplete()" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-400 text-navy-900 rounded text-xs font-bold transition-colors">Completar</button>
-            <button onclick="bulkDelete()" class="px-3 py-1.5 bg-danger-500 hover:bg-danger-600 rounded text-xs text-navy-50 font-bold transition-colors">Eliminar</button>
-            <button onclick="toggleBulkMode()" class="px-3 py-1.5 bg-navy-900 hover:bg-navy-700 rounded text-xs text-navy-400 font-bold transition-colors">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- Contenedor Flotante de Notificaciones -->
-    <div id="notification-box" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- ========================================== -->
-    <!--          MODAL: REGISTRAR INSTANCIA        -->
-    <!-- ========================================== -->
-    <div id="addTaskModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-lg rounded-lg shadow-xl p-6 slide-up max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-navy-700 shrink-0">
-                <h3 class="text-base font-bold text-navy-50">Registrar Nueva Tarea</h3>
-                <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <!-- Herramientas (Búsqueda y filtros) -->
+            <div id="filters-container" class="flex flex-wrap items-center gap-2 mt-1">
+                <div id="searchWrap" class="relative flex-grow sm:flex-grow-0 sm:w-36 md:w-44 transition-all">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-3.5 h-3.5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text" id="searchInput" onkeyup="updateFilters()" placeholder="Buscar..." class="w-full text-xs bg-navy-900 border border-navy-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 rounded-md py-2 pl-9 pr-3 transition-all outline-none text-navy-50 placeholder-navy-500">
+                </div>
+                <select onchange="updateFilters()" id="filterStatus" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[130px] sm:max-w-none text-ellipsis">
+                    <option value="pending" selected>Pendientes / En Progreso</option><option value="in_progress">Solo En Progreso</option><option value="completed">Completadas</option><option value="all">Todas</option>
+                </select>
+                <select onchange="updateFilters()" id="filterPriority" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors">
+                    <option value="all">Prioridad</option><option value="urgente">Urgentes</option><option value="alta">Altas</option><option value="media">Medias</option><option value="baja">Bajas</option>
+                </select>
+                <select onchange="updateFilters()" id="filterContext" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer hidden md:block transition-colors">
+                    <option value="all">Contexto</option>
+                </select>
+                <select onchange="updateSort()" id="sortSelect" class="text-xs font-semibold bg-navy-900 text-navy-50 border border-navy-700 hover:border-navy-600 px-3 py-2 rounded-md focus:ring-0 cursor-pointer transition-colors max-w-[120px] sm:max-w-none text-ellipsis">
+                    <option value="none-asc">Ordenar por...</option>
+                    <option value="date-asc" selected>Fecha (ascendente)</option>
+                    <option value="date-desc">Fecha (descendente)</option>
+                    <option value="priority-desc">Prioridad (mayor a menor)</option>
+                    <option value="priority-asc">Prioridad (menor a mayor)</option>
+                    <option value="context-asc">Contexto (A-Z)</option>
+                </select>
+                <button onclick="toggleBulkMode()" id="btnBulkMode" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Selección múltiple">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </button>
+                <button onclick="resetFilters()" id="btnResetFilters" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Limpiar filtros secundarios">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div class="h-6 w-px bg-navy-700 mx-1 hidden sm:block" id="filtersDivider"></div>
+                <button onclick="toggleAIFilter()" id="btnAIToggle" class="p-2 text-navy-400 hover:text-brand-500 bg-navy-900 border border-navy-700 rounded-md transition-colors focus:outline-none" title="Asistente de Filtrado IA">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                </button>
+                
+                <button onclick="emptyTrash()" id="btnEmptyTrash" class="hidden p-2 px-4 text-danger-500 hover:text-danger-400 bg-navy-900 border border-danger-500/50 hover:border-danger-500 rounded-md transition-colors focus:outline-none text-xs font-bold tracking-wide">
+                    Vaciar Papelera
                 </button>
             </div>
-            
-            <div class="overflow-y-auto space-y-4 pr-1 flex-1 no-scrollbar">
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Identificador de la tarea</label>
-                    <input type="text" id="taskInput" placeholder="Nombre descriptivo de la actividad..." class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500 font-semibold">
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-32" id="main-scroll-area">
+            <div class="max-w-5xl mx-auto space-y-6">
+                <!-- Panel dedicado a IA -->
+                <div id="omnibar-container" class="hidden relative group bg-navy-900/80 p-5 rounded-lg border border-brand-500/30 slide-up mb-6 shadow-lg">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-brand-400 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg> 
+                            Asistente de Filtrado Inteligente
+                        </h3>
+                        <button onclick="toggleAIFilter()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="omnibarInput" placeholder="Ej. 'Mostrame las urgentes de casa' o 'Ordená alfabéticamente'" class="w-full pl-4 pr-[5.5rem] py-3 bg-navy-900 border border-navy-700 rounded-md text-sm text-navy-50 focus:outline-none focus:border-brand-500 transition-all placeholder:text-navy-500" onkeydown="handleOmnibarKeydown(event)">
+                        <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+                            <button id="micBtn" onclick="toggleVoiceCapture()" class="p-2 text-navy-400 hover:text-danger-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Dictar búsqueda">
+                                <svg id="micIcon" class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                            </button>
+                            <button id="omnibarBtn" onclick="processOmnibarCommand()" class="p-2 text-navy-400 hover:text-brand-500 focus:outline-none transition-colors rounded-md hover:bg-navy-700" title="Procesar comando">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Fecha programada</label>
-                        <input type="date" id="dateInput" onchange="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Hora específica (Opcional)</label>
-                        <input type="time" id="timeInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500">
+                <div id="view-list" class="slide-up">
+                    <div id="taskList"></div>
+                    <div id="emptyState" class="hidden text-center py-20 border border-navy-700 rounded-md text-navy-400 text-sm">
+                        No se encontraron tareas bajo los criterios actuales.
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Área Operativa</label>
-                        <select id="areaInput" onchange="updateAddParentDropdown()" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Contexto espacial</label>
-                        <select id="contextInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                <div id="view-calendar" class="hidden slide-up">
+                    <div class="bg-navy-800 border border-navy-700 rounded-md p-8">
+                        <div class="flex justify-between items-center mb-8">
+                            <h2 id="calendar-month" class="font-light text-2xl capitalize text-navy-50"></h2>
+                            <div class="flex space-x-2">
+                                <button onclick="changeMonth(-1)" class="p-2 hover:bg-navy-700 rounded-md text-navy-300 transition-all border border-navy-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                                <button onclick="changeMonth(1)" class="p-2 hover:bg-navy-700 rounded-md text-navy-300 transition-all border border-navy-700"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 mb-4 text-center">
+                            <span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Dom</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Lun</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Mar</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Mie</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Jue</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Vie</span><span class="text-[10px] font-black text-navy-400 uppercase tracking-tighter">Sab</span>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Jerarquía (Tarea Superior)</label>
-                        <select id="parentInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer">
-                            <option value="root">Ninguna (Tarea Principal)</option>
-                        </select>
+        <!-- Bulk Action Bar -->
+        <div id="bulkActionBar" class="fixed bottom-8 md:bottom-12 left-1/2 transform -translate-x-1/2 bg-navy-800 border border-brand-500 rounded-md px-5 py-3 flex items-center gap-3 md:gap-4 z-40 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
+            <span class="text-xs md:text-sm font-bold text-brand-500 whitespace-nowrap"><span id="bulkCount">0</span> sel.</span>
+            <div class="h-5 w-px bg-navy-700"></div>
+            <button onclick="bulkComplete()" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Completar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>
+            <button onclick="openBulkMoveModal()" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Reubicar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></button>
+            <button onclick="openPostponeModal('bulk')" class="p-2 text-navy-300 hover:text-brand-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Posponer"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+            <button onclick="bulkDelete()" class="p-2 text-navy-300 hover:text-danger-500 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Eliminar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            <div class="h-5 w-px bg-navy-700"></div>
+            <button onclick="toggleBulkMode()" class="p-2 text-navy-400 hover:text-navy-50 rounded-md hover:bg-navy-700 transition-colors focus:outline-none" title="Cancelar Múltiple"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+
+        <button id="mainFab" onclick="openAddTaskModal()" class="absolute bottom-8 right-4 md:right-8 z-30 w-14 h-14 bg-brand-500 text-navy-900 rounded-md flex items-center justify-center hover:bg-brand-400 transition-colors focus:outline-none shadow-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+    </main>
+
+    <!-- Modal: Nueva Tarea -->
+    <div id="addTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-lg rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
+            <div class="p-4 md:p-5 border-b border-navy-700 flex justify-between items-center shrink-0">
+                <h3 class="font-semibold text-base text-navy-50">Nueva Tarea</h3>
+                <button onclick="closeAddTaskModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-4 md:p-5 space-y-4 overflow-y-auto flex-1">
+                <input type="text" id="taskInput" placeholder="¿Qué tarea tenés pendiente?" class="w-full text-lg focus:outline-none border-b border-navy-700 pb-2 bg-transparent placeholder:text-navy-500 text-navy-50">
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Área</label>
+                        <select id="areaInput" onchange="updateAddParentDropdown()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                     </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Urgencia Relativa</label>
-                        <select id="priorityInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer">
-                            <option value="baja">Baja</option>
-                            <option value="media">Media</option>
-                            <option value="alta">Alta</option>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Contexto</label>
+                        <select id="contextInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Prioridad</label>
+                        <select id="priorityInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
                             <option value="urgente">Urgente</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja" selected>Baja</option>
                         </select>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Notas adicionales</label>
-                    <textarea id="notesInput" rows="2" placeholder="Detalles u observaciones de apoyo..." class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500"></textarea>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Dependencia</label>
+                    <select id="parentInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
                 </div>
 
-                <!-- Calendario de Recordatorios Multi-opción -->
-                <div class="p-3 bg-navy-900/40 rounded border border-navy-700/80">
-                    <div class="mb-3">
-                        <span class="block text-xs font-bold text-navy-50">Sincronizar alertas con Calendar</span>
-                        <span class="block text-[10px] text-navy-400 mt-0.5 leading-none">Seleccioná una o más opciones para recibir notificaciones.</span>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Notas</label>
+                    <textarea id="notesInput" rows="2" placeholder="Detalles adicionales, enlaces, etc." class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                </div>
+
+                <div class="space-y-2 border border-navy-700 rounded-md p-3 bg-navy-900/50">
+                    <div class="flex justify-between items-center">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Archivos Adjuntos</label>
+                        <div class="relative">
+                            <input type="file" id="attachFileInput" class="hidden" onchange="handleFileUpload(event, 'add')">
+                            <button onclick="document.getElementById('attachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                Añadir Archivo
+                            </button>
+                        </div>
+                    </div>
+                    <div id="addAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
+                    <div id="addAttachmentsList" class="flex flex-wrap gap-1.5 empty:hidden mt-1.5"></div>
+                </div>
+
+                <div class="pt-3 border-t border-navy-700 space-y-3">
+                    <span class="block text-[10px] text-navy-400 font-bold uppercase tracking-wider ml-1 mb-1">Programación de Tarea</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Fecha Base</label><input type="date" id="dateInput" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Hora</label><input type="time" id="timeInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
                     </div>
                     
-                    <div id="addReminderAlerts" class="flex flex-wrap gap-2">
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="exact" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                En el momento
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1h" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 hora antes
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1d" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 día antes
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1w" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 semana antes
-                            </div>
-                        </label>
+                    <div class="pt-1">
+                        <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="reminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
                     </div>
-                </div>
 
-                <!-- Bloque de Recurrencia -->
-                <div class="p-3 bg-brand-500/5 rounded border border-brand-500/10 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <span class="block text-xs font-bold text-brand-500">Automatizar repetición</span>
-                            <span class="block text-[10px] text-navy-400 mt-0.5 leading-none">Activar el motor de proyección temporal</span>
+                    <div class="flex items-center justify-between p-3 bg-navy-900 border border-navy-700 rounded-lg mt-3">
+                        <div class="flex flex-col">
+                            <span class="text-[11px] font-bold text-navy-50">Automatizar periodicidad</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="addHasRecurrence" onchange="toggleRecurrenceUI('add')" class="sr-only peer">
-                            <div class="w-11 h-6 bg-navy-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-navy-900 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-navy-300 after:border-navy-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                            <div class="w-9 h-5 bg-navy-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-navy-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
                         </label>
                     </div>
 
-                    <div id="addRecurrenceContainer" class="hidden space-y-4 border-t border-navy-700/50 pt-3 animate-fadeIn">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Frecuencia</label>
-                                <select id="addFrequency" onchange="refreshRecurrenceUI('add')" class="w-full bg-navy-900 border border-navy-700 rounded px-3 py-1.5 text-xs text-navy-50 focus:outline-none cursor-pointer">
-                                    <option value="daily">Diaria</option>
-                                    <option value="weekly">Semanal</option>
-                                    <option value="monthly">Mensual</option>
-                                    <option value="yearly">Anual</option>
-                                    <option value="after_completion">X días post-completado</option>
-                                    <option value="custom">Personalizada (Meses)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Cada (Intervalo)</label>
-                                <div class="flex items-center space-x-2">
-                                    <input type="number" id="addInterval" min="1" value="1" oninput="validateAndProjectRecurrence('add')" class="w-16 bg-navy-900 border border-navy-700 rounded px-2 py-1 text-xs text-navy-50 text-center font-bold focus:outline-none">
-                                    <span id="addIntervalLabel" class="text-xs text-navy-400">días</span>
-                                </div>
+                    <div id="addRecurrenceContainer" class="hidden space-y-4 mt-3 p-3 border border-brand-500/30 bg-navy-900/50 rounded-lg">
+                        <div>
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Frecuencia</label>
+                            <select id="addFrequency" onchange="refreshRecurrenceUI('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                                <option value="daily">Diaria</option>
+                                <option value="weekly">Semanal (Días específicos)</option>
+                                <option value="monthly">Mensual</option>
+                                <option value="yearly">Anual</option>
+                                <option value="after_completion">Días después de completar</option>
+                                <option value="custom">Mensual extendida (Personalizada)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-[11px] text-navy-300">Cada</span>
+                            <input type="number" id="addInterval" value="1" min="1" onchange="validateAndProjectRecurrence('add')" class="w-16 text-xs bg-navy-800 border border-navy-600 text-center text-navy-50 px-2 py-1.5 rounded-md focus:outline-none focus:border-brand-500">
+                            <span id="addIntervalLabel" class="text-[11px] text-navy-300">días</span>
+                        </div>
+
+                        <!-- Weekly Days -->
+                        <div id="addWeeklyBlock" class="hidden space-y-2">
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider">Días de ejecución</label>
+                            <div class="flex justify-between">
+                                <button type="button" id="add-day-0" onclick="toggleDay('add', 0)" class="day-btn bg-navy-800">D</button>
+                                <button type="button" id="add-day-1" onclick="toggleDay('add', 1)" class="day-btn bg-brand-500 text-navy-900 border-brand-500 scale-110">L</button>
+                                <button type="button" id="add-day-2" onclick="toggleDay('add', 2)" class="day-btn bg-navy-800">M</button>
+                                <button type="button" id="add-day-3" onclick="toggleDay('add', 3)" class="day-btn bg-navy-800">M</button>
+                                <button type="button" id="add-day-4" onclick="toggleDay('add', 4)" class="day-btn bg-navy-800">J</button>
+                                <button type="button" id="add-day-5" onclick="toggleDay('add', 5)" class="day-btn bg-navy-800">V</button>
+                                <button type="button" id="add-day-6" onclick="toggleDay('add', 6)" class="day-btn bg-navy-800">S</button>
                             </div>
                         </div>
 
-                        <!-- Panel Semanal -->
-                        <div id="addWeeklyBlock" class="hidden space-y-1.5">
-                            <label class="block text-[10px] text-navy-400 uppercase font-bold">Días de ejecución</label>
-                            <div class="flex justify-between bg-navy-900 p-2 rounded border border-navy-700">
-                                <button type="button" id="add-day-0" onclick="toggleDay('add', 0)" class="day-btn">D</button>
-                                <button type="button" id="add-day-1" onclick="toggleDay('add', 1)" class="day-btn">L</button>
-                                <button type="button" id="add-day-2" onclick="toggleDay('add', 2)" class="day-btn">M</button>
-                                <button type="button" id="add-day-3" onclick="toggleDay('add', 3)" class="day-btn">M</button>
-                                <button type="button" id="add-day-4" onclick="toggleDay('add', 4)" class="day-btn">J</button>
-                                <button type="button" id="add-day-5" onclick="toggleDay('add', 5)" class="day-btn">V</button>
-                                <button type="button" id="add-day-6" onclick="toggleDay('add', 6)" class="day-btn">S</button>
-                            </div>
-                        </div>
-
-                        <!-- Panel Mensual -->
-                        <div id="addMonthlyBlock" class="hidden space-y-3 p-3 bg-navy-900/50 rounded border border-navy-700">
-                            <div class="flex space-x-4 border-b border-navy-700/80 pb-2">
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="addMonthlyMode" value="fixed" checked onchange="refreshRecurrenceUI('add')" class="text-brand-500 focus:ring-0">
-                                    <span class="text-xs text-navy-300 font-bold">Calendario Fijo</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="addMonthlyMode" value="business" onchange="refreshRecurrenceUI('add')" class="text-brand-500 focus:ring-0">
-                                    <span class="text-xs text-navy-300 font-bold">Día Hábil</span>
-                                </label>
+                        <!-- Monthly Options -->
+                        <div id="addMonthlyBlock" class="hidden space-y-3">
+                            <div class="flex space-x-4 border-b border-navy-700 pb-2">
+                                <label class="flex items-center space-x-2"><input type="radio" name="addMonthlyMode" value="fixed" checked onchange="refreshRecurrenceUI('add')" class="text-brand-500 focus:ring-0 bg-transparent border-navy-600"><span class="text-[11px] text-navy-300">Día Fijo</span></label>
+                                <label class="flex items-center space-x-2"><input type="radio" name="addMonthlyMode" value="business" onchange="refreshRecurrenceUI('add')" class="text-brand-500 focus:ring-0 bg-transparent border-navy-600"><span class="text-[11px] text-navy-300">Día Hábil</span></label>
                             </div>
                             <div id="addMonthlyFixedBlock">
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día objetivo del mes</label>
-                                <input type="number" id="addDayOfMonth" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día objetivo</label>
+                                <input type="number" id="addDayOfMonth" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
                             </div>
                             <div id="addMonthlyBusinessBlock" class="hidden">
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Enésimo día hábil (1 al 31)</label>
-                                <input type="number" id="addNthBusinessDay" min="1" max="31" value="5" oninput="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Índice Hábil</label>
+                                <input type="number" id="addNthBusinessDay" value="5" min="1" max="31" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
                             </div>
                         </div>
 
-                        <!-- Panel Anual -->
-                        <div id="addYearlyBlock" class="hidden grid grid-cols-2 gap-3 p-3 bg-navy-900/50 rounded border border-navy-700">
+                        <!-- Yearly Options -->
+                        <div id="addYearlyBlock" class="hidden grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día Fijo</label>
-                                <input type="number" id="addYearDay" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día</label>
+                                <input type="number" id="addYearDay" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
                             </div>
                             <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Mes del año</label>
-                                <select id="addYearMonth" onchange="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Mes</label>
+                                <select id="addYearMonth" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
                                     <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Panel Personalizado -->
-                        <div id="addCustomBlock" class="hidden p-3 bg-navy-900/50 rounded border border-navy-700">
-                            <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día objetivo</label>
-                            <input type="number" id="addCustomDay" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('add')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
+                        <!-- Custom Block -->
+                        <div id="addCustomBlock" class="hidden">
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día del Mes</label>
+                            <input type="number" id="addCustomDay" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('add')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
                         </div>
 
-                        <!-- Recalcular post completado -->
-                        <div id="addCompletionBaseBlock" class="p-2 border-t border-navy-700/80">
-                            <label class="flex items-start space-x-2.5 cursor-pointer">
-                                <input type="checkbox" id="addBaseOnCompletion" onchange="validateAndProjectRecurrence('add')" class="mt-0.5 text-brand-500 rounded focus:ring-0">
-                                <div>
-                                    <span class="block text-xs text-navy-200 font-bold">Proyectar desde completado real</span>
-                                    <span class="block text-[9px] text-navy-400 leading-normal mt-0.5">Calcula la próxima fecha desde el día en que marcas la tarea como finalizada, evitando vencimientos acumulados.</span>
-                                </div>
-                            </label>
+                        <!-- Completion Base -->
+                        <div id="addCompletionBaseBlock">
+                            <label class="flex items-center space-x-2 bg-navy-800 border border-navy-600 px-3 py-2 rounded-md cursor-pointer"><input type="checkbox" id="addBaseOnCompletion" onchange="validateAndProjectRecurrence('add')" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300">Recalcular desde resolución real</span></label>
                         </div>
-
-                        <!-- Simulación del Siguiente -->
-                        <div class="p-2 text-center bg-brand-500/10 rounded border border-brand-500/20">
-                            <span id="addRecurrenceProjection" class="text-[10px] font-black font-mono text-brand-400 tracking-wide"></span>
-                        </div>
+                        
+                        <div id="addRecurrenceProjection" class="text-[10px] font-mono text-emerald-400 p-2 bg-navy-800 rounded border border-navy-600"></div>
                     </div>
                 </div>
             </div>
-
-            <div class="pt-4 border-t border-navy-700 flex gap-4 shrink-0">
-                <button onclick="closeAddTaskModal()" class="w-1/2 bg-navy-700 text-navy-300 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 focus:outline-none transition-colors">Cancelar</button>
-                <button onclick="addTask()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-brand-400 transition-colors focus:outline-none shadow-md">Registrar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--            MODAL: EDITAR REGISTRO          -->
-    <!-- ========================================== -->
-    <div id="editModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-lg rounded-lg shadow-xl p-6 slide-up max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-navy-700 shrink-0">
-                <h3 class="text-base font-bold text-navy-50">Editar Tarea</h3>
-                <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            
-            <div class="overflow-y-auto space-y-4 pr-1 flex-1 no-scrollbar">
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Identificador</label>
-                    <input type="text" id="editNameInput" placeholder="Nombre descriptivo de la actividad..." class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500 font-semibold">
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Estado</label>
-                        <select id="editStatusInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer">
-                            <option value="pending">Pendiente</option>
-                            <option value="in_progress">En Progreso</option>
-                            <option value="completed">Completada</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Urgencia Relativa</label>
-                        <select id="editPriorityInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer">
-                            <option value="baja">Baja</option>
-                            <option value="media">Media</option>
-                            <option value="alta">Alta</option>
-                            <option value="urgente">Urgente</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Fecha programada</label>
-                        <input type="date" id="editDateInput" onchange="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Hora específica (Opcional)</label>
-                        <input type="time" id="editTimeInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Área Operativa</label>
-                        <select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer"></select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Contexto espacial</label>
-                        <select id="editContextInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer"></select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Jerarquía (Tarea Superior)</label>
-                    <select id="editParentInput" class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 focus:outline-none focus:border-brand-500 cursor-pointer">
-                        <option value="root">Ninguna (Tarea Principal)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">Notas adicionales</label>
-                    <textarea id="editNotesInput" rows="2" placeholder="Detalles u observaciones de apoyo..." class="w-full bg-navy-900 border border-navy-700 rounded-md py-2 px-3 text-xs text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500"></textarea>
-                </div>
-
-                <!-- Calendario de Recordatorios Multi-opción -->
-                <div class="p-3 bg-navy-900/40 rounded border border-navy-700/80">
-                    <div class="mb-3">
-                        <span class="block text-xs font-bold text-navy-50">Sincronizar alertas con Calendar</span>
-                        <span class="block text-[10px] text-navy-400 mt-0.5 leading-none">Seleccioná una o más opciones para recibir notificaciones.</span>
-                    </div>
-                    
-                    <div id="editReminderAlerts" class="flex flex-wrap gap-2">
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="exact" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                En el momento
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1h" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 hora antes
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1d" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 día antes
-                            </div>
-                        </label>
-                        <label class="reminder-tag cursor-pointer">
-                            <input type="checkbox" value="1w" class="hidden">
-                            <div class="px-3 py-1.5 rounded-full text-[10px] font-semibold border border-navy-600 bg-navy-800 text-navy-300 transition-colors">
-                                1 semana antes
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Bloque de Recurrencia -->
-                <div class="p-3 bg-brand-500/5 rounded border border-brand-500/10 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <span class="block text-xs font-bold text-brand-500">Automatizar repetición</span>
-                            <span class="block text-[10px] text-navy-400 mt-0.5 leading-none">Activar el motor de proyección temporal</span>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="editHasRecurrence" onchange="toggleRecurrenceUI('edit')" class="sr-only peer">
-                            <div class="w-11 h-6 bg-navy-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-navy-900 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-navy-300 after:border-navy-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-                        </label>
-                    </div>
-
-                    <div id="editRecurrenceContainer" class="hidden space-y-4 border-t border-navy-700/50 pt-3 animate-fadeIn">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Frecuencia</label>
-                                <select id="editFrequency" onchange="refreshRecurrenceUI('edit')" class="w-full bg-navy-900 border border-navy-700 rounded px-3 py-1.5 text-xs text-navy-50 focus:outline-none cursor-pointer">
-                                    <option value="daily">Diaria</option>
-                                    <option value="weekly">Semanal</option>
-                                    <option value="monthly">Mensual</option>
-                                    <option value="yearly">Anual</option>
-                                    <option value="after_completion">X días post-completado</option>
-                                    <option value="custom">Personalizada (Meses)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Cada (Intervalo)</label>
-                                <div class="flex items-center space-x-2">
-                                    <input type="number" id="editInterval" min="1" value="1" oninput="validateAndProjectRecurrence('edit')" class="w-16 bg-navy-900 border border-navy-700 rounded px-2 py-1 text-xs text-navy-50 text-center font-bold focus:outline-none">
-                                    <span id="editIntervalLabel" class="text-xs text-navy-400">días</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Panel Semanal -->
-                        <div id="editWeeklyBlock" class="hidden space-y-1.5">
-                            <label class="block text-[10px] text-navy-400 uppercase font-bold">Días de ejecución</label>
-                            <div class="flex justify-between bg-navy-900 p-2 rounded border border-navy-700">
-                                <button type="button" id="edit-day-0" onclick="toggleDay('edit', 0)" class="day-btn">D</button>
-                                <button type="button" id="edit-day-1" onclick="toggleDay('edit', 1)" class="day-btn">L</button>
-                                <button type="button" id="edit-day-2" onclick="toggleDay('edit', 2)" class="day-btn">M</button>
-                                <button type="button" id="edit-day-3" onclick="toggleDay('edit', 3)" class="day-btn">M</button>
-                                <button type="button" id="edit-day-4" onclick="toggleDay('edit', 4)" class="day-btn">J</button>
-                                <button type="button" id="edit-day-5" onclick="toggleDay('edit', 5)" class="day-btn">V</button>
-                                <button type="button" id="edit-day-6" onclick="toggleDay('edit', 6)" class="day-btn">S</button>
-                            </div>
-                        </div>
-
-                        <!-- Panel Mensual -->
-                        <div id="editMonthlyBlock" class="hidden space-y-3 p-3 bg-navy-900/50 rounded border border-navy-700">
-                            <div class="flex space-x-4 border-b border-navy-700/80 pb-2">
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="editMonthlyMode" value="fixed" checked onchange="refreshRecurrenceUI('edit')" class="text-brand-500 focus:ring-0">
-                                    <span class="text-xs text-navy-300 font-bold">Calendario Fijo</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="editMonthlyMode" value="business" onchange="refreshRecurrenceUI('edit')" class="text-brand-500 focus:ring-0">
-                                    <span class="text-xs text-navy-300 font-bold">Día Hábil</span>
-                                </label>
-                            </div>
-                            <div id="editMonthlyFixedBlock">
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día objetivo del mes</label>
-                                <input type="number" id="editDayOfMonth" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
-                            </div>
-                            <div id="editMonthlyBusinessBlock" class="hidden">
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Enésimo día hábil (1 al 31)</label>
-                                <input type="number" id="editNthBusinessDay" min="1" max="31" value="5" oninput="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
-                            </div>
-                        </div>
-
-                        <!-- Panel Anual -->
-                        <div id="editYearlyBlock" class="hidden grid grid-cols-2 gap-3 p-3 bg-navy-900/50 rounded border border-navy-700">
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día Fijo</label>
-                                <input type="number" id="editYearDay" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Mes del año</label>
-                                <select id="editYearMonth" onchange="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
-                                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Panel Personalizado -->
-                        <div id="editCustomBlock" class="hidden p-3 bg-navy-900/50 rounded border border-navy-700">
-                            <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Día objetivo</label>
-                            <input type="number" id="editCustomDay" min="1" max="31" value="1" oninput="validateAndProjectRecurrence('edit')" class="w-full bg-navy-900 border border-navy-700 rounded p-1.5 text-xs text-navy-50 font-bold focus:outline-none">
-                        </div>
-
-                        <!-- Recalcular post completado -->
-                        <div id="editCompletionBaseBlock" class="p-2 border-t border-navy-700/80">
-                            <label class="flex items-start space-x-2.5 cursor-pointer">
-                                <input type="checkbox" id="editBaseOnCompletion" onchange="validateAndProjectRecurrence('edit')" class="mt-0.5 text-brand-500 rounded focus:ring-0">
-                                <div>
-                                    <span class="block text-xs text-navy-200 font-bold">Proyectar desde completado real</span>
-                                    <span class="block text-[9px] text-navy-400 leading-normal mt-0.5">Calcula la próxima fecha desde el día en que marcas la tarea como finalizada, evitando vencimientos acumulados.</span>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Simulación del Siguiente -->
-                        <div class="p-2 text-center bg-brand-500/10 rounded border border-brand-500/20">
-                            <span id="editRecurrenceProjection" class="text-[10px] font-black font-mono text-brand-400 tracking-wide"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pt-4 border-t border-navy-700 flex gap-4 shrink-0">
-                <button onclick="closeEditModal()" class="w-1/2 bg-navy-700 text-navy-300 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 focus:outline-none transition-colors">Cancelar</button>
-                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-bold uppercase tracking-wider hover:bg-brand-400 transition-colors focus:outline-none shadow-md">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--          MODAL: DETALLES DEL DÍA           -->
-    <!-- ========================================== -->
-    <div id="dayDetailModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-md rounded-lg shadow-xl p-6 slide-up max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-navy-700 shrink-0">
-                <h3 id="modalDateTitle" class="text-base font-bold text-navy-50"></h3>
-                <button onclick="closeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div id="modalContent" class="overflow-y-auto space-y-3 flex-1 no-scrollbar pr-1"></div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--            MODAL: CONFIGURACIÓN            -->
-    <!-- ========================================== -->
-    <div id="settingsModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-md rounded-lg shadow-xl p-6 slide-up">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-navy-700">
-                <h3 class="text-base font-bold text-navy-50">Configuración de Conexiones</h3>
-                <button onclick="closeSettingsModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1.5">URL del Apps Script (Google Sheets)</label>
-                    <input type="text" id="settingsDbUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-navy-900 border border-navy-600 rounded-md py-2 px-3 text-xs text-navy-50 placeholder-navy-500 font-mono focus:outline-none focus:border-brand-500">
-                </div>
-                <div class="flex gap-3 justify-end pt-4 border-t border-navy-700">
-                    <button onclick="closeSettingsModal()" class="px-4 py-2 bg-navy-700 hover:bg-navy-600 text-navy-300 rounded-md text-xs font-semibold transition-colors">Cancelar</button>
-                    <button onclick="saveSettings()" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-navy-900 rounded-md text-xs font-bold transition-colors shadow-md">Guardar y Sincronizar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--            MODAL: POSPONER TAREA           -->
-    <!-- ========================================== -->
-    <div id="postponeModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-xs rounded-lg shadow-xl p-5 slide-up">
-            <div class="flex justify-between items-center mb-4 pb-1 border-b border-navy-700">
-                <h3 class="text-sm font-bold text-navy-50">Posponer Tarea</h3>
-                <button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div class="flex flex-col gap-2">
-                <button onclick="postponeAction('tomorrow')" class="w-full text-left py-2 px-3 bg-navy-700 hover:bg-navy-600 rounded text-xs text-navy-50 font-medium transition-colors">Para mañana</button>
-                <button onclick="postponeAction('nextWeek')" class="w-full text-left py-2 px-3 bg-navy-700 hover:bg-navy-600 rounded text-xs text-navy-50 font-medium transition-colors">Para la semana que viene (7 días)</button>
-                <div class="border-t border-navy-700 my-1 pt-2">
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Elegir fecha libre</label>
-                    <div class="flex gap-2">
-                        <input type="date" id="postponeCustomDate" class="bg-navy-900 border border-navy-600 rounded px-2 py-1 text-xs text-navy-50 focus:outline-none flex-1">
-                        <button onclick="postponeAction('custom')" class="px-3 bg-brand-500 hover:bg-brand-400 text-navy-900 rounded text-xs font-bold transition-colors">OK</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--          MODAL: MOVER POR LOTE             -->
-    <!-- ========================================== -->
-    <div id="bulkMoveModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-sm rounded-lg shadow-xl p-5 slide-up">
-            <div class="flex justify-between items-center mb-4 pb-1 border-b border-navy-700">
-                <h3 class="text-sm font-bold text-navy-50">Mover Tareas Seleccionadas</h3>
-                <button onclick="closeBulkMoveModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Nueva Área</label>
-                    <select id="bulkAreaInput" class="w-full bg-navy-900 border border-navy-700 rounded px-3 py-2 text-xs text-navy-50 focus:outline-none cursor-pointer"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] text-navy-400 uppercase font-bold mb-1">Nuevo Contexto</label>
-                    <select id="bulkContextInput" class="w-full bg-navy-900 border border-navy-700 rounded px-3 py-2 text-xs text-navy-50 focus:outline-none cursor-pointer"></select>
-                </div>
-                <div class="flex gap-3 justify-end pt-2">
-                    <button onclick="closeBulkMoveModal()" class="px-4 py-2 bg-navy-700 hover:bg-navy-600 text-navy-300 rounded text-xs font-semibold transition-colors">Cancelar</button>
-                    <button onclick="applyBulkMove()" class="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-navy-900 rounded text-xs font-bold transition-colors">Aplicar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--            MODAL: CONFIRMACIÓN             -->
-    <!-- ========================================== -->
-    <div id="confirmModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-navy-800 border border-navy-700 w-full max-w-sm rounded-lg shadow-xl p-6 slide-up">
-            <h3 id="confirmModalTitle" class="text-base font-bold text-navy-50 mb-2"></h3>
-            <p id="confirmModalMessage" class="text-xs text-navy-300 mb-6 leading-relaxed"></p>
-            <div class="flex gap-4">
-                <button onclick="closeConfirmModal(false)" class="w-1/2 bg-navy-700 text-navy-300 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
-                <button id="confirmModalBtnAction" onclick="closeConfirmModal(true)" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Aceptar</button>
+            <div class="flex justify-end p-4 md:p-5 border-t border-navy-700 shrink-0">
+                <button onclick="addTask()" class="w-full md:w-auto bg-brand-500 text-navy-900 px-8 py-2.5 rounded-md text-sm font-bold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Tarea</button>
             </div>
         </div>
     </div>
     
+    <!-- Modal: Edición de Tarea -->
+    <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-lg rounded-md border border-navy-600 overflow-hidden slide-up flex flex-col max-h-[90vh]">
+            <div class="p-4 md:p-5 border-b border-navy-700 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-3">
+                    <h3 id="editModalTitle" class="font-semibold text-base text-navy-50">Editar Tarea</h3>
+                    <button id="btnBreakdownAI" onclick="breakdownTaskWithAI()" class="flex items-center space-x-1.5 px-2.5 py-1 bg-navy-700 border border-navy-600 hover:bg-navy-600 text-brand-400 rounded-md text-xs font-semibold transition-colors focus:outline-none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        <span>Desglosar con IA</span>
+                    </button>
+                </div>
+                <button onclick="closeEditModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-4 md:p-5 overflow-y-auto space-y-4 flex-1">
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Nombre</label>
+                    <input type="text" id="editNameInput" class="w-full text-base bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2.5 rounded-md focus:outline-none focus:border-brand-500">
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Estado</label>
+                        <select id="editStatusInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"><option value="pending">Pendiente</option><option value="in_progress">En progreso</option><option value="completed">Completada</option></select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Área</label>
+                        <select id="editAreaInput" onchange="updateEditParentDropdown()" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Contexto</label>
+                        <select id="editContextInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Prioridad</label>
+                        <select id="editPriorityInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                            <option value="urgente">Urgente</option>
+                            <option value="alta">Alta</option>
+                            <option value="media">Media</option>
+                            <option value="baja">Baja</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Dependencia</label>
+                    <select id="editParentInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Notas</label>
+                    <textarea id="editNotesInput" rows="2" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 resize-y"></textarea>
+                </div>
+
+                <div class="space-y-2 border border-navy-700 rounded-md p-3 bg-navy-900/50">
+                    <div class="flex justify-between items-center">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1">Archivos Adjuntos</label>
+                        <div class="relative">
+                            <input type="file" id="editAttachFileInput" class="hidden" onchange="handleFileUpload(event, 'edit')">
+                            <button onclick="document.getElementById('editAttachFileInput').click()" class="text-[9px] bg-navy-700 hover:bg-navy-600 text-navy-50 px-2.5 py-1 rounded transition-colors font-semibold flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                Añadir Archivo
+                            </button>
+                        </div>
+                    </div>
+                    <div id="editAttachmentLoading" class="hidden text-[10px] text-brand-500 font-bold animate-pulse">Subiendo a Google Drive...</div>
+                    <div id="editAttachmentsList" class="flex flex-wrap gap-1.5 empty:hidden mt-1.5"></div>
+                </div>
+
+                <div class="pt-3 border-t border-navy-700 space-y-3">
+                    <span class="block text-[10px] text-navy-400 font-bold uppercase tracking-wider ml-1 mb-1">Programación</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Fecha Base</label><input type="date" id="editDateInput" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                        <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Hora</label><input type="time" id="editTimeInput" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div>
+                    </div>
+                    <div class="pt-1">
+                        <label class="flex items-center space-x-2 bg-navy-900 border border-navy-700 px-3 py-2 rounded-md cursor-pointer w-max"><input type="checkbox" id="editReminderToggle" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300 font-semibold">Activar recordatorio</span></label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-navy-900 border border-navy-700 rounded-lg mt-3">
+                        <div class="flex flex-col">
+                            <span class="text-[11px] font-bold text-navy-50">Automatizar periodicidad</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="editHasRecurrence" onchange="toggleRecurrenceUI('edit')" class="sr-only peer">
+                            <div class="w-9 h-5 bg-navy-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-navy-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                        </label>
+                    </div>
+
+                    <div id="editRecurrenceContainer" class="hidden space-y-4 mt-3 p-3 border border-brand-500/30 bg-navy-900/50 rounded-lg">
+                        <div>
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Frecuencia</label>
+                            <select id="editFrequency" onchange="refreshRecurrenceUI('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer">
+                                <option value="daily">Diaria</option>
+                                <option value="weekly">Semanal (Días específicos)</option>
+                                <option value="monthly">Mensual</option>
+                                <option value="yearly">Anual</option>
+                                <option value="after_completion">Días después de completar</option>
+                                <option value="custom">Mensual extendida (Personalizada)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-[11px] text-navy-300">Cada</span>
+                            <input type="number" id="editInterval" value="1" min="1" onchange="validateAndProjectRecurrence('edit')" class="w-16 text-xs bg-navy-800 border border-navy-600 text-center text-navy-50 px-2 py-1.5 rounded-md focus:outline-none focus:border-brand-500">
+                            <span id="editIntervalLabel" class="text-[11px] text-navy-300">días</span>
+                        </div>
+
+                        <div id="editWeeklyBlock" class="hidden space-y-2">
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider">Días de ejecución</label>
+                            <div class="flex justify-between">
+                                <button type="button" id="edit-day-0" onclick="toggleDay('edit', 0)" class="day-btn bg-navy-800">D</button>
+                                <button type="button" id="edit-day-1" onclick="toggleDay('edit', 1)" class="day-btn bg-brand-500 text-navy-900 border-brand-500 scale-110">L</button>
+                                <button type="button" id="edit-day-2" onclick="toggleDay('edit', 2)" class="day-btn bg-navy-800">M</button>
+                                <button type="button" id="edit-day-3" onclick="toggleDay('edit', 3)" class="day-btn bg-navy-800">M</button>
+                                <button type="button" id="edit-day-4" onclick="toggleDay('edit', 4)" class="day-btn bg-navy-800">J</button>
+                                <button type="button" id="edit-day-5" onclick="toggleDay('edit', 5)" class="day-btn bg-navy-800">V</button>
+                                <button type="button" id="edit-day-6" onclick="toggleDay('edit', 6)" class="day-btn bg-navy-800">S</button>
+                            </div>
+                        </div>
+
+                        <div id="editMonthlyBlock" class="hidden space-y-3">
+                            <div class="flex space-x-4 border-b border-navy-700 pb-2">
+                                <label class="flex items-center space-x-2"><input type="radio" name="editMonthlyMode" value="fixed" checked onchange="refreshRecurrenceUI('edit')" class="text-brand-500 focus:ring-0 bg-transparent border-navy-600"><span class="text-[11px] text-navy-300">Día Fijo</span></label>
+                                <label class="flex items-center space-x-2"><input type="radio" name="editMonthlyMode" value="business" onchange="refreshRecurrenceUI('edit')" class="text-brand-500 focus:ring-0 bg-transparent border-navy-600"><span class="text-[11px] text-navy-300">Día Hábil</span></label>
+                            </div>
+                            <div id="editMonthlyFixedBlock">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día objetivo</label>
+                                <input type="number" id="editDayOfMonth" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div id="editMonthlyBusinessBlock" class="hidden">
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Índice Hábil</label>
+                                <input type="number" id="editNthBusinessDay" value="5" min="1" max="31" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+
+                        <div id="editYearlyBlock" class="hidden grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día</label>
+                                <input type="number" id="editYearDay" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Mes</label>
+                                <select id="editYearMonth" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
+                                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="editCustomBlock" class="hidden">
+                            <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider mb-1">Día del Mes</label>
+                            <input type="number" id="editCustomDay" value="1" min="1" max="31" onchange="validateAndProjectRecurrence('edit')" class="w-full text-xs bg-navy-800 border border-navy-600 text-navy-50 px-3 py-2 rounded-md focus:outline-none focus:border-brand-500">
+                        </div>
+
+                        <div id="editCompletionBaseBlock">
+                            <label class="flex items-center space-x-2 bg-navy-800 border border-navy-600 px-3 py-2 rounded-md cursor-pointer"><input type="checkbox" id="editBaseOnCompletion" onchange="validateAndProjectRecurrence('edit')" class="w-3.5 h-3.5 rounded-sm border-brand-500 text-brand-500 focus:ring-brand-500 bg-transparent"><span class="text-[11px] text-navy-300">Recalcular desde resolución real</span></label>
+                        </div>
+                        
+                        <div id="editRecurrenceProjection" class="text-[10px] font-mono text-emerald-400 p-2 bg-navy-800 rounded border border-navy-600"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 md:p-5 border-t border-navy-700 flex space-x-3 shrink-0">
+                <button onclick="closeEditModal()" class="w-1/2 bg-navy-700 text-navy-50 py-2.5 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                <button onclick="saveEdit()" class="w-1/2 bg-brand-500 text-navy-900 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reubicación Múltiple -->
+    <div id="bulkMoveModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
+                <h3 class="font-semibold text-lg text-navy-50">Reubicar Tareas</h3>
+                <button onclick="closeBulkMoveModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-5 md:p-6 space-y-5">
+                <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Nueva Área</label><select id="bulkAreaInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                <div class="space-y-1"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Nuevo Contexto</label><select id="bulkContextInput" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer"></select></div>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeBulkMoveModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                    <button onclick="applyBulkMove()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Posponer -->
+    <div id="postponeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 class="font-semibold text-lg text-navy-50">Posponer Tarea</h3><button onclick="closePostponeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 space-y-4"><div class="grid grid-cols-1 gap-2"><button onclick="postponeAction('tomorrow')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>Mañana</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-tomorrow"></span></button><button onclick="postponeAction('nextWeek')" class="w-full text-left bg-navy-900 border border-navy-700 hover:border-brand-500 text-navy-50 px-4 py-3 rounded-md text-sm font-semibold transition-colors flex justify-between items-center focus:outline-none"><span>La semana que viene</span><span class="text-xs text-navy-400 font-normal capitalize" id="postpone-opt-nextweek"></span></button></div><div class="border-t border-navy-700 pt-4 space-y-2"><div class="flex space-x-2"><div class="w-2/3"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Elegir fecha</label><input type="date" id="postponeCustomDate" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500" style="color-scheme: dark;"></div><div class="w-1/3"><label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Hora</label><input type="time" id="postponeCustomTime" class="w-full text-sm bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500 cursor-pointer" style="color-scheme: dark;"></div></div></div><div class="flex space-x-3 pt-2"><button onclick="closePostponeModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button><button onclick="postponeAction('custom')" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button></div></div></div></div>
+
+    <!-- Modal: Detalle de Día -->
+    <div id="dayDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="modalDateTitle" class="font-semibold text-lg text-navy-50">Detalle del día</h3><button onclick="closeModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div id="modalContent" class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-3"></div></div></div>
+
+    <!-- Modal: Configuración Cloud -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
+                <h3 class="font-semibold text-lg text-navy-50">Configuración Cloud</h3>
+                <button onclick="closeSettingsModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-5 md:p-6 space-y-4">
+                <p class="text-xs text-navy-300 leading-relaxed">Vinculá tu agenda con Google Sheets para mantener sincronizados tus datos. Tus datos viajan cifrados y directamente a tu cuenta de Google.</p>
+                <div class="space-y-1">
+                    <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">URL de Google Apps Script</label>
+                    <input type="text" id="settingsDbUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center px-1">
+                        <label class="block text-[10px] font-bold text-navy-400 uppercase tracking-wider ml-1 mb-1">Gemini API Key (Opcional)</label>
+                        <a href="https://aistudio.google.com/" target="_blank" class="text-[9px] text-brand-500 hover:underline">Obtener clave gratis</a>
+                    </div>
+                    <input type="password" id="settingsApiKeyInput" placeholder="Clave API para procesamiento IA" class="w-full text-xs bg-navy-900 border border-navy-700 text-navy-50 px-4 py-3 rounded-md focus:outline-none focus:border-brand-500">
+                </div>
+                <div class="pt-2 flex space-x-3">
+                    <button onclick="closeSettingsModal()" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-xs font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cerrar</button>
+                    <button onclick="saveSettings()" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-xs font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gestionar Áreas y Contextos -->
+    <div id="manageModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay"><div class="bg-navy-800 w-full max-w-md rounded-md border border-navy-600 overflow-hidden slide-up"><div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center"><h3 id="manageModalTitle" class="font-semibold text-lg text-navy-50">Gestionar</h3><button onclick="closeManageModal()" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="p-5 md:p-6 max-h-[60vh] overflow-y-auto space-y-4" id="manageModalContent"></div></div></div>
+
+    <!-- Modal Confirmación -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-navy-800 w-full max-w-sm rounded-md border border-navy-600 overflow-hidden slide-up">
+            <div class="p-5 md:p-6 border-b border-navy-700 flex justify-between items-center">
+                <h3 id="confirmModalTitle" class="font-semibold text-lg text-navy-50">Confirmar acción</h3>
+                <button onclick="closeConfirmModal(false)" class="text-navy-400 hover:text-navy-50 focus:outline-none"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-5 md:p-6 space-y-4">
+                <p id="confirmModalMessage" class="text-sm text-navy-300 leading-relaxed"></p>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeConfirmModal(false)" class="w-1/2 bg-navy-700 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-navy-600 transition-colors focus:outline-none">Cancelar</button>
+                    <button onclick="closeConfirmModal(true)" id="confirmModalBtnAction" class="w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-box" class="fixed bottom-8 right-24 z-[70] flex flex-col gap-2 pointer-events-none"></div>
+
     <script src="app.js"></script>
 </body>
 </html>
