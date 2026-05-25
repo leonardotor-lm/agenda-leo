@@ -138,6 +138,12 @@ function migrateAndNormalizeTasks() {
             if (n.context === undefined) { n.context = ''; changed = true; }
             if (n.time === undefined) { n.time = ''; changed = true; }
             
+            // MIGRACIÓN: Inicialización de recordatorios múltiples para tareas antiguas
+            if (n.reminderOptions === undefined) {
+                n.reminderOptions = n.reminder ? ['0'] : [];
+                changed = true;
+            }
+            
             if (n.recurrence && n.recurrence !== 'none' && !n.recurrenceRule) {
                 n.recurrenceRule = {
                     frequency: n.recurrence === 'diario' ? 'daily' : n.recurrence === 'semanal' ? 'weekly' : 'monthly',
@@ -313,9 +319,17 @@ async function addTask() {
     const name = document.getElementById('taskInput').value.trim(); if (!name) return; 
     const area = document.getElementById('areaInput').value; const context = document.getElementById('contextInput').value; const priority = document.getElementById('priorityInput').value; 
     const dateInput = document.getElementById('dateInput').value; const timeInput = document.getElementById('timeInput').value; const notes = document.getElementById('notesInput').value.trim(); 
-    const reminder = document.getElementById('reminderToggle').checked; const rule = buildRuleFromUI('add');
+    
+    // REEMPLAZO: Extracción de múltiples recordatorios
+    const reminderOptions = Array.from(document.querySelectorAll('#addTaskModal .reminder-cb:checked')).map(cb => cb.value);
+    const reminder = reminderOptions.length > 0;
+    
+    const rule = buildRuleFromUI('add');
     const parentIdRaw = document.getElementById('parentInput').value; const parentId = parentIdRaw === 'root' ? 'root' : Number(parentIdRaw);
-    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
+    
+    // MODIFICADO: Integración de reminderOptions en la estructura base
+    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, reminderOptions, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
+    
     if (parentId === 'root') tasks.unshift(newTask); else insertTask(newTask, parentId);
     
     closeAddTaskModal(); 
@@ -328,11 +342,20 @@ async function saveEdit() {
     const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
     const status = document.getElementById('editStatusInput').value; const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; 
     const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; 
-    const notes = document.getElementById('editNotesInput').value.trim(); const reminder = document.getElementById('editReminderToggle').checked; const rule = buildRuleFromUI('edit');
+    const notes = document.getElementById('editNotesInput').value.trim(); 
+    
+    // REEMPLAZO: Extracción de múltiples recordatorios en modal de edición
+    const reminderOptions = Array.from(document.querySelectorAll('#editModal .edit-reminder-cb:checked')).map(cb => cb.value);
+    const reminder = reminderOptions.length > 0;
+    
+    const rule = buildRuleFromUI('edit');
     const newParentIdRaw = document.getElementById('editParentInput').value; const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
     let targetTask = null; if (newParentId !== editState.parentId) targetTask = extractTask(id);
-    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
-    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
+    
+    // MODIFICADO: Actualización de ambos campos (reminder y reminderOptions)
+    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.reminderOptions = reminderOptions; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
+    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.reminderOptions = reminderOptions; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
+    
     closeEditModal(); refreshAllDropdowns(); renderTasks(); showNotice("Guardado exitosamente"); await saveData(); 
 }
 async function toggleTaskUniversal(id) {
@@ -363,13 +386,11 @@ function openAddTaskModal() {
     document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     document.getElementById('contextInput').value = ''; 
     
-    // Reseteo robusto: Desmarcamos explícitamente y disparamos el evento 'change' 
-    // para asegurar que cualquier capa visual dependiente (CSS/JS) se actualice sin fallos.
-    const reminderToggle = document.getElementById('reminderToggle');
-    if (reminderToggle) {
-        reminderToggle.checked = false;
-        reminderToggle.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    // Reseteo robusto: Desmarcamos explícitamente múltiples opciones y disparamos eventos
+    document.querySelectorAll('#addTaskModal .reminder-cb').forEach(cb => {
+        cb.checked = false;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     
     currentAttachments = []; 
     renderAttachments('add'); 
@@ -385,13 +406,11 @@ function openAddTaskModal() {
 function closeAddTaskModal() { 
     document.getElementById('addTaskModal').classList.add('hidden'); 
     
-    // Intervención de seguridad: Limpiamos la casilla también al cerrar, 
-    // cubriendo el caso de que el usuario cierre o cancele el modal.
-    const reminderToggle = document.getElementById('reminderToggle');
-    if (reminderToggle) {
-        reminderToggle.checked = false;
-        reminderToggle.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    // Intervención de seguridad: Limpiamos las casillas al cerrar o cancelar
+    document.querySelectorAll('#addTaskModal .reminder-cb').forEach(cb => {
+        cb.checked = false;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 }
 
 function openEditModal(id) { 
@@ -399,7 +418,16 @@ function openEditModal(id) {
     function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } } traverse(tasks); if (!target) return;
     document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); document.getElementById('editStatusInput').value = target.status || 'pending';
     document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || ''; document.getElementById('editPriorityInput').value = target.priority || 'baja'; 
-    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; document.getElementById('editNotesInput').value = target.notes || '';
+    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; 
+    
+    // Carga de estado para recordatorios múltiples con soporte para tareas viejas
+    const savedReminders = target.reminderOptions || (target.reminder ? ['0'] : []);
+    document.querySelectorAll('#editModal .edit-reminder-cb').forEach(cb => {
+        cb.checked = savedReminders.includes(cb.value);
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    
+    document.getElementById('editNotesInput').value = target.notes || '';
     currentAttachments = target.attachments ? [...target.attachments] : []; renderAttachments('edit'); updateEditParentDropdown();
     if (target.recurrenceRule) {
         const r = target.recurrenceRule; document.getElementById('editHasRecurrence').checked = true; document.getElementById('editFrequency').value = r.frequency; document.getElementById('editInterval').value = r.interval; document.getElementById('editBaseOnCompletion').checked = !!r.baseOnCompletion;
@@ -410,7 +438,16 @@ function openEditModal(id) {
     } else { document.getElementById('editHasRecurrence').checked = false; }
     toggleRecurrenceUI('edit'); document.getElementById('editModal').classList.remove('hidden'); 
 }
-function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+
+function closeEditModal() { 
+    document.getElementById('editModal').classList.add('hidden'); 
+    
+    // Intervención de seguridad: Limpiamos las casillas al cerrar edición
+    document.querySelectorAll('#editModal .edit-reminder-cb').forEach(cb => {
+        cb.checked = false;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+}
 
 // UTILIDADES Y RENDERIZADO VISUAL
 function showConfirm(title, message, onConfirm, isDanger = false) { document.getElementById('confirmModalTitle').innerText = title; document.getElementById('confirmModalMessage').innerText = message; confirmCallback = onConfirm; const btnConfirm = document.getElementById('confirmModalBtnAction'); if (isDanger) btnConfirm.className = "w-1/2 bg-danger-500 text-navy-50 py-3 rounded-md text-sm font-semibold hover:bg-danger-600 focus:outline-none"; else btnConfirm.className = "w-1/2 bg-brand-500 text-navy-900 py-3 rounded-md text-sm font-semibold hover:bg-brand-400 transition-colors focus:outline-none"; document.getElementById('confirmModal').classList.remove('hidden'); }
