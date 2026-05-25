@@ -1,37 +1,3 @@
-// CONFIGURACIÓN DE TAILWIND CSS
-tailwind.config = {
-    theme: {
-        extend: {
-            colors: {
-                navy: {
-                    50: '#FDFDFD',
-                    100: '#FADAC1',
-                    200: '#B0C4DF',
-                    300: '#8A9DB5',
-                    400: '#667A90',
-                    500: '#4A5B6D',
-                    600: '#324252',
-                    700: '#1D313C',
-                    800: '#122028',
-                    900: '#0A1318',
-                },
-                brand: {
-                    400: '#F88D5D',
-                    500: '#F6723A',
-                    600: '#DF5E28',
-                },
-                danger: {
-                    500: '#C43B39',
-                    600: '#A6302E',
-                },
-                info: {
-                    500: '#50A3AB',
-                }
-            }
-        }
-    }
-};
-
 // ESTADOS Y VARIABLES GLOBALES
 const apiKey = ""; 
 const DB_URL_KEY = 'leo_agenda_db_url';
@@ -45,6 +11,7 @@ function safeParse(key, fallback) {
     catch (e) { return fallback; }
 }
 
+// Inicialización de la base local
 let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
 let customAreas = safeParse('leo_custom_areas', ["Inbox", "Trabajo", "Personal", "Estudios"]);
@@ -137,12 +104,6 @@ function migrateAndNormalizeTasks() {
             if (!n.area || n.area === 'General') { n.area = parentArea || 'Inbox'; changed = true; }
             if (n.context === undefined) { n.context = ''; changed = true; }
             if (n.time === undefined) { n.time = ''; changed = true; }
-            
-            // MIGRACIÓN: Inicialización de recordatorios múltiples para tareas antiguas
-            if (n.reminderOptions === undefined) {
-                n.reminderOptions = n.reminder ? ['0'] : [];
-                changed = true;
-            }
             
             if (n.recurrence && n.recurrence !== 'none' && !n.recurrenceRule) {
                 n.recurrenceRule = {
@@ -319,43 +280,21 @@ async function addTask() {
     const name = document.getElementById('taskInput').value.trim(); if (!name) return; 
     const area = document.getElementById('areaInput').value; const context = document.getElementById('contextInput').value; const priority = document.getElementById('priorityInput').value; 
     const dateInput = document.getElementById('dateInput').value; const timeInput = document.getElementById('timeInput').value; const notes = document.getElementById('notesInput').value.trim(); 
-    
-    // REEMPLAZO: Extracción de múltiples recordatorios
-    const reminderOptions = Array.from(document.querySelectorAll('#addTaskModal .reminder-cb:checked')).map(cb => cb.value);
-    const reminder = reminderOptions.length > 0;
-    
-    const rule = buildRuleFromUI('add');
+    const reminder = document.getElementById('reminderToggle').checked; const rule = buildRuleFromUI('add');
     const parentIdRaw = document.getElementById('parentInput').value; const parentId = parentIdRaw === 'root' ? 'root' : Number(parentIdRaw);
-    
-    // MODIFICADO: Integración de reminderOptions en la estructura base
-    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, reminderOptions, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
-    
+    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
     if (parentId === 'root') tasks.unshift(newTask); else insertTask(newTask, parentId);
-    
-    closeAddTaskModal(); 
-    refreshAllDropdowns(); 
-    renderTasks(); 
-    showNotice("Tarea guardada"); 
-    await saveData(); 
+    closeAddTaskModal(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea guardada"); await saveData(); 
 }
 async function saveEdit() {
     const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
     const status = document.getElementById('editStatusInput').value; const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; 
     const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; 
-    const notes = document.getElementById('editNotesInput').value.trim(); 
-    
-    // REEMPLAZO: Extracción de múltiples recordatorios en modal de edición
-    const reminderOptions = Array.from(document.querySelectorAll('#editModal .edit-reminder-cb:checked')).map(cb => cb.value);
-    const reminder = reminderOptions.length > 0;
-    
-    const rule = buildRuleFromUI('edit');
+    const notes = document.getElementById('editNotesInput').value.trim(); const reminder = document.getElementById('editReminderToggle').checked; const rule = buildRuleFromUI('edit');
     const newParentIdRaw = document.getElementById('editParentInput').value; const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
     let targetTask = null; if (newParentId !== editState.parentId) targetTask = extractTask(id);
-    
-    // MODIFICADO: Actualización de ambos campos (reminder y reminderOptions)
-    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.reminderOptions = reminderOptions; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
-    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.reminderOptions = reminderOptions; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
-    
+    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
+    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
     closeEditModal(); refreshAllDropdowns(); renderTasks(); showNotice("Guardado exitosamente"); await saveData(); 
 }
 async function toggleTaskUniversal(id) {
@@ -386,12 +325,6 @@ function openAddTaskModal() {
     document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     document.getElementById('contextInput').value = ''; 
     
-    // Reseteo robusto: Desmarcamos explícitamente múltiples opciones y disparamos eventos
-    document.querySelectorAll('#addTaskModal .reminder-cb').forEach(cb => {
-        cb.checked = false;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    
     currentAttachments = []; 
     renderAttachments('add'); 
     updateAddParentDropdown();
@@ -399,18 +332,30 @@ function openAddTaskModal() {
     addSelectedDays = [1]; 
     toggleDay('add', 1); 
     toggleRecurrenceUI('add');
+    
+    // 1. Mostrar el modal (removiendo el display: none)
     document.getElementById('addTaskModal').classList.remove('hidden'); 
+    
+    // 2. CORRECCIÓN ARQUITECTÓNICA: Reseteo de estado con el DOM visible.
+    // Al modificar la propiedad 'checked' DESPUÉS de que el nodo es visible en el DOM activo, 
+    // forzamos al motor de renderizado a repintar las clases pseudo-estado de Tailwind (peer-checked).
+    // Si se hace antes (estando oculto), el motor JS actualiza la propiedad pero el CSS omite el repintado.
+    const reminderToggle = document.getElementById('reminderToggle');
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+    }
+
     setTimeout(() => document.getElementById('taskInput').focus(), 100); 
 }
 
 function closeAddTaskModal() { 
     document.getElementById('addTaskModal').classList.add('hidden'); 
     
-    // Intervención de seguridad: Limpiamos las casillas al cerrar o cancelar
-    document.querySelectorAll('#addTaskModal .reminder-cb').forEach(cb => {
-        cb.checked = false;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    // Limpieza de seguridad post-cierre (previene fugas de estado si el renderizado falla)
+    const reminderToggle = document.getElementById('reminderToggle');
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+    }
 }
 
 function openEditModal(id) { 
@@ -418,16 +363,7 @@ function openEditModal(id) {
     function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } } traverse(tasks); if (!target) return;
     document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); document.getElementById('editStatusInput').value = target.status || 'pending';
     document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || ''; document.getElementById('editPriorityInput').value = target.priority || 'baja'; 
-    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; 
-    
-    // Carga de estado para recordatorios múltiples con soporte para tareas viejas
-    const savedReminders = target.reminderOptions || (target.reminder ? ['0'] : []);
-    document.querySelectorAll('#editModal .edit-reminder-cb').forEach(cb => {
-        cb.checked = savedReminders.includes(cb.value);
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    
-    document.getElementById('editNotesInput').value = target.notes || '';
+    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; document.getElementById('editNotesInput').value = target.notes || '';
     currentAttachments = target.attachments ? [...target.attachments] : []; renderAttachments('edit'); updateEditParentDropdown();
     if (target.recurrenceRule) {
         const r = target.recurrenceRule; document.getElementById('editHasRecurrence').checked = true; document.getElementById('editFrequency').value = r.frequency; document.getElementById('editInterval').value = r.interval; document.getElementById('editBaseOnCompletion').checked = !!r.baseOnCompletion;
@@ -441,12 +377,6 @@ function openEditModal(id) {
 
 function closeEditModal() { 
     document.getElementById('editModal').classList.add('hidden'); 
-    
-    // Intervención de seguridad: Limpiamos las casillas al cerrar edición
-    document.querySelectorAll('#editModal .edit-reminder-cb').forEach(cb => {
-        cb.checked = false;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-    });
 }
 
 // UTILIDADES Y RENDERIZADO VISUAL
