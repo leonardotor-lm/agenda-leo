@@ -1,3 +1,37 @@
+// CONFIGURACIÓN DE TAILWIND CSS
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                navy: {
+                    50: '#FDFDFD',
+                    100: '#FADAC1',
+                    200: '#B0C4DF',
+                    300: '#8A9DB5',
+                    400: '#667A90',
+                    500: '#4A5B6D',
+                    600: '#324252',
+                    700: '#1D313C',
+                    800: '#122028',
+                    900: '#0A1318',
+                },
+                brand: {
+                    400: '#F88D5D',
+                    500: '#F6723A',
+                    600: '#DF5E28',
+                },
+                danger: {
+                    500: '#C43B39',
+                    600: '#A6302E',
+                },
+                info: {
+                    500: '#50A3AB',
+                }
+            }
+        }
+    }
+};
+
 // ESTADOS Y VARIABLES GLOBALES
 const apiKey = ""; 
 const DB_URL_KEY = 'leo_agenda_db_url';
@@ -11,7 +45,6 @@ function safeParse(key, fallback) {
     catch (e) { return fallback; }
 }
 
-// Inicialización de la base local
 let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
 let customAreas = safeParse('leo_custom_areas', ["Inbox", "Trabajo", "Personal", "Estudios"]);
@@ -318,30 +351,17 @@ async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task
 // MODALS LIFECYCLE
 function openAddTaskModal() { 
     document.getElementById('taskInput').value = ''; 
-    
-    // CAMBIO: Evalúa la vista temporal para predefinir la fecha si corresponde
-    let defaultDate = '';
-    if (currentState.view === 'today') {
-        defaultDate = formatDateLocal(new Date());
-    } else if (currentState.view === 'tomorrow') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        defaultDate = formatDateLocal(tomorrow);
-    }
-    document.getElementById('dateInput').value = defaultDate;
-    
+    document.getElementById('dateInput').value = ''; 
     document.getElementById('timeInput').value = ''; 
     document.getElementById('notesInput').value = ''; 
     document.getElementById('priorityInput').value = 'baja';
-    
-    // CAMBIO: Selecciona automáticamente el área si el usuario está visualizando una específica.
-    if (currentState.view === 'area' && currentState.selectedArea) {
-        document.getElementById('areaInput').value = currentState.selectedArea;
-    } else {
-        document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
-    }
-    
+    document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     document.getElementById('contextInput').value = ''; 
+    
+    // Reseteo forzado de la casilla de recordatorios
+    const reminderToggle = document.getElementById('reminderToggle');
+    if (reminderToggle) reminderToggle.checked = false;
+    
     currentAttachments = []; 
     renderAttachments('add'); 
     updateAddParentDropdown();
@@ -585,25 +605,13 @@ function buildTaskRows(nodes, path = []) {
 function renderTasks() {
     const list = document.getElementById('taskList'); const empty = document.getElementById('emptyState');
     let nodesToRender = [];
-    let taskCount = 0; 
-    
     if (currentState.view === 'trash') {
         function collectDeleted(nodes) { nodes.forEach(n => { if (n.isDeleted) nodesToRender.push(n); else if (n.subtasks) collectDeleted(n.subtasks); }); }
         collectDeleted(tasks); nodesToRender.sort((a,b) => (b.deletedAt || 0) - (a.deletedAt || 0));
-        taskCount = nodesToRender.length; 
     } else {
         const pruned = pruneTree(tasks);
-        const flatMatches = flattenMatches(pruned); 
         const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
-        nodesToRender = isFlatView ? flatMatches : pruned;
-        taskCount = flatMatches.length; 
-    }
-
-    const titleEl = document.getElementById('view-title');
-    if (titleEl) {
-        const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
-        let baseTitle = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
-        titleEl.innerText = `${baseTitle} (${taskCount})`;
+        nodesToRender = isFlatView ? flattenMatches(pruned) : pruned;
     }
 
     if (nodesToRender.length === 0) { list.innerHTML = ''; empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales."; empty.classList.remove('hidden'); return; }
