@@ -317,7 +317,12 @@ async function addTask() {
     const parentIdRaw = document.getElementById('parentInput').value; const parentId = parentIdRaw === 'root' ? 'root' : Number(parentIdRaw);
     const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
     if (parentId === 'root') tasks.unshift(newTask); else insertTask(newTask, parentId);
-    closeAddTaskModal(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea guardada"); await saveData(); 
+    
+    closeAddTaskModal(); 
+    refreshAllDropdowns(); 
+    renderTasks(); 
+    showNotice("Tarea guardada"); 
+    await saveData(); 
 }
 async function saveEdit() {
     const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
@@ -358,9 +363,13 @@ function openAddTaskModal() {
     document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     document.getElementById('contextInput').value = ''; 
     
-    // Reseteo forzado de la casilla de recordatorios
+    // Reseteo robusto: Desmarcamos explícitamente y disparamos el evento 'change' 
+    // para asegurar que cualquier capa visual dependiente (CSS/JS) se actualice sin fallos.
     const reminderToggle = document.getElementById('reminderToggle');
-    if (reminderToggle) reminderToggle.checked = false;
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+        reminderToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     
     currentAttachments = []; 
     renderAttachments('add'); 
@@ -372,7 +381,19 @@ function openAddTaskModal() {
     document.getElementById('addTaskModal').classList.remove('hidden'); 
     setTimeout(() => document.getElementById('taskInput').focus(), 100); 
 }
-function closeAddTaskModal() { document.getElementById('addTaskModal').classList.add('hidden'); }
+
+function closeAddTaskModal() { 
+    document.getElementById('addTaskModal').classList.add('hidden'); 
+    
+    // Intervención de seguridad: Limpiamos la casilla también al cerrar, 
+    // cubriendo el caso de que el usuario cierre o cancele el modal.
+    const reminderToggle = document.getElementById('reminderToggle');
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+        reminderToggle.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
 function openEditModal(id) { 
     editState = { id, parentId: getParentId(id) }; let target = null;
     function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } } traverse(tasks); if (!target) return;
