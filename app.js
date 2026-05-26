@@ -907,8 +907,9 @@ window.handleFileUpload = async function(event, mode) {
         const base64Content = e.target.result.split(',')[1];
         
         try {
+            // Corrección estructural: se alinea el identificador con el parámetro esperado por el servidor
             const payload = {
-                action: 'uploadAttachment', 
+                action: 'uploadFile', 
                 fileName: file.name,
                 mimeType: file.type,
                 fileData: base64Content
@@ -929,19 +930,16 @@ window.handleFileUpload = async function(event, mode) {
                 throw new Error('El servidor devolvió un documento HTML. Verificar permisos.');
             }
 
-            // NUEVO: Evaluación y extracción rigurosa de la carga útil (URL)
             let finalUrl = serverResponse.trim();
             
-            // Intento de decodificación en caso de que el servidor devuelva un objeto estructurado (JSON)
             try {
                 const parsed = JSON.parse(finalUrl);
-                // Búsqueda de claves estandarizadas donde Google Apps Script suele alojar el enlace
+                // El servidor devuelve un objeto con la propiedad 'url', la cual es interceptada aquí
                 finalUrl = parsed.url || parsed.link || parsed.fileUrl || parsed.fileId || finalUrl;
             } catch (jsonError) {
-                // Si la conversión falla, asumimos que es texto plano y continuamos
+                // Silenciamiento del error de parseo si el servidor devuelve texto plano
             }
 
-            // Validación inquebrantable de integridad de red
             if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
                 console.error("Respuesta anómala del servidor:", serverResponse);
                 throw new Error('El servidor no devolvió una URL válida: ' + finalUrl.substring(0, 30));
@@ -950,7 +948,7 @@ window.handleFileUpload = async function(event, mode) {
             const fileData = {
                 name: file.name,
                 type: file.type,
-                data: finalUrl // Puntero absoluto garantizado
+                data: finalUrl
             };
             
             currentAttachments.push(fileData);
