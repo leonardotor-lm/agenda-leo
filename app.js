@@ -895,8 +895,60 @@ function closePostponeModal() { document.getElementById('postponeModal').classLi
 async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
 
 // FILE UPLOAD AND ATTACHMENTS
-async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
-function renderAttachments(mode) {}
+async function handleFileUpload(event, mode) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const fileData = {
+            name: file.name,
+            type: file.type,
+            data: e.target.result // Conversión a cadena Base64
+        };
+        
+        // Integración al arreglo global de la instancia activa (creación o edición)
+        currentAttachments.push(fileData);
+        showNotice(`Archivo "${file.name}" procesado.`);
+        
+        // Actualización del árbol del DOM
+        renderAttachments(mode);
+    };
+    
+    reader.onerror = function() {
+        showNotice("Error de lectura. El archivo podría estar corrupto o ser inaccesible.");
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = ''; // Reseteo del input para habilitar cargas sucesivas del mismo archivo
+}
+
+function renderAttachments(mode) {
+    // Determinación del nodo contenedor según el contexto de la interfaz
+    const containerId = mode === 'edit' ? 'editAttachmentsList' : 'attachmentsList';
+    const container = document.getElementById(containerId);
+    
+    if (!container) return;
+
+    // Vaciado previo para evitar duplicidad en el renderizado
+    container.innerHTML = '';
+    
+    currentAttachments.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1 border border-navy-700";
+        
+        // Estructuración del hipervínculo para permitir la lectura/descarga directa de la carga útil (payload)
+        const fileLink = file.data 
+            ? `<a href="${file.data}" download="${file.name}" class="text-brand-400 hover:underline cursor-pointer truncate mr-2" title="Descargar o abrir archivo">${file.name}</a>` 
+            : `<span class="truncate mr-2">${file.name}</span>`;
+
+        div.innerHTML = `
+            ${fileLink}
+            <button type="button" onclick="currentAttachments.splice(${index}, 1); renderAttachments('${mode}');" class="text-danger-500 font-bold hover:bg-navy-700 px-2 py-1 rounded transition-colors">X</button>
+        `;
+        container.appendChild(div);
+    });
+}
 
 // STUBS / SIMULATION IA
 function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
