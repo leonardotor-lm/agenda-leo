@@ -904,12 +904,9 @@ window.handleFileUpload = async function(event, mode) {
     const reader = new FileReader();
     
     reader.onload = async function(e) {
-        // Se extrae exclusivamente la carga útil en Base64, omitiendo los metadatos iniciales de la cadena
         const base64Content = e.target.result.split(',')[1];
         
         try {
-            // Estructura de envío hacia Google Apps Script. 
-            // Es crucial que estos nombres de propiedad coincidan con los que espera tu servidor.
             const payload = {
                 action: 'uploadAttachment', 
                 fileName: file.name,
@@ -928,19 +925,36 @@ window.handleFileUpload = async function(event, mode) {
             
             const serverResponse = await response.text();
             
-            // Prevención de errores por deslogueo o fallos de permisos que devuelven la página de login de Google
             if (serverResponse.trim().startsWith('<')) {
-                throw new Error('El servidor devolvió un documento HTML. Verificar permisos del Web App.');
+                throw new Error('El servidor devolvió un documento HTML. Verificar permisos.');
+            }
+
+            // NUEVO: Evaluación y extracción rigurosa de la carga útil (URL)
+            let finalUrl = serverResponse.trim();
+            
+            // Intento de decodificación en caso de que el servidor devuelva un objeto estructurado (JSON)
+            try {
+                const parsed = JSON.parse(finalUrl);
+                // Búsqueda de claves estandarizadas donde Google Apps Script suele alojar el enlace
+                finalUrl = parsed.url || parsed.link || parsed.fileUrl || parsed.fileId || finalUrl;
+            } catch (jsonError) {
+                // Si la conversión falla, asumimos que es texto plano y continuamos
+            }
+
+            // Validación inquebrantable de integridad de red
+            if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                console.error("Respuesta anómala del servidor:", serverResponse);
+                throw new Error('El servidor no devolvió una URL válida: ' + finalUrl.substring(0, 30));
             }
 
             const fileData = {
                 name: file.name,
                 type: file.type,
-                data: serverResponse.trim() // La URL de Drive que devuelve el servidor
+                data: finalUrl // Puntero absoluto garantizado
             };
             
             currentAttachments.push(fileData);
-            showNotice("Archivo alojado en Drive correctamente.");
+            showNotice("Archivo alojado y vinculado correctamente.");
             
             if (typeof renderAttachments === 'function') {
                 renderAttachments(mode);
@@ -948,7 +962,7 @@ window.handleFileUpload = async function(event, mode) {
             
         } catch (err) {
             console.error("Error en la transmisión a Drive:", err);
-            showNotice("Fallo al subir archivo: " + err.message.substring(0, 40));
+            showNotice("Fallo al subir: " + err.message.substring(0, 50));
         }
     };
     
@@ -959,6 +973,7 @@ window.handleFileUpload = async function(event, mode) {
     reader.readAsDataURL(file);
     event.target.value = '';
 };
+
 function renderAttachments(mode) {
     // Determinación del nodo contenedor según el contexto de la interfaz
     const containerId = mode === 'edit' ? 'editAttachmentsList' : 'attachmentsList';
