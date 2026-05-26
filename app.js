@@ -895,48 +895,8 @@ function closePostponeModal() { document.getElementById('postponeModal').classLi
 async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
 
 // FILE UPLOAD AND ATTACHMENTS
-async function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const fileData = {
-            name: file.name,
-            type: file.type,
-            data: e.target.result 
-        };
-        currentAttachments.push(fileData);
-        showNotice(`Archivo "${file.name}" adjuntado.`);
-        
-        // Actualizamos la vista de adjuntos si existe la función
-        if (typeof renderAttachments === 'function') {
-            renderAttachments();
-        }
-    };
-    
-    reader.readAsDataURL(file);
-    event.target.value = '';
-}
-
-// Esta es la función que te estaba faltando y que causaba el error
-function renderAttachments(mode = '') {
-    // Si el contenedor no existe en tu HTML, la función termina silenciosamente
-    const container = document.getElementById('attachmentsList'); 
-    if (!container) return;
-
-    container.innerHTML = ''; // Limpiamos la lista actual
-    
-    currentAttachments.forEach((file, index) => {
-        const div = document.createElement('div');
-        div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1";
-        div.innerHTML = `
-            <span>${file.name}</span>
-            <button onclick="currentAttachments.splice(${index}, 1); renderAttachments();" class="text-danger-500 font-bold">X</button>
-        `;
-        container.appendChild(div);
-    });
-}
+async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
+function renderAttachments(mode) {}
 
 // STUBS / SIMULATION IA
 function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
