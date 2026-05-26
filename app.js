@@ -130,6 +130,9 @@ function migrateAndNormalizeTasks() {
 // COMUNICACIÓN CLOUD Y PERSISTENCIA
 async function saveData() {
     localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks));
+    localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas));
+    localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts));
+    
     if (!dbUrl) return;
     showSyncStatus('saving');
     try {
@@ -149,7 +152,6 @@ async function saveData() {
         showNotice("Fallo al guardar: " + e.message.substring(0, 40));
     }
 }
-
 async function loadDataFromCloud() {
     if (!dbUrl) return false;
     showSyncStatus('loading');
