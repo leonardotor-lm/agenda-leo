@@ -895,34 +895,70 @@ function closePostponeModal() { document.getElementById('postponeModal').classLi
 async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
 
 // FILE UPLOAD AND ATTACHMENTS
-async function handleFileUpload(event, mode) {
+window.handleFileUpload = async function(event, mode) {
     const file = event.target.files[0];
     if (!file) return;
 
+    showNotice(`Subiendo "${file.name}" a Google Drive...`);
+
     const reader = new FileReader();
-    reader.onload = function(e) {
-        const fileData = {
-            name: file.name,
-            type: file.type,
-            data: e.target.result // Conversión a cadena Base64
-        };
+    
+    reader.onload = async function(e) {
+        // Se extrae exclusivamente la carga útil en Base64, omitiendo los metadatos iniciales de la cadena
+        const base64Content = e.target.result.split(',')[1];
         
-        // Integración al arreglo global de la instancia activa (creación o edición)
-        currentAttachments.push(fileData);
-        showNotice(`Archivo "${file.name}" procesado.`);
-        
-        // Actualización del árbol del DOM
-        renderAttachments(mode);
+        try {
+            // Estructura de envío hacia Google Apps Script. 
+            // Es crucial que estos nombres de propiedad coincidan con los que espera tu servidor.
+            const payload = {
+                action: 'uploadAttachment', 
+                fileName: file.name,
+                mimeType: file.type,
+                fileData: base64Content
+            };
+
+            const response = await fetch(dbUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload),
+                redirect: 'follow'
+            });
+
+            if (!response.ok) throw new Error('Rechazo del servidor HTTP: ' + response.status);
+            
+            const serverResponse = await response.text();
+            
+            // Prevención de errores por deslogueo o fallos de permisos que devuelven la página de login de Google
+            if (serverResponse.trim().startsWith('<')) {
+                throw new Error('El servidor devolvió un documento HTML. Verificar permisos del Web App.');
+            }
+
+            const fileData = {
+                name: file.name,
+                type: file.type,
+                data: serverResponse.trim() // La URL de Drive que devuelve el servidor
+            };
+            
+            currentAttachments.push(fileData);
+            showNotice("Archivo alojado en Drive correctamente.");
+            
+            if (typeof renderAttachments === 'function') {
+                renderAttachments(mode);
+            }
+            
+        } catch (err) {
+            console.error("Error en la transmisión a Drive:", err);
+            showNotice("Fallo al subir archivo: " + err.message.substring(0, 40));
+        }
     };
     
     reader.onerror = function() {
-        showNotice("Error de lectura. El archivo podría estar corrupto o ser inaccesible.");
+        showNotice("Error local de lectura de disco.");
     };
 
     reader.readAsDataURL(file);
-    event.target.value = ''; // Reseteo del input para habilitar cargas sucesivas del mismo archivo
-}
-
+    event.target.value = '';
+};
 function renderAttachments(mode) {
     // Determinación del nodo contenedor según el contexto de la interfaz
     const containerId = mode === 'edit' ? 'editAttachmentsList' : 'attachmentsList';
