@@ -619,6 +619,7 @@ function closeModal() { document.getElementById('dayDetailModal').classList.add(
 
 function openManageModal() { document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
 function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
+
 // FUNCIONES DE GESTIÓN DE ÁREAS Y CONTEXTOS
 window.deleteCustomArea = async function(index) {
     if(confirm("¿Seguro que querés eliminar esta área?")) {
@@ -661,24 +662,47 @@ window.addCustomContext = async function() {
 };
 
 function renderManageItems() {
+    // Rutina de recuperación de datos huérfanos
+    let areasSet = new Set(customAreas);
+    let contextsMap = new Map();
+    customContexts.forEach(c => contextsMap.set(c.name, c.color));
+
+    function walkTasks(nodes) {
+        if (!nodes) return;
+        for (let t of nodes) {
+            if (t.area && !areasSet.has(t.area)) areasSet.add(t.area);
+            if (t.context && !contextsMap.has(t.context)) contextsMap.set(t.context, 'blue');
+            if (t.subtasks) walkTasks(t.subtasks);
+        }
+    }
+    walkTasks(tasks);
+    
+    customAreas = Array.from(areasSet);
+    customContexts = Array.from(contextsMap.entries()).map(([name, color]) => ({name: name, color: color}));
+    
+    // Sincronización local tras la recuperación
+    localStorage.setItem('leo_custom_areas', JSON.stringify(customAreas));
+    localStorage.setItem('leo_custom_contexts', JSON.stringify(customContexts));
+
+    // Renderizado con clases de diseño oscuro e integración con contextColorMap
     const container = document.getElementById('manageModalContent');
     const colors = ['blue', 'purple', 'green', 'red', 'orange', 'gray', 'pink', 'teal', 'yellow', 'cyan', 'indigo', 'rose', 'emerald', 'fuchsia'];
     let colorOptions = colors.map(c => `<option value="${c}">${c}</option>`).join('');
 
     let html = `
     <div class="mb-6">
-        <h3 class="font-bold text-lg mb-2 text-navy-900">Áreas</h3>
+        <h3 class="font-bold text-lg mb-2 text-navy-50">Áreas</h3>
         <div class="flex gap-2 mb-3">
-            <input type="text" id="newAreaInput" placeholder="Nueva área..." class="border rounded p-2 flex-1 text-sm text-navy-900">
-            <button onclick="addCustomArea()" class="bg-brand-500 text-navy-900 px-3 py-1 rounded text-sm font-bold">Agregar</button>
+            <input type="text" id="newAreaInput" placeholder="Nueva área..." class="border border-navy-600 bg-navy-900 text-navy-50 rounded p-2 flex-1 text-sm placeholder-navy-400">
+            <button onclick="addCustomArea()" class="bg-brand-500 text-navy-900 px-3 py-1 rounded text-sm font-bold hover:bg-brand-400">Agregar</button>
         </div>
         <ul class="space-y-2 max-h-40 overflow-y-auto pr-2">`;
         
     customAreas.forEach((area, i) => {
         html += `
-        <li class="flex justify-between items-center p-2 bg-navy-50 rounded border">
-            <span class="text-navy-900 font-semibold">${area}</span>
-            <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-bold px-2 py-1 hover:bg-red-100 rounded">Borrar</button>
+        <li class="flex justify-between items-center p-2 bg-navy-800 rounded border border-navy-700">
+            <span class="text-navy-50 font-semibold">${area}</span>
+            <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-bold px-2 py-1 hover:bg-navy-700 rounded transition-colors">Borrar</button>
         </li>`;
     });
 
@@ -686,19 +710,20 @@ function renderManageItems() {
         </ul>
     </div>
     <div>
-        <h3 class="font-bold text-lg mb-2 text-navy-900">Contextos</h3>
+        <h3 class="font-bold text-lg mb-2 text-navy-50">Contextos</h3>
         <div class="flex gap-2 mb-3">
-            <input type="text" id="newContextInput" placeholder="Ej: @reunión" class="border rounded p-2 flex-1 text-sm text-navy-900">
-            <select id="newContextColor" class="border rounded p-2 text-sm text-navy-900">${colorOptions}</select>
-            <button onclick="addCustomContext()" class="bg-brand-500 text-navy-900 px-3 py-1 rounded text-sm font-bold">Agregar</button>
+            <input type="text" id="newContextInput" placeholder="Ej: @reunión" class="border border-navy-600 bg-navy-900 text-navy-50 rounded p-2 flex-1 text-sm placeholder-navy-400">
+            <select id="newContextColor" class="border border-navy-600 bg-navy-900 text-navy-50 rounded p-2 text-sm">${colorOptions}</select>
+            <button onclick="addCustomContext()" class="bg-brand-500 text-navy-900 px-3 py-1 rounded text-sm font-bold hover:bg-brand-400">Agregar</button>
         </div>
         <ul class="space-y-2 max-h-40 overflow-y-auto pr-2">`;
 
     customContexts.forEach((ctx, i) => {
+        const colorClasses = contextColorMap[ctx.color] ? contextColorMap[ctx.color].text : `text-${ctx.color}-500`;
         html += `
-        <li class="flex justify-between items-center p-2 bg-navy-50 rounded border">
-            <span style="color: ${ctx.color}; font-weight: bold;">${ctx.name}</span>
-            <button onclick="deleteCustomContext(${i})" class="text-danger-500 text-xs font-bold px-2 py-1 hover:bg-red-100 rounded">Borrar</button>
+        <li class="flex justify-between items-center p-2 bg-navy-800 rounded border border-navy-700">
+            <span class="${colorClasses} font-bold">${ctx.name}</span>
+            <button onclick="deleteCustomContext(${i})" class="text-danger-500 text-xs font-bold px-2 py-1 hover:bg-navy-700 rounded transition-colors">Borrar</button>
         </li>`;
     });
 
