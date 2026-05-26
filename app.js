@@ -16,16 +16,11 @@ let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
 let customAreas = safeParse('leo_custom_areas', ["Inbox", "Trabajo", "Personal", "Estudios"]);
 let customContexts = safeParse('leo_custom_contexts', [{ name: "@casa", color: "purple" }, { name: "@oficina", color: "blue" }, { name: "@online", color: "teal" }]);
-
-// REPARACIÓN QUIRÚRGICA: Normalización de datos legacy
-// Convierte tus contextos antiguos (texto simple) al nuevo formato de objetos para recuperar la visibilidad.
-customContexts = customContexts.map(c => typeof c === 'string' ? { name: c, color: 'gray' } : c);
-
 let expandedStates = safeParse('leo_expanded_states', {});
 
 let currentState = { view: 'today', selectedArea: null, focusTargetId: null };
 let currentFilters = { search: '', status: 'pending', priority: 'all', context: 'all' };
-let currentSort = { by: 'date', order: 'asc' }; 
+let currentSort = { by: 'date', order: 'asc' }; // Orden predeterminado por fecha de vencimiento
 let navHistory = [];
 
 let isBulkMode = false;
@@ -164,7 +159,7 @@ async function loadDataFromCloud() {
         const textData = await res.text();
         
         if (textData.trim().startsWith('<')) {
-            throw new Error("La URL devolvió código HTML. Revisá los permisos.");
+            throw new Error("La URL devolvió código HTML. Revisá los permisos de tu Apps Script.");
         }
 
         const data = JSON.parse(textData);
@@ -172,12 +167,14 @@ async function loadDataFromCloud() {
             tasks = data; 
             localStorage.setItem('leo_agenda_v11', JSON.stringify(tasks)); 
             showSyncStatus('synced'); 
+            showNotice("Sincronizado");
             return true;
         }
         return false;
     } catch (e) { 
         console.error("Error al cargar:", e); 
         showSyncStatus('offline'); 
+        showNotice("Modo Offline: " + e.message.substring(0, 50)); 
         return false;
     }
 }
@@ -221,7 +218,7 @@ function calculateNextOccurrence(task, completionDateStr = null) {
     }
 }
 
-// FUNCIONES DE INTERFAZ RECURRENCIA
+// FUNCIONES DE INTERFAZ RECURRENCIA (MODALS)
 function toggleRecurrenceUI(mode) {
     const checked = document.getElementById(`${mode}HasRecurrence`).checked;
     document.getElementById(`${mode}RecurrenceContainer`).classList.toggle('hidden', !checked);
@@ -281,79 +278,25 @@ function validateAndProjectRecurrence(mode) {
 // LÓGICA DE TAREAS (CREATE / UPDATE / DELETE / COMPLETE)
 async function addTask() { 
     const name = document.getElementById('taskInput').value.trim(); if (!name) return; 
-    const area = document.getElementById('areaInput').value; 
-    const context = document.getElementById('contextInput').value; 
-    const priority = document.getElementById('priorityInput').value; 
-    const dateInput = document.getElementById('dateInput').value; 
-    const timeInput = document.getElementById('timeInput').value; 
-    const notes = document.getElementById('notesInput').value.trim(); 
-    
-    // APLICACIÓN DE EVALUACIÓN BOOLEANA ESTRICTA (CALENDAR)
-    const reminderToggle = document.getElementById('reminderToggle');
-    const isReminderActive = (reminderToggle !== null && reminderToggle.checked === true);
-    
-    const rule = buildRuleFromUI('add');
+    const area = document.getElementById('areaInput').value; const context = document.getElementById('contextInput').value; const priority = document.getElementById('priorityInput').value; 
+    const dateInput = document.getElementById('dateInput').value; const timeInput = document.getElementById('timeInput').value; const notes = document.getElementById('notesInput').value.trim(); 
+    const reminder = document.getElementById('reminderToggle').checked; const rule = buildRuleFromUI('add');
     const parentIdRaw = document.getElementById('parentInput').value; const parentId = parentIdRaw === 'root' ? 'root' : Number(parentIdRaw);
-    
-    const newTask = { 
-        id: Date.now(), 
-        name, area, context, priority, 
-        date: dateInput, startDate: dateInput, time: timeInput, 
-        notes, 
-        reminder: isReminderActive,
-        status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule 
-    };
-    
+    const newTask = { id: Date.now(), name, area, context, priority, date: dateInput, startDate: dateInput, time: timeInput, notes, reminder, status: 'pending', attachments: [...currentAttachments], subtasks: [], recurrenceRule: rule };
     if (parentId === 'root') tasks.unshift(newTask); else insertTask(newTask, parentId);
-    
-    closeAddTaskModal(); 
-    refreshAllDropdowns(); 
-    renderTasks(); 
-    showNotice("Tarea guardada"); 
-    await saveData(); 
+    closeAddTaskModal(); refreshAllDropdowns(); renderTasks(); showNotice("Tarea guardada"); await saveData(); 
 }
-
 async function saveEdit() {
-    const id = editState.id; 
-    const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
-    const status = document.getElementById('editStatusInput').value; 
-    const area = document.getElementById('editAreaInput').value; 
-    const context = document.getElementById('editContextInput').value; 
-    const priority = document.getElementById('editPriorityInput').value; 
-    const date = document.getElementById('editDateInput').value; 
-    const time = document.getElementById('editTimeInput').value; 
-    const notes = document.getElementById('editNotesInput').value.trim(); 
-    
-    // APLICACIÓN DE EVALUACIÓN BOOLEANA ESTRICTA EN EDICIÓN (CALENDAR)
-    const editReminderToggle = document.getElementById('editReminderToggle');
-    const isReminderActive = (editReminderToggle !== null && editReminderToggle.checked === true);
-    
-    const rule = buildRuleFromUI('edit');
+    const id = editState.id; const name = document.getElementById('editNameInput').value.trim(); if (!name) return;
+    const status = document.getElementById('editStatusInput').value; const area = document.getElementById('editAreaInput').value; const context = document.getElementById('editContextInput').value; 
+    const priority = document.getElementById('editPriorityInput').value; const date = document.getElementById('editDateInput').value; const time = document.getElementById('editTimeInput').value; 
+    const notes = document.getElementById('editNotesInput').value.trim(); const reminder = document.getElementById('editReminderToggle').checked; const rule = buildRuleFromUI('edit');
     const newParentIdRaw = document.getElementById('editParentInput').value; const newParentId = newParentIdRaw === 'root' ? 'root' : Number(newParentIdRaw);
-    
     let targetTask = null; if (newParentId !== editState.parentId) targetTask = extractTask(id);
-    
-    if (targetTask) { 
-        targetTask.name = name; targetTask.status = status; targetTask.area = area; 
-        targetTask.context = context; targetTask.priority = priority; targetTask.date = date; 
-        targetTask.time = time; targetTask.notes = notes; 
-        targetTask.reminder = isReminderActive;
-        targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; 
-        insertTask(targetTask, newParentId); 
-    } else { 
-        findAndMutateTask(id, (nodes, i) => { 
-            const n = nodes[i]; 
-            n.name = name; n.status = status; n.area = area; 
-            n.context = context; n.priority = priority; n.date = date; 
-            n.time = time; n.notes = notes; 
-            n.reminder = isReminderActive;
-            n.recurrenceRule = rule; n.attachments = [...currentAttachments]; 
-        }); 
-    }
-    
+    if (targetTask) { targetTask.name = name; targetTask.status = status; targetTask.area = area; targetTask.context = context; targetTask.priority = priority; targetTask.date = date; targetTask.time = time; targetTask.notes = notes; targetTask.reminder = reminder; targetTask.recurrenceRule = rule; targetTask.attachments = [...currentAttachments]; insertTask(targetTask, newParentId); }
+    else { findAndMutateTask(id, (nodes, i) => { const n = nodes[i]; n.name = name; n.status = status; n.area = area; n.context = context; n.priority = priority; n.date = date; n.time = time; n.notes = notes; n.reminder = reminder; n.recurrenceRule = rule; n.attachments = [...currentAttachments]; }); }
     closeEditModal(); refreshAllDropdowns(); renderTasks(); showNotice("Guardado exitosamente"); await saveData(); 
 }
-
 async function toggleTaskUniversal(id) {
     findAndMutateTask(id, (nodes, i) => {
         const t = nodes[i];
@@ -370,16 +313,7 @@ async function toggleTaskUniversal(id) {
     });
     renderTasks(); renderCalendar(); await saveData();
 }
-
-async function deleteTaskUniversal(id) { 
-    const task = getTaskById(id); if (!task) return; 
-    const performDelete = async () => { 
-        if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })) { 
-            refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData(); 
-        } 
-    }; 
-    if (task.subtasks && task.subtasks.length > 0) { showConfirm("Eliminar con subtareas", `¿Enviar a papelera con sus ${task.subtasks.length} subtareas?`, performDelete, true); } else { await performDelete(); } 
-}
+async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task) return; const performDelete = async () => { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Enviada a papelera"); await saveData(); } }; if (task.subtasks && task.subtasks.length > 0) { showConfirm("Eliminar con subtareas", `¿Enviar a papelera con sus ${task.subtasks.length} subtareas?`, performDelete, true); } else { await performDelete(); } }
 
 // MODALS LIFECYCLE
 function openAddTaskModal() { 
@@ -399,34 +333,38 @@ function openAddTaskModal() {
     toggleDay('add', 1); 
     toggleRecurrenceUI('add');
     
+    // 1. Mostrar el modal (removiendo el display: none)
     document.getElementById('addTaskModal').classList.remove('hidden'); 
     
+    // 2. CORRECCIÓN ARQUITECTÓNICA: Reseteo de estado con el DOM visible.
+    // Al modificar la propiedad 'checked' DESPUÉS de que el nodo es visible en el DOM activo, 
+    // forzamos al motor de renderizado a repintar las clases pseudo-estado de Tailwind (peer-checked).
+    // Si se hace antes (estando oculto), el motor JS actualiza la propiedad pero el CSS omite el repintado.
     const reminderToggle = document.getElementById('reminderToggle');
-    if (reminderToggle) reminderToggle.checked = false;
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+    }
 
     setTimeout(() => document.getElementById('taskInput').focus(), 100); 
 }
 
 function closeAddTaskModal() { 
     document.getElementById('addTaskModal').classList.add('hidden'); 
+    
+    // Limpieza de seguridad post-cierre (previene fugas de estado si el renderizado falla)
     const reminderToggle = document.getElementById('reminderToggle');
-    if (reminderToggle) reminderToggle.checked = false;
+    if (reminderToggle) {
+        reminderToggle.checked = false;
+    }
 }
 
 function openEditModal(id) { 
     editState = { id, parentId: getParentId(id) }; let target = null;
     function traverse(nodes) { for(let n of nodes) { if(n.id === id) { target = n; return true; } if(n.subtasks && traverse(n.subtasks)) return true; } } traverse(tasks); if (!target) return;
-    
     document.getElementById('editNameInput').value = target.name; refreshEditDropdowns(); document.getElementById('editStatusInput').value = target.status || 'pending';
     document.getElementById('editAreaInput').value = target.area || 'Inbox'; document.getElementById('editContextInput').value = target.context || ''; document.getElementById('editPriorityInput').value = target.priority || 'baja'; 
-    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; 
-    
-    const editReminderToggle = document.getElementById('editReminderToggle');
-    if (editReminderToggle) editReminderToggle.checked = target.reminder === true;
-    
-    document.getElementById('editNotesInput').value = target.notes || '';
+    document.getElementById('editDateInput').value = target.date || ''; document.getElementById('editTimeInput').value = target.time || ''; document.getElementById('editReminderToggle').checked = target.reminder || false; document.getElementById('editNotesInput').value = target.notes || '';
     currentAttachments = target.attachments ? [...target.attachments] : []; renderAttachments('edit'); updateEditParentDropdown();
-    
     if (target.recurrenceRule) {
         const r = target.recurrenceRule; document.getElementById('editHasRecurrence').checked = true; document.getElementById('editFrequency').value = r.frequency; document.getElementById('editInterval').value = r.interval; document.getElementById('editBaseOnCompletion').checked = !!r.baseOnCompletion;
         if (r.frequency === 'weekly') { editSelectedDays = r.daysOfWeek || [1]; for(let i=0;i<7;i++){ if(editSelectedDays.includes(i)){ toggleDay('edit', i); toggleDay('edit', i); } else { const btn = document.getElementById(`edit-day-${i}`); btn.classList.remove('bg-brand-500', 'text-navy-900', 'border-brand-500', 'scale-110'); btn.classList.add('bg-navy-800'); } } }
@@ -434,14 +372,11 @@ function openEditModal(id) {
         if (r.frequency === 'yearly') { document.getElementById('editYearDay').value = r.dayOfMonth || 1; document.getElementById('editYearMonth').value = r.monthOfYear || 1; }
         if (r.frequency === 'custom') { document.getElementById('editCustomDay').value = r.dayOfMonth || 1; }
     } else { document.getElementById('editHasRecurrence').checked = false; }
-    
     toggleRecurrenceUI('edit'); document.getElementById('editModal').classList.remove('hidden'); 
 }
 
 function closeEditModal() { 
     document.getElementById('editModal').classList.add('hidden'); 
-    const editReminderToggle = document.getElementById('editReminderToggle');
-    if (editReminderToggle) editReminderToggle.checked = false;
 }
 
 // UTILIDADES Y RENDERIZADO VISUAL
@@ -477,8 +412,15 @@ function navigate(view, areaName = null, pushHistory = true, focusId = null) {
     if (window.innerWidth < 768) toggleSidebar(false); 
     updateUI(); 
 }
-function focusTaskTree(id) { navigate('focus', null, true, id); }
-function goBack() { if (navHistory.length > 0) { currentState = navHistory.pop(); updateUI(); } }
+function focusTaskTree(id) { 
+    navigate('focus', null, true, id); 
+}
+function goBack() { 
+    if (navHistory.length > 0) { 
+        currentState = navHistory.pop(); 
+        updateUI(); 
+    } 
+}
 
 function exportData() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute("href", dataStr); dlAnchorElem.setAttribute("download", "agenda_backup.json"); dlAnchorElem.click(); }
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
@@ -491,6 +433,7 @@ function refreshEditDropdowns() { const allAreas = getAllAreasOrdered(); const a
 function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
 function updateEditParentDropdown() { const area = document.getElementById('editAreaInput').value; const taskId = editState.id; const select = document.getElementById('editParentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value || editState.parentId; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
 
+// NAVIGATION & FILTERS CONTINUATION
 function updateFilters() { currentFilters = { search: document.getElementById('searchInput').value.trim(), status: document.getElementById('filterStatus').value, priority: document.getElementById('filterPriority').value, context: document.getElementById('filterContext').value }; renderTasks(); }
 function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'date-asc'; currentSort = { by: 'date', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
 function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
@@ -523,6 +466,7 @@ function updateUI() {
     if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
 }
 
+// TREE AND LIST RENDER LOGIC
 function containsFocusNode(node, targetId) { if (node.id === targetId) return true; if (!node.subtasks) return false; return node.subtasks.some(s => containsFocusNode(s, targetId)); }
 function sortTasks(taskList) { if (currentSort.by === 'none') return taskList; const priorityWeight = { urgente: 4, alta: 3, media: 2, baja: 1 }; return taskList.sort((a, b) => { let valA, valB; if (currentSort.by === 'priority') { valA = priorityWeight[a.priority] || 0; valB = priorityWeight[b.priority] || 0; } else if (currentSort.by === 'date') { valA = a.date || '9999-12-31'; valB = b.date || '9999-12-31'; } else if (currentSort.by === 'name') { valA = (a.name || '').toLowerCase(); valB = (b.name || '').toLowerCase(); } else if (currentSort.by === 'context') { valA = (a.context || '\uFFFF').toLowerCase(); valB = (b.context || '\uFFFF').toLowerCase(); } let comparison = 0; if (valA < valB) comparison = -1; if (valA > valB) comparison = 1; return currentSort.order === 'desc' ? -comparison : comparison; }); }
 
@@ -558,6 +502,7 @@ function pruneTree(nodeList, inFocusedSubtree = false) {
     return sortTasks(filtered);
 }
 
+// FLATTEN MATCHES
 function flattenMatches(prunedNodes, path = []) {
     let flat = []; if (!Array.isArray(prunedNodes)) return flat;
     prunedNodes.forEach(node => {
@@ -567,6 +512,7 @@ function flattenMatches(prunedNodes, path = []) {
     }); return flat;
 }
 
+// BUILD TASK ROWS
 function buildTaskRows(nodes, path = []) {
     if (!nodes || nodes.length === 0) return '';
     const isTrash = currentState.view === 'trash';
@@ -582,6 +528,7 @@ function buildTaskRows(nodes, path = []) {
         const isCompleted = task.status === 'completed';
         const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
+        // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
         let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
         if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
 
@@ -660,6 +607,7 @@ function renderTasks() {
     list.innerHTML = `<div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">${buildTaskRows(nodesToRender)}</div>`;
 }
 
+// VARIOUS OTHER UTILS
 function toggleExpand(id, event) { if (event) event.stopPropagation(); expandedStates[id] = !expandedStates[id]; localStorage.setItem('leo_expanded_states', JSON.stringify(expandedStates)); renderTasks(); }
 
 function renderCalendar() { const grid = document.getElementById('calendar-grid'); grid.innerHTML = ''; document.getElementById('calendar-month').innerText = calendarDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }); const year = calendarDate.getFullYear(); const month = calendarDate.getMonth(); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>'; for (let day = 1; day <= daysInMonth; day++) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; let hasTask = false; function check(ns) { if(!Array.isArray(ns)) return; for(let n of ns) { if(n.isDeleted) continue; if(n.status !== 'completed' && n.date === dateStr) { hasTask = true; return; } if(n.subtasks) check(n.subtasks); } } check(tasks); const isToday = formatDateLocal(new Date()) === dateStr; const dayEl = document.createElement('div'); dayEl.className = `calendar-day ${isToday ? 'today' : ''}`; dayEl.innerHTML = `<span>${day}</span>${hasTask ? '<div class="absolute bottom-2 w-1.5 h-1.5 bg-brand-500 rounded-full"></div>' : ''}`; dayEl.onclick = () => openDayDetail(dateStr); grid.appendChild(dayEl); } }
@@ -667,178 +615,16 @@ function changeMonth(delta) { calendarDate.setMonth(calendarDate.getMonth() + de
 function openDayDetail(dateStr) { const dayTasks = []; function collect(ns, pName) { if (!Array.isArray(ns)) return; ns.forEach(n => { if (n.isDeleted) return; if (n.status !== 'completed' && n.date === dateStr) dayTasks.push({ ...n, type: pName ? `Depende de: ${pName}` : 'Principal' }); if (n.subtasks) collect(n.subtasks, n.name); }); } collect(tasks, null); document.getElementById('modalDateTitle').innerText = new Date(dateStr + "T00:00:00").toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }); const content = document.getElementById('modalContent'); if (dayTasks.length === 0) content.innerHTML = '<p class="text-navy-400 text-sm text-center italic py-10">Libre de tareas.</p>'; else content.innerHTML = dayTasks.map(t => `<div class="p-4 bg-navy-900 border border-navy-700 rounded-md flex items-center justify-between cursor-pointer hover:bg-navy-800 transition-colors" onclick="openEditModal(${t.id}); closeModal();"><div><p class="font-semibold text-sm ${t.status === 'in_progress' ? 'text-info-500' : 'text-navy-50'}">${t.name}</p><p class="text-[9px] text-navy-400 uppercase tracking-wider font-bold">${t.area}${t.context ? ` &bull; ${t.context}` : ''} &bull; <span class="text-brand-500">${t.type}</span></p></div><div class="flex flex-col items-end gap-1"><svg class="w-3.5 h-3.5 ${priorityColors[t.priority]}" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg></div></div>`).join(''); document.getElementById('dayDetailModal').classList.remove('hidden'); }
 function closeModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
 
-// --- MÓDULO RESTAURADO DE ÁREAS Y CONTEXTOS ---
-function openManageModal() { 
-    document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; 
-    renderManageItems(); 
-    document.getElementById('manageModal').classList.remove('hidden'); 
-}
-function closeManageModal() { 
-    document.getElementById('manageModal').classList.add('hidden'); 
-}
-
-function renderManageItems() {
-    const content = document.getElementById('manageModalContent');
-    if (!content) return;
-
-    let areasHtml = customAreas.map((area, idx) => `
-        <div class="flex items-center justify-between bg-navy-800 p-2.5 rounded border border-navy-700 mb-2">
-            <span class="text-sm font-medium text-navy-50">${area}</span>
-            <div class="flex items-center gap-1">
-                ${area !== 'Inbox' ? `
-                <button onclick="editCustomArea('${area}')" class="text-navy-400 hover:text-brand-500 p-1" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                <button onclick="deleteCustomArea(${idx})" class="text-navy-400 hover:text-danger-500 p-1" title="Eliminar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                ` : '<span class="text-xs text-navy-500 font-semibold px-2">Fijo</span>'}
-            </div>
-        </div>
-    `).join('');
-
-    let contextsHtml = customContexts.map((ctx, idx) => `
-        <div class="flex items-center justify-between bg-navy-800 p-2.5 rounded border border-navy-700 mb-2">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full ${contextColorMap[ctx.color]?.dot || 'bg-gray-500'} border border-navy-600"></span>
-                <span class="text-sm font-medium text-navy-50">${ctx.name}</span>
-            </div>
-            <div class="flex items-center gap-1">
-                <button onclick="editCustomContext('${ctx.name}')" class="text-navy-400 hover:text-brand-500 p-1" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                <button onclick="deleteCustomContext(${idx})" class="text-navy-400 hover:text-danger-500 p-1" title="Eliminar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-            </div>
-        </div>
-    `).join('');
-
-    content.innerHTML = `
-        <div class="space-y-6">
-            <div>
-                <h4 class="text-xs font-bold text-navy-300 mb-3 uppercase tracking-wider flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span> Áreas</h4>
-                <div class="flex gap-2 mb-3">
-                    <input type="text" id="newAreaInput" placeholder="Nueva área..." class="flex-1 bg-navy-900 border border-navy-600 rounded-md px-3 py-2 text-sm text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500 transition-colors">
-                    <button onclick="addCustomArea()" class="bg-brand-500 hover:bg-brand-400 text-navy-900 px-4 py-2 rounded-md text-sm font-bold transition-colors">Añadir</button>
-                </div>
-                <div class="max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">${areasHtml}</div>
-            </div>
-            <hr class="border-navy-700">
-            <div>
-                <h4 class="text-xs font-bold text-navy-300 mb-3 uppercase tracking-wider flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-info-500"></span> Contextos</h4>
-                <div class="space-y-3 mb-3">
-                    <div class="flex gap-2">
-                        <input type="text" id="newContextInput" placeholder="Nuevo @contexto..." class="flex-1 bg-navy-900 border border-navy-600 rounded-md px-3 py-2 text-sm text-navy-50 placeholder-navy-500 focus:outline-none focus:border-brand-500 transition-colors">
-                        <button onclick="addCustomContext()" class="bg-brand-500 hover:bg-brand-400 text-navy-900 px-4 py-2 rounded-md text-sm font-bold transition-colors">Añadir</button>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-navy-400 font-semibold">Color:</span>
-                        <div class="flex flex-wrap gap-1.5 p-1.5 bg-navy-900/50 rounded-md border border-navy-700/50">
-                            ${Object.keys(contextColorMap).map(color => `
-                                <div onclick="selectManageColor('${color}')" class="w-5 h-5 rounded-full cursor-pointer transition-transform ${manageSelectedColor === color ? 'ring-2 ring-brand-500 scale-110 shadow-lg' : 'hover:scale-110 opacity-70 hover:opacity-100'} ${contextColorMap[color].dot} border border-navy-500" title="${color}"></div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-                <div class="max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">${contextsHtml}</div>
-            </div>
-        </div>
-    `;
-}
-
-function selectManageColor(color) {
-    manageSelectedColor = color;
-    renderManageItems(); 
-}
-
-async function addCustomArea() {
-    const input = document.getElementById('newAreaInput');
-    const val = input.value.trim();
-    if (!val) return;
-    if (customAreas.includes(val)) { showNotice("El área ya existe"); return; }
-    
-    customAreas.push(val);
-    saveCategories(); renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-}
-
-async function deleteCustomArea(idx) {
-    const area = customAreas[idx];
-    if (area === 'Inbox') return;
-    showConfirm("Eliminar Área", `¿Eliminar '${area}'? Las tareas se moverán a Inbox.`, async () => {
-        customAreas.splice(idx, 1); saveCategories();
-        function moveTasks(nodes) {
-            if (!Array.isArray(nodes)) return;
-            nodes.forEach(n => { if (n.area === area) n.area = 'Inbox'; if (n.subtasks) moveTasks(n.subtasks); });
-        }
-        moveTasks(tasks);
-        renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-    });
-}
-
-async function editCustomArea(oldName) {
-    if (oldName === 'Inbox') { showNotice("El área Inbox es fija y no puede editarse."); return; }
-    const newName = prompt(`Editar área '${oldName}':`, oldName);
-    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
-    
-    const trimmed = newName.trim();
-    if (customAreas.includes(trimmed)) { showNotice("Ese nombre ya está en uso."); return; }
-    
-    const idx = customAreas.indexOf(oldName);
-    if (idx !== -1) customAreas[idx] = trimmed;
-    saveCategories();
-
-    function updateTasksArea(nodes) {
-        nodes.forEach(n => { if (n.area === oldName) n.area = trimmed; if (n.subtasks) updateTasksArea(n.subtasks); });
-    }
-    updateTasksArea(tasks);
-    
-    renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-}
-
-async function addCustomContext() {
-    const input = document.getElementById('newContextInput');
-    let val = input.value.trim();
-    if (!val) return;
-    if (!val.startsWith('@')) val = '@' + val;
-    
-    if (customContexts.some(c => c.name.toLowerCase() === val.toLowerCase())) { showNotice("El contexto ya existe"); return; }
-    
-    customContexts.push({ name: val, color: manageSelectedColor });
-    saveCategories(); renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-}
-
-async function deleteCustomContext(idx) {
-    const ctxName = customContexts[idx].name;
-    showConfirm("Eliminar Contexto", `¿Eliminar '${ctxName}'?`, async () => {
-        customContexts.splice(idx, 1); saveCategories();
-        function removeContexts(nodes) {
-            if (!Array.isArray(nodes)) return;
-            nodes.forEach(n => { if (n.context === ctxName) n.context = ''; if (n.subtasks) removeContexts(n.subtasks); });
-        }
-        removeContexts(tasks);
-        renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-    });
-}
-
-async function editCustomContext(oldName) {
-    const newName = prompt(`Editar nombre de contexto '${oldName}' (incluya el @):`, oldName);
-    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
-    
-    let trimmed = newName.trim();
-    if (!trimmed.startsWith('@')) trimmed = '@' + trimmed;
-    if (customContexts.some(c => c.name === trimmed)) { showNotice("Ese contexto ya existe."); return; }
-    
-    const ctx = customContexts.find(c => c.name === oldName);
-    if (ctx) { ctx.name = trimmed; ctx.color = manageSelectedColor; }
-    saveCategories();
-
-    function updateTasksContext(nodes) {
-        nodes.forEach(n => { if (n.context === oldName) n.context = trimmed; if (n.subtasks) updateTasksContext(n.subtasks); });
-    }
-    updateTasksContext(tasks);
-    
-    renderManageItems(); refreshAllDropdowns(); renderTasks(); await saveData();
-}
-// --- FIN DEL MÓDULO RESTAURADO ---
+function openManageModal() { document.getElementById('manageModalTitle').innerText = 'Gestionar Categorías'; renderManageItems(); document.getElementById('manageModal').classList.remove('hidden'); }
+function closeManageModal() { document.getElementById('manageModal').classList.add('hidden'); }
+function renderManageItems() { document.getElementById('manageModalContent').innerHTML = '<p class="text-xs text-navy-400">Panel de gestión disponible.</p>'; }
 
 async function setTaskStatus(id, newStatus) { findAndMutateTask(id, (nodes, i) => { nodes[i].status = newStatus; }); renderTasks(); renderCalendar(); await saveData(); }
 async function restoreTask(id) { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = false; delete nodes[i].deletedAt; })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); } }
 async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definitivamente?", async () => { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { refreshAllDropdowns(); renderTasks(); showNotice("Eliminada"); await saveData(); } }, true); }
 async function emptyTrash() { showConfirm("Vaciar Papelera", "¿Vaciar toda la papelera?", async () => { let changed = false; function walk(nodes) { for (let i = nodes.length - 1; i >= 0; i--) { if (nodes[i].isDeleted) { nodes.splice(i, 1); changed = true; } else if (nodes[i].subtasks) walk(nodes[i].subtasks); } } walk(tasks); if (changed) { renderTasks(); showNotice("Papelera vaciada"); await saveData(); } }, true); }
 
+// BULK ACTIONS
 function toggleBulkMode() { isBulkMode = !isBulkMode; selectedTaskIds.clear(); document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); document.getElementById('bulkCount').innerText = '0'; renderTasks(); }
 function toggleBulkSelect(id, e) { if (e) e.stopPropagation(); if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); else selectedTaskIds.add(id); document.getElementById('bulkCount').innerText = selectedTaskIds.size; renderTasks(); }
 async function bulkDelete() { if (selectedTaskIds.size === 0) return; showConfirm("Eliminar", `¿Enviar ${selectedTaskIds.size} tareas a la papelera?`, async () => { selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })); toggleBulkMode(); renderTasks(); showNotice("Tareas eliminadas"); await saveData(); }, true); }
@@ -869,13 +655,16 @@ async function applyBulkMove() {
     await saveData();
 }
 
+// POSTPONE ACTIONS
 function openPostponeModal(id, e) { if (e) e.stopPropagation(); postponeState = { id }; document.getElementById('postponeModal').classList.remove('hidden'); }
 function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
 async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
 
+// FILE UPLOAD AND ATTACHMENTS
 async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
 function renderAttachments(mode) {}
 
+// STUBS / SIMULATION IA
 function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
 function processOmnibarCommand() { showNotice("Comando procesado localmente (Simulación)."); document.getElementById('omnibarInput').value = ''; }
 function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
