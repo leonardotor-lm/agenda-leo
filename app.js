@@ -778,10 +778,58 @@ async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definiti
 async function emptyTrash() { showConfirm("Vaciar Papelera", "¿Vaciar toda la papelera?", async () => { let changed = false; function walk(nodes) { for (let i = nodes.length - 1; i >= 0; i--) { if (nodes[i].isDeleted) { nodes.splice(i, 1); changed = true; } else if (nodes[i].subtasks) walk(nodes[i].subtasks); } } walk(tasks); if (changed) { renderTasks(); showNotice("Papelera vaciada"); await saveData(); } }, true); }
 
 // BULK ACTIONS
-function toggleBulkMode() { isBulkMode = !isBulkMode; selectedTaskIds.clear(); document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); document.getElementById('bulkCount').innerText = '0'; renderTasks(); }
-function toggleBulkSelect(id, e) { if (e) e.stopPropagation(); if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); else selectedTaskIds.add(id); document.getElementById('bulkCount').innerText = selectedTaskIds.size; renderTasks(); }
-async function bulkDelete() { if (selectedTaskIds.size === 0) return; showConfirm("Eliminar", `¿Enviar ${selectedTaskIds.size} tareas a la papelera?`, async () => { selectedTaskIds.forEach(id => findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = true; nodes[i].deletedAt = Date.now(); })); toggleBulkMode(); renderTasks(); showNotice("Tareas eliminadas"); await saveData(); }, true); }
-async function bulkComplete() { if (selectedTaskIds.size === 0) return; selectedTaskIds.forEach(id => toggleTaskUniversal(id)); toggleBulkMode(); renderTasks(); showNotice("Tareas actualizadas"); await saveData(); }
+window.toggleBulkMode = function() { 
+    isBulkMode = !isBulkMode; 
+    selectedTaskIds.clear(); 
+    document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); 
+    document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); 
+    document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); 
+    document.getElementById('bulkCount').innerText = '0'; 
+    renderTasks(); 
+};
+
+window.toggleBulkSelect = function(id, e) { 
+    if (e) e.stopPropagation(); 
+    if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); 
+    else selectedTaskIds.add(id); 
+    document.getElementById('bulkCount').innerText = selectedTaskIds.size; 
+    renderTasks(); 
+};
+
+window.bulkDelete = async function() { 
+    if (selectedTaskIds.size === 0) return; 
+    if (confirm(`¿Seguro que querés enviar ${selectedTaskIds.size} tareas a la papelera?`)) {
+        selectedTaskIds.forEach(id => {
+            findAndMutateTask(id, (nodes, i) => { 
+                nodes[i].isDeleted = true; 
+                nodes[i].deletedAt = Date.now(); 
+            });
+        }); 
+        toggleBulkMode(); 
+        renderTasks(); 
+        showNotice("Tareas eliminadas"); 
+        await saveData(); 
+    }
+};
+
+window.bulkComplete = async function() { 
+    if (selectedTaskIds.size === 0) return; 
+    selectedTaskIds.forEach(id => toggleTaskUniversal(id)); 
+    toggleBulkMode(); 
+    renderTasks(); 
+    showNotice("Tareas actualizadas"); 
+    await saveData(); 
+};
+
+window.bulkPostpone = function() {
+    if (selectedTaskIds.size === 0) return;
+    if (typeof openPostponeModal === 'function') {
+        openPostponeModal('bulk');
+    } else {
+        postponeState = { id: 'bulk' };
+        document.getElementById('postponeModal').classList.remove('hidden');
+    }
+};
 
 function openBulkMoveModal() { 
     if (selectedTaskIds.size === 0) return;
@@ -790,7 +838,11 @@ function openBulkMoveModal() {
     populateSelect('bulkContextInput', allContexts, "Mantener contexto actual", "");
     document.getElementById('bulkMoveModal').classList.remove('hidden'); 
 }
-function closeBulkMoveModal() { document.getElementById('bulkMoveModal').classList.add('hidden'); }
+
+function closeBulkMoveModal() { 
+    document.getElementById('bulkMoveModal').classList.add('hidden'); 
+}
+
 async function applyBulkMove() {
     const newArea = document.getElementById('bulkAreaInput').value;
     const newContext = document.getElementById('bulkContextInput').value;
@@ -807,7 +859,6 @@ async function applyBulkMove() {
     showNotice("Tareas reubicadas");
     await saveData();
 }
-
 // POSTPONE ACTIONS
 function openPostponeModal(id, e) { if (e) e.stopPropagation(); postponeState = { id }; document.getElementById('postponeModal').classList.remove('hidden'); }
 function closePostponeModal() { document.getElementById('postponeModal').classList.add('hidden'); }
