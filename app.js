@@ -778,13 +778,22 @@ async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definiti
 async function emptyTrash() { showConfirm("Vaciar Papelera", "¿Vaciar toda la papelera?", async () => { let changed = false; function walk(nodes) { for (let i = nodes.length - 1; i >= 0; i--) { if (nodes[i].isDeleted) { nodes.splice(i, 1); changed = true; } else if (nodes[i].subtasks) walk(nodes[i].subtasks); } } walk(tasks); if (changed) { renderTasks(); showNotice("Papelera vaciada"); await saveData(); } }, true); }
 
 // BULK ACTIONS
+// BULK ACTIONS
 window.toggleBulkMode = function() { 
     isBulkMode = !isBulkMode; 
     selectedTaskIds.clear(); 
     document.getElementById('btnBulkMode').classList.toggle('text-brand-500', isBulkMode); 
-    document.getElementById('bulkActionBar').classList.toggle('translate-y-32', !isBulkMode); 
-    document.getElementById('bulkActionBar').classList.toggle('opacity-0', !isBulkMode); 
+    
+    const bar = document.getElementById('bulkActionBar');
+    if (bar) {
+        bar.classList.toggle('translate-y-32', !isBulkMode); 
+        bar.classList.toggle('opacity-0', !isBulkMode); 
+        // Elevación forzada para evitar solapamiento de capas invisibles
+        bar.style.zIndex = isBulkMode ? "9999" : "-1";
+    }
+    
     document.getElementById('bulkCount').innerText = '0'; 
+    window.updateBulkButtonsState();
     renderTasks(); 
 };
 
@@ -792,10 +801,31 @@ window.toggleBulkSelect = function(id, e) {
     if (e) e.stopPropagation(); 
     if (selectedTaskIds.has(id)) selectedTaskIds.delete(id); 
     else selectedTaskIds.add(id); 
+    
     document.getElementById('bulkCount').innerText = selectedTaskIds.size; 
+    window.updateBulkButtonsState();
     renderTasks(); 
 };
 
+window.updateBulkButtonsState = function() {
+    const bar = document.getElementById('bulkActionBar');
+    if (!bar) return;
+    const hasSelection = selectedTaskIds.size > 0;
+    
+    const buttons = bar.querySelectorAll('button');
+    buttons.forEach(btn => {
+        btn.disabled = !hasSelection;
+        if (!hasSelection) {
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+        } else {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
+        }
+    });
+};
 window.bulkDelete = async function() { 
     if (selectedTaskIds.size === 0) return; 
     if (confirm(`¿Seguro que querés enviar ${selectedTaskIds.size} tareas a la papelera?`)) {
