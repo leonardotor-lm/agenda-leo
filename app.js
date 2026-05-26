@@ -899,35 +899,43 @@ async function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Convertimos el archivo a Base64 para que pueda guardarse en el JSON de la tarea
     const reader = new FileReader();
-    
     reader.onload = function(e) {
         const fileData = {
             name: file.name,
             type: file.type,
-            data: e.target.result // Esto es el archivo convertido a texto (Base64)
+            data: e.target.result 
         };
-        
-        // Lo agregamos a tu variable global de adjuntos
         currentAttachments.push(fileData);
-        
         showNotice(`Archivo "${file.name}" adjuntado.`);
         
-        // Si tenés una función para dibujar los adjuntos en la interfaz, llamala aquí:
+        // Actualizamos la vista de adjuntos si existe la función
         if (typeof renderAttachments === 'function') {
             renderAttachments();
         }
     };
     
-    reader.onerror = function() {
-        showNotice("Error al leer el archivo");
-    };
-    
     reader.readAsDataURL(file);
-    
-    // Limpiamos el input para que permita subir el mismo archivo si es necesario
     event.target.value = '';
+}
+
+// Esta es la función que te estaba faltando y que causaba el error
+function renderAttachments(mode = '') {
+    // Si el contenedor no existe en tu HTML, la función termina silenciosamente
+    const container = document.getElementById('attachmentsList'); 
+    if (!container) return;
+
+    container.innerHTML = ''; // Limpiamos la lista actual
+    
+    currentAttachments.forEach((file, index) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1";
+        div.innerHTML = `
+            <span>${file.name}</span>
+            <button onclick="currentAttachments.splice(${index}, 1); renderAttachments();" class="text-danger-500 font-bold">X</button>
+        `;
+        container.appendChild(div);
+    });
 }
 
 // STUBS / SIMULATION IA
