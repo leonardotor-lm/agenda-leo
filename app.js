@@ -1027,3 +1027,43 @@ function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("
 function processOmnibarCommand() { showNotice("Comando procesado localmente (Simulación)."); document.getElementById('omnibarInput').value = ''; }
 function handleOmnibarKeydown(event) { if (event.key === 'Enter') processOmnibarCommand(); }
 function breakdownTaskWithAI() { showNotice("Funcionalidad de IA en desarrollo."); }
+
+// INSERCIÓN RÁPIDA DE SUBTAREAS (INLINE)
+window.quickAddSubtask = async function(parentId, event) {
+    if (event) event.stopPropagation(); 
+    
+    const title = prompt("Ingresá el título de la nueva subtarea:");
+    if (!title || title.trim() === "") return;
+    
+    findAndMutateTask(parentId, (nodes, i) => {
+        if (!nodes[i].subtasks) nodes[i].subtasks = [];
+        
+        const newTask = { 
+            id: Date.now(), 
+            name: title.trim(), 
+            area: nodes[i].area || 'Inbox', 
+            context: '', // El contexto permanece vacío deliberadamente
+            priority: 'baja', 
+            date: nodes[i].date || '', // Hereda la fecha del padre
+            startDate: nodes[i].startDate || '', 
+            time: '', 
+            notes: '', 
+            reminder: false, 
+            status: 'pending', 
+            attachments: [], 
+            subtasks: [], 
+            recurrenceRule: null 
+        };
+        
+        nodes[i].subtasks.push(newTask);
+        
+        // Expande el nodo padre para mostrar la nueva tarea
+        if (typeof expandedStates !== 'undefined') {
+            expandedStates[parentId] = true;
+        }
+    });
+    
+    renderTasks();
+    showNotice("Subtarea rápida creada.");
+    await saveData();
+};
