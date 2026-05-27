@@ -817,37 +817,104 @@ window.deleteCustomContext = async function(index) {
     }
 };
 
-window.editCustomContext = async function(index) {
+window.editCustomContext = function(index) {
     const oldCtx = customContexts[index];
+    let tempColor = oldCtx.color || 'gray';
     
-    // 1. Edición del nombre
-    const newName = prompt("Editar nombre del contexto:", oldCtx.name);
-    if (newName === null) return; // Si el usuario presiona "Cancelar", se aborta sin romper nada
+    // Diccionario de colores seguro para la interfaz
+    const colorHexMap = { 'blue': '#3b82f6', 'purple': '#a855f7', 'green': '#22c55e', 'red': '#ef4444', 'orange': '#f97316', 'gray': '#6b7280', 'pink': '#ec4899', 'teal': '#14b8a6', 'yellow': '#eab308', 'cyan': '#06b6d4', 'indigo': '#6366f1', 'rose': '#f43f5e', 'emerald': '#10b981', 'fuchsia': '#d946ef' };
     
-    let finalName = oldCtx.name;
-    if (newName.trim() !== "" && newName.trim() !== oldCtx.name) {
-        finalName = newName.trim();
+    // 1. Purga de modales huérfanos previos (prevención de superposición)
+    const modalId = 'dynamic-edit-context-modal';
+    let existingModal = document.getElementById(modalId);
+    if (existingModal) existingModal.remove();
+    
+    // 2. Construcción del contenedor principal
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'fixed inset-0 flex items-center justify-center';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'; // Fondo oscuro translúcido
+    modal.style.zIndex = '9999'; // Garantiza prioridad visual absoluta
+    
+    // 3. Renderizado dinámico de la paleta de colores
+    const renderColors = () => {
+        return Object.keys(colorHexMap).map(c => `
+            <button type="button" 
+            onclick="
+                document.getElementById('${modalId}').dataset.selectedColor = '${c}'; 
+                Array.from(document.querySelectorAll('.color-edit-btn')).forEach(btn => btn.style.boxShadow = ''); 
+                this.style.boxShadow = '0 0 0 2px #0f172a, 0 0 0 4px ${colorHexMap[c]}';
+            "
+            class="color-edit-btn w-6 h-6 rounded-full outline-none focus:outline-none flex-shrink-0 cursor-pointer transition-transform hover:scale-110" 
+            style="background-color: ${colorHexMap[c]}; ${tempColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
+            title="${c}"></button>
+        `).join('');
+    };
+
+    // 4. Inyección del código HTML interno
+    modal.innerHTML = `
+        <div class="bg-navy-800 border border-navy-700 rounded p-5 w-[90%] max-w-sm shadow-2xl">
+            <h3 class="text-navy-50 font-bold mb-4 text-lg">Editar Contexto</h3>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-navy-400 mb-1 uppercase tracking-wide">Nombre</label>
+                <input type="text" id="editContextNameInput" value="${oldCtx.name}" class="w-full bg-navy-900 border border-navy-700 text-navy-50 text-sm rounded px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-semibold text-navy-400 mb-2 uppercase tracking-wide">Color visual</label>
+                <div class="flex flex-wrap gap-2.5">
+                    ${renderColors()}
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 border-t border-navy-700 pt-4">
+                <button type="button" id="cancelEditCtxBtn" class="px-4 py-1.5 text-sm font-semibold text-navy-400 hover:text-navy-50 hover:bg-navy-700 rounded transition-colors focus:outline-none">Cancelar</button>
+                <button type="button" id="saveEditCtxBtn" class="px-4 py-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-400 text-white rounded transition-colors focus:outline-none">Guardar Cambios</button>
+            </div>
+        </div>
+    `;
+    
+    modal.dataset.selectedColor = tempColor;
+    document.body.appendChild(modal);
+    
+    // 5. Gestión del foco para optimizar el tipeo inmediato
+    const nameInput = document.getElementById('editContextNameInput');
+    nameInput.focus();
+    nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+    
+    // 6. Lógica de cancelación
+    document.getElementById('cancelEditCtxBtn').onclick = () => modal.remove();
+    
+    // 7. Lógica de guardado asincrónico y actualización en cascada
+    document.getElementById('saveEditCtxBtn').onclick = async () => {
+        const newNameRaw = nameInput.value.trim();
+        if (!newNameRaw) return; // Validación silenciosa si está vacío
+        
+        let finalName = newNameRaw;
         if (!finalName.startsWith('@')) finalName = '@' + finalName;
-        cascadeUpdateCategory('context', oldCtx.name, finalName);
-        customContexts[index].name = finalName;
-    }
-
-    // 2. Edición del color (Solución quirúrgica vía prompt para evitar reescribir el DOM)
-    const validColors = "blue, purple, green, red, orange, gray, pink, teal, yellow, cyan, indigo, rose, emerald, fuchsia";
-    const currentColor = oldCtx.color || 'gray';
-    const newColor = prompt(`Editar color del contexto.\nOpciones válidas:\n${validColors}`, currentColor);
-    
-    if (newColor !== null && newColor.trim() !== "") {
-        const colorClean = newColor.toLowerCase().trim();
-        if (validColors.includes(colorClean)) {
-            customContexts[index].color = colorClean;
+        
+        const selectedColor = modal.dataset.selectedColor || 'gray';
+        
+        // Actualiza las tareas previas si se modificó el nombre
+        if (finalName !== oldCtx.name) {
+            if (typeof cascadeUpdateCategory === 'function') {
+                cascadeUpdateCategory('context', oldCtx.name, finalName);
+            }
         }
-    }
-
-    // 3. Persistencia y renderizado
-    await saveData();
-    renderManageItems();
-    if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
+        
+        // Mutación de la base de datos local
+        customContexts[index].name = finalName;
+        customContexts[index].color = selectedColor;
+        
+        // Persistencia y actualización de vistas
+        if (typeof saveData === 'function') await saveData();
+        if (typeof renderManageItems === 'function') renderManageItems();
+        if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
+        
+        // Destrucción del modal efímero
+        modal.remove();
+    };
 };
 
 window.addCustomContext = async function() {
