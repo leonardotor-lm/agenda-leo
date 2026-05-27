@@ -662,11 +662,44 @@ function buildTaskRows(nodes, path = []) {
         const isCompleted = task.status === 'completed';
         const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
-        // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
-        let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
-        if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
 
-        const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
+        // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
+    let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
+    
+    if (task.date) { 
+        const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; 
+        
+        // 1. Intercepción temporal: cálculo de proximidad
+        let relativeDateLabel = formatDateAR(task.date, false); // Fallback por defecto (formato DD/MM)
+        
+        try {
+            // Desensamble estricto para forzar la zona horaria local y evitar desfasajes UTC
+            const [year, month, day] = task.date.split('-').map(Number);
+            const taskD = new Date(year, month - 1, day);
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Se normaliza a la medianoche para una comparación neta
+            
+            const diffTime = taskD.getTime() - today.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            // 2. Asignación léxica según la ventana de 7 días
+            if (diffDays === 0) {
+                relativeDateLabel = 'hoy';
+            } else if (diffDays === 1) {
+                relativeDateLabel = 'mañana';
+            } else if (diffDays > 1 && diffDays <= 7) {
+                const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+                relativeDateLabel = dayNames[taskD.getDay()];
+            }
+        } catch (e) {
+            console.warn("Fallo en el cálculo de fecha relativa. Se aplicará formato estándar.", e);
+        }
+
+        // 3. Inyección en el DOM preservando la evaluación original de '(Vencida)'
+        dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${relativeDateLabel} ${isOverdue ? '(Vencida)' : ''}</span>`; 
+    }
+                const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
 
         let subtasksHtml = (isExpanded && !isTrash) ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
         const subtaskListHTML = isTrash ? '' : `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
