@@ -1035,32 +1035,35 @@ window.handleFileUpload = async function(event, mode) {
     event.target.value = '';
 };
 
-function renderAttachments(mode) {
-    // Determinación del nodo contenedor según el contexto de la interfaz
-    const containerId = mode === 'edit' ? 'editAttachmentsList' : 'attachmentsList';
-    const container = document.getElementById(containerId);
-    
-    if (!container) return;
-
-    // Vaciado previo para evitar duplicidad en el renderizado
-    container.innerHTML = '';
-    
-    currentAttachments.forEach((file, index) => {
-        const div = document.createElement('div');
-        div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1 border border-navy-700";
+function renderAttachments() {
+    // Iteración simultánea sobre los contenedores de "Crear" y "Editar" sin depender del parámetro 'mode'
+    ['attachmentsList', 'editAttachmentsList'].forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container) return; 
         
-        // Estructuración del hipervínculo para permitir la lectura/descarga directa de la carga útil (payload)
-        const fileLink = file.data 
-            ? `<a href="${file.data}" download="${file.name}" class="text-brand-400 hover:underline cursor-pointer truncate mr-2" title="Descargar o abrir archivo">${file.name}</a>` 
-            : `<span class="truncate mr-2">${file.name}</span>`;
+        container.innerHTML = '';
+        
+        currentAttachments.forEach((file, index) => {
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1 border border-navy-700";
+            
+            // Extracción robusta del enlace histórico o actual
+            const fileUrl = file.data || file.url || file.link || file.fileUrl;
+            const isValidLink = typeof fileUrl === 'string' && (fileUrl.startsWith('http://') || fileUrl.startsWith('https://') || fileUrl.startsWith('data:'));
+            
+            const fileLink = isValidLink 
+                ? `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:underline cursor-pointer truncate mr-2" title="Abrir documento">${file.name}</a>` 
+                : `<span class="truncate mr-2 text-navy-400" title="Registro sin enlace recuperable">${file.name}</span>`;
 
-        div.innerHTML = `
-            ${fileLink}
-            <button type="button" onclick="currentAttachments.splice(${index}, 1); renderAttachments('${mode}');" class="text-danger-500 font-bold hover:bg-navy-700 px-2 py-1 rounded transition-colors">X</button>
-        `;
-        container.appendChild(div);
+            div.innerHTML = `
+                ${fileLink}
+                <button type="button" onclick="currentAttachments.splice(${index}, 1); renderAttachments();" class="text-danger-500 font-bold hover:bg-navy-700 px-2 py-1 rounded transition-colors">X</button>
+            `;
+            container.appendChild(div);
+        });
     });
 }
+window.renderAttachments = renderAttachments;
 
 // STUBS / SIMULATION IA
 function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
