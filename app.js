@@ -844,7 +844,42 @@ window.addCustomContext = async function() {
 
 window.selectManageColor = function(color) {
     manageSelectedColor = color;
+    
+    // 1. Rescate del estado: capturamos el texto escrito antes de la destrucción del DOM
+    const inputDOM = document.getElementById('newContextInput');
+    const currentText = inputDOM ? inputDOM.value : '';
+    
+    // 2. Ejecución del renderizador (se redibuja la paleta de colores)
     renderManageItems();
+    
+    // 3. Restauración: reinyectamos el texto en el nuevo input recién creado
+    const restoredInput = document.getElementById('newContextInput');
+    if (restoredInput) {
+        restoredInput.value = currentText;
+        restoredInput.focus(); // Mantiene el cursor activo para no interrumpir el tipeo
+    }
+};
+
+window.addCustomContext = async function() {
+    const input = document.getElementById('newContextInput');
+    if (!input) return;
+    
+    const val = input.value.trim();
+    if(val) {
+        const name = val.startsWith('@') ? val : '@' + val;
+        
+        // Prevención estricta: si el usuario no tocó ningún color, se asigna uno por defecto
+        const safeColor = (typeof manageSelectedColor !== 'undefined' && manageSelectedColor) ? manageSelectedColor : 'gray';
+        
+        customContexts.push({name: name, color: safeColor});
+        await saveData();
+        
+        // Purga de la variable en memoria para que no contamine la creación del siguiente contexto
+        manageSelectedColor = 'gray';
+        renderManageItems();
+        
+        if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
+    }
 };
 
 function renderManageItems() {
