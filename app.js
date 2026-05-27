@@ -320,11 +320,28 @@ async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task
 // MODALS LIFECYCLE
 function openAddTaskModal() { 
     document.getElementById('taskInput').value = ''; 
-    document.getElementById('dateInput').value = ''; 
+    
+    // 1. ASIGNACIÓN DINÁMICA DE FECHA (Corregida para zona horaria local)
+    const dateInput = document.getElementById('dateInput');
+    if (currentState && currentState.view === 'today') {
+        const today = new Date();
+        dateInput.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    } else if (currentState && currentState.view === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.value = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + String(tomorrow.getDate()).padStart(2, '0');
+    } else {
+        dateInput.value = ''; 
+    }
+
     document.getElementById('timeInput').value = ''; 
     document.getElementById('notesInput').value = ''; 
     document.getElementById('priorityInput').value = 'baja';
-    document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
+    
+    // 2. ASIGNACIÓN DINÁMICA DE ÁREA
+    const fallbackArea = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || '');
+    document.getElementById('areaInput').value = (currentState && currentState.selectedArea) ? currentState.selectedArea : fallbackArea; 
+    
     document.getElementById('contextInput').value = ''; 
     
     currentAttachments = []; 
@@ -339,9 +356,6 @@ function openAddTaskModal() {
     document.getElementById('addTaskModal').classList.remove('hidden'); 
     
     // 2. CORRECCIÓN ARQUITECTÓNICA: Reseteo de estado con el DOM visible.
-    // Al modificar la propiedad 'checked' DESPUÉS de que el nodo es visible en el DOM activo, 
-    // forzamos al motor de renderizado a repintar las clases pseudo-estado de Tailwind (peer-checked).
-    // Si se hace antes (estando oculto), el motor JS actualiza la propiedad pero el CSS omite el repintado.
     const reminderToggle = document.getElementById('reminderToggle');
     if (reminderToggle) {
         reminderToggle.checked = false;
