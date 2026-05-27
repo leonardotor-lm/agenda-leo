@@ -977,16 +977,49 @@ window.addCustomContext = async function() {
     }
 };
 
+// Controladores globales para la jerarquización manual anexados directamente al objeto window
+// Se omiten las declaraciones "let" a nivel de raíz para erradicar el riesgo de SyntaxError
+window.dragStartArea = function(event, index) {
+    window.draggedAreaIndex = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', index);
+};
+
+window.dragOverArea = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+};
+
+window.dropArea = async function(event, targetIndex) {
+    event.preventDefault();
+    if (typeof window.draggedAreaIndex === 'undefined' || window.draggedAreaIndex === null || window.draggedAreaIndex === targetIndex) return;
+
+    // Mutación quirúrgica de la matriz posicional
+    const areaToMove = customAreas.splice(window.draggedAreaIndex, 1)[0];
+    customAreas.splice(targetIndex, 0, areaToMove);
+    
+    // Purga de la variable temporal en memoria
+    window.draggedAreaIndex = null;
+
+    // Consolidación y renderizado
+    if (typeof saveData === 'function') await saveData();
+    renderManageItems();
+    if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
+};
+
 function renderManageItems() {
     const container = document.getElementById('manageModalContent');
+    if (!container) return; // Blindaje contra nodos de interfaz inexistentes
     
-    // Mapeo seguro de colores para evitar fallos del compilador JIT de Tailwind
     const colorHexMap = { 'blue': '#3b82f6', 'purple': '#a855f7', 'green': '#22c55e', 'red': '#ef4444', 'orange': '#f97316', 'gray': '#6b7280', 'pink': '#ec4899', 'teal': '#14b8a6', 'yellow': '#eab308', 'cyan': '#06b6d4', 'indigo': '#6366f1', 'rose': '#f43f5e', 'emerald': '#10b981', 'fuchsia': '#d946ef' };
     
+    // Evaluación segura de la variable de color para evitar ReferenceError si no fue instanciada
+    const currentSelectedColor = typeof manageSelectedColor !== 'undefined' ? manageSelectedColor : null;
+
     let colorSwatches = Object.keys(colorHexMap).map(c => `
         <button onclick="selectManageColor('${c}')" 
                 class="w-5 h-5 rounded-full outline-none focus:outline-none flex-shrink-0" 
-                style="background-color: ${colorHexMap[c]}; ${manageSelectedColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
+                style="background-color: ${colorHexMap[c]}; ${currentSelectedColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
                 title="${c}" type="button"></button>
     `).join('');
 
@@ -1001,11 +1034,19 @@ function renderManageItems() {
         
     customAreas.forEach((area, i) => {
         html += `
-        <li class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700">
-            <span class="text-navy-50 text-sm">${area}</span>
+        <li draggable="true" 
+            ondragstart="window.dragStartArea(event, ${i})" 
+            ondragover="window.dragOverArea(event)" 
+            ondrop="window.dropArea(event, ${i})"
+            class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700 cursor-move hover:bg-navy-700 transition-colors"
+            title="Arrastrar para reorganizar">
+            <div class="flex items-center gap-2">
+                <span class="text-navy-400 font-bold opacity-50 cursor-grab" aria-hidden="true">&#8942;&#8942;</span>
+                <span class="text-navy-50 text-sm">${area}</span>
+            </div>
             <div class="flex gap-2">
-                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Editar</button>
-                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Borrar</button>
+                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Editar</button>
+                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Borrar</button>
             </div>
         </li>`;
     });
