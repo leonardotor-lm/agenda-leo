@@ -10,6 +10,7 @@ function safeParse(key, fallback) {
     try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : fallback; } 
     catch (e) { return fallback; }
 }
+
 // INSERCIÓN RÁPIDA DE SUBTAREAS (BLINDAJE GLOBAL)
 async function quickAddSubtask(parentId, event) {
     if (event) event.stopPropagation(); 
@@ -26,8 +27,8 @@ async function quickAddSubtask(parentId, event) {
             area: nodes[i].area || 'Inbox', 
             context: '', 
             priority: 'baja', 
-            date: nodes[i].date || '', 
-            startDate: nodes[i].startDate || '', 
+            date: '', // Corrección: la fecha no se hereda
+            startDate: '', // Corrección: la fecha de inicio tampoco se hereda
             time: '', 
             notes: '', 
             reminder: false, 
@@ -50,7 +51,6 @@ async function quickAddSubtask(parentId, event) {
 }
 // Forzamos la exposición al objeto global para garantizar que el HTML la encuentre
 window.quickAddSubtask = quickAddSubtask;
-
 // Inicialización de la base local
 let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
