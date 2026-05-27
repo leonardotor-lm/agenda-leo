@@ -819,24 +819,53 @@ window.deleteCustomContext = async function(index) {
 
 window.editCustomContext = async function(index) {
     const oldCtx = customContexts[index];
+    
+    // 1. Edición del nombre
     const newName = prompt("Editar nombre del contexto:", oldCtx.name);
-    if (newName && newName.trim() !== "" && newName.trim() !== oldCtx.name) {
-        let finalName = newName.trim();
+    if (newName === null) return; // Si el usuario presiona "Cancelar", se aborta sin romper nada
+    
+    let finalName = oldCtx.name;
+    if (newName.trim() !== "" && newName.trim() !== oldCtx.name) {
+        finalName = newName.trim();
         if (!finalName.startsWith('@')) finalName = '@' + finalName;
         cascadeUpdateCategory('context', oldCtx.name, finalName);
         customContexts[index].name = finalName;
-        await saveData();
-        renderManageItems();
-        if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
     }
+
+    // 2. Edición del color (Solución quirúrgica vía prompt para evitar reescribir el DOM)
+    const validColors = "blue, purple, green, red, orange, gray, pink, teal, yellow, cyan, indigo, rose, emerald, fuchsia";
+    const currentColor = oldCtx.color || 'gray';
+    const newColor = prompt(`Editar color del contexto.\nOpciones válidas:\n${validColors}`, currentColor);
+    
+    if (newColor !== null && newColor.trim() !== "") {
+        const colorClean = newColor.toLowerCase().trim();
+        if (validColors.includes(colorClean)) {
+            customContexts[index].color = colorClean;
+        }
+    }
+
+    // 3. Persistencia y renderizado
+    await saveData();
+    renderManageItems();
+    if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
 };
 
 window.addCustomContext = async function() {
-    const val = document.getElementById('newContextInput').value.trim();
+    const input = document.getElementById('newContextInput');
+    if (!input) return;
+    
+    const val = input.value.trim();
     if(val) {
         const name = val.startsWith('@') ? val : '@' + val;
-        customContexts.push({name: name, color: manageSelectedColor});
+        
+        // Prevención estricta: asignación de color por defecto si no se seleccionó ninguno
+        const safeColor = (typeof manageSelectedColor !== 'undefined' && manageSelectedColor) ? manageSelectedColor : 'gray';
+        
+        customContexts.push({name: name, color: safeColor});
         await saveData();
+        
+        // Purga de la variable temporal
+        manageSelectedColor = 'gray'; 
         renderManageItems();
         if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
     }
@@ -845,18 +874,17 @@ window.addCustomContext = async function() {
 window.selectManageColor = function(color) {
     manageSelectedColor = color;
     
-    // 1. Rescate del estado: capturamos el texto escrito antes de la destrucción del DOM
+    // Rescate del estado previo a la destrucción del DOM
     const inputDOM = document.getElementById('newContextInput');
     const currentText = inputDOM ? inputDOM.value : '';
     
-    // 2. Ejecución del renderizador (se redibuja la paleta de colores)
     renderManageItems();
     
-    // 3. Restauración: reinyectamos el texto en el nuevo input recién creado
+    // Re-inyección del texto para no interrumpir el flujo de escritura
     const restoredInput = document.getElementById('newContextInput');
     if (restoredInput) {
         restoredInput.value = currentText;
-        restoredInput.focus(); // Mantiene el cursor activo para no interrumpir el tipeo
+        restoredInput.focus();
     }
 };
 
