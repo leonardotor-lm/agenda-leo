@@ -776,8 +776,20 @@ function renderTasks() {
         const pruned = pruneTree(tasks);
         const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
         nodesToRender = isFlatView ? flattenMatches(pruned) : pruned;
-    }
 
+        // Intervención quirúrgica: Ordenamiento cronológico predeterminado para ventanas de corto y mediano plazo
+        if (['week', 'fortnight'].includes(currentState.view)) {
+            nodesToRender.sort((a, b) => {
+                // Las tareas sin fecha asignada se desplazan al final de la lista de renderizado
+                if (!a.date && !b.date) return 0;
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                
+                // Comparación de cadenas: funcional y exacta dado que las fechas operan bajo estándar ISO (YYYY-MM-DD)
+                return a.date.localeCompare(b.date);
+            });
+        }
+    }
     if (nodesToRender.length === 0) { list.innerHTML = ''; empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales."; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
     list.innerHTML = `<div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">${buildTaskRows(nodesToRender)}</div>`;
