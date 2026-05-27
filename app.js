@@ -484,7 +484,37 @@ function importData(event) { const file = event.target.files[0]; if (!file) retu
 // RENDERING
 function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
 function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) { el.value = currentVal; } else if (defaultLabel !== null) { el.value = defaultValue; } }
-function refreshAllDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('areaInput', allAreas); populateSelect('contextInput', allContexts, "Sin contexto", ""); populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); renderSidebarAreas(); }
+function refreshAllDropdowns() {
+    if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
+
+    // 1. Mapeo dinámico: extracción exhaustiva de valores desde la base de tareas
+    const dynamicAreas = [...new Set(tasks.map(t => t.area))].filter(a => a && a.trim() !== '');
+    const dynamicContexts = [...new Set(tasks.map(t => t.context))].filter(c => c && c.trim() !== '');
+    
+    // 2. Fusión estricta: se integran los parámetros estáticos con los dinámicos evitando redundancias
+    const staticAreas = typeof customAreas !== 'undefined' ? customAreas : [];
+    const allAreas = [...new Set([...staticAreas, ...dynamicAreas])].sort();
+    
+    const staticContexts = (typeof customContexts !== 'undefined' ? customContexts : []).map(c => typeof c === 'object' ? c.name : c);
+    const allContexts = [...new Set([...staticContexts, ...dynamicContexts])].sort();
+    
+    // 3. Inyección en la interfaz de usuario (Ventanas de Creación, Edición y Filtros)
+    if (typeof populateSelect === 'function') {
+        populateSelect('areaInput', allAreas);
+        populateSelect('editAreaInput', allAreas);
+        populateSelect('contextInput', allContexts, "Sin contexto", "");
+        populateSelect('editContextInput', allContexts, "Sin contexto", "");
+        // Se preserva la actualización de tu filtro original
+        populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); 
+    }
+
+    // 4. Se preserva el renderizado de tu barra lateral
+    if (typeof renderSidebarAreas === 'function') {
+        renderSidebarAreas();
+    }
+}
+// Vinculación explícita al objeto global
+window.refreshAllDropdowns = refreshAllDropdowns;
 function refreshEditDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('editAreaInput', allAreas); populateSelect('editContextInput', allContexts, "Sin contexto", ""); }
 function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
 function updateEditParentDropdown() { const area = document.getElementById('editAreaInput').value; const taskId = editState.id; const select = document.getElementById('editParentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value || editState.parentId; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
