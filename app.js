@@ -515,7 +515,10 @@ function refreshAllDropdowns() {
     if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
         dynamicContexts.forEach(ctx => {
             const exists = customContexts.some(c => (typeof c === 'object' ? c.name : c) === ctx);
-            if (!exists) customContexts.push(ctx); 
+            if (!exists) {
+                // Corrección: instanciación estricta como objeto para compatibilidad con la interfaz
+                customContexts.push({ name: ctx, color: '#64748b' }); 
+            }
         });
     }
 
