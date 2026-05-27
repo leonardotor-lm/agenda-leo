@@ -977,36 +977,6 @@ window.addCustomContext = async function() {
     }
 };
 
-// Controladores globales para la jerarquización manual (Drag & Drop)
-let draggedAreaIndex = null;
-
-window.dragStartArea = function(event, index) {
-    draggedAreaIndex = index;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', index); // Compatibilidad estricta para navegadores
-};
-
-window.dragOverArea = function(event) {
-    event.preventDefault(); // Condición sine qua non de HTML5 para habilitar la zona de caída
-    event.dataTransfer.dropEffect = 'move';
-};
-
-window.dropArea = async function(event, targetIndex) {
-    event.preventDefault();
-    if (draggedAreaIndex === null || draggedAreaIndex === targetIndex) return;
-
-    // Mutación quirúrgica: se extrae el nodo de su índice original y se lo inserta en la nueva coordenada
-    const areaToMove = customAreas.splice(draggedAreaIndex, 1)[0];
-    customAreas.splice(targetIndex, 0, areaToMove);
-    
-    draggedAreaIndex = null;
-
-    // Consolidación en memoria y actualización de la interfaz
-    if (typeof saveData === 'function') await saveData();
-    renderManageItems();
-    if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
-};
-
 function renderManageItems() {
     const container = document.getElementById('manageModalContent');
     
@@ -1030,21 +1000,12 @@ function renderManageItems() {
         <ul class="space-y-1.5 max-h-40 overflow-y-auto pr-2">`;
         
     customAreas.forEach((area, i) => {
-        // Implementación de los atributos de arrastre y un indicador visual (icono de agarre)
         html += `
-        <li draggable="true" 
-            ondragstart="window.dragStartArea(event, ${i})" 
-            ondragover="window.dragOverArea(event)" 
-            ondrop="window.dropArea(event, ${i})"
-            class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700 cursor-move hover:bg-navy-700 transition-colors"
-            title="Arrastrar para reorganizar">
-            <div class="flex items-center gap-2">
-                <span class="text-navy-400 font-bold opacity-50 cursor-grab" aria-hidden="true">⋮⋮</span>
-                <span class="text-navy-50 text-sm">${area}</span>
-            </div>
+        <li class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700">
+            <span class="text-navy-50 text-sm">${area}</span>
             <div class="flex gap-2">
-                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Editar</button>
-                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Borrar</button>
+                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Editar</button>
+                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Borrar</button>
             </div>
         </li>`;
     });
