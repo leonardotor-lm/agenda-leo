@@ -977,39 +977,10 @@ window.addCustomContext = async function() {
     }
 };
 
-// Controladores globales para la jerarquización manual (Drag & Drop)
-let draggedAreaIndex = null;
-
-window.dragStartArea = function(event, index) {
-    draggedAreaIndex = index;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', index);
-};
-
-window.dragOverArea = function(event) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-};
-
-window.dropArea = async function(event, targetIndex) {
-    event.preventDefault();
-    if (draggedAreaIndex === null || draggedAreaIndex === targetIndex) return;
-
-    // Mutación quirúrgica: reubicación del nodo en la matriz
-    const areaToMove = customAreas.splice(draggedAreaIndex, 1)[0];
-    customAreas.splice(targetIndex, 0, areaToMove);
-    
-    draggedAreaIndex = null;
-
-    // Consolidación en memoria y actualización de la interfaz
-    if (typeof saveData === 'function') await saveData();
-    renderManageItems();
-    if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
-};
-
 function renderManageItems() {
     const container = document.getElementById('manageModalContent');
     
+    // Mapeo seguro de colores para evitar fallos del compilador JIT de Tailwind
     const colorHexMap = { 'blue': '#3b82f6', 'purple': '#a855f7', 'green': '#22c55e', 'red': '#ef4444', 'orange': '#f97316', 'gray': '#6b7280', 'pink': '#ec4899', 'teal': '#14b8a6', 'yellow': '#eab308', 'cyan': '#06b6d4', 'indigo': '#6366f1', 'rose': '#f43f5e', 'emerald': '#10b981', 'fuchsia': '#d946ef' };
     
     let colorSwatches = Object.keys(colorHexMap).map(c => `
@@ -1030,19 +1001,11 @@ function renderManageItems() {
         
     customAreas.forEach((area, i) => {
         html += `
-        <li draggable="true" 
-            ondragstart="window.dragStartArea(event, ${i})" 
-            ondragover="window.dragOverArea(event)" 
-            ondrop="window.dropArea(event, ${i})"
-            class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700 cursor-move hover:bg-navy-700 transition-colors"
-            title="Arrastrar para reorganizar">
-            <div class="flex items-center gap-2">
-                <span class="text-navy-400 font-bold opacity-50 cursor-grab" aria-hidden="true">⋮⋮</span>
-                <span class="text-navy-50 text-sm">${area}</span>
-            </div>
+        <li class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700">
+            <span class="text-navy-50 text-sm">${area}</span>
             <div class="flex gap-2">
-                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Editar</button>
-                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Borrar</button>
+                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Editar</button>
+                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Borrar</button>
             </div>
         </li>`;
     });
@@ -1079,6 +1042,7 @@ function renderManageItems() {
     
     container.innerHTML = html;
 }
+
 async function setTaskStatus(id, newStatus) { findAndMutateTask(id, (nodes, i) => { nodes[i].status = newStatus; }); renderTasks(); renderCalendar(); await saveData(); }
 async function restoreTask(id) { if (findAndMutateTask(id, (nodes, i) => { nodes[i].isDeleted = false; delete nodes[i].deletedAt; })) { refreshAllDropdowns(); renderTasks(); renderCalendar(); showNotice("Tarea restaurada"); await saveData(); } }
 async function hardDeleteTask(id) { showConfirm("Eliminar", "¿Eliminar definitivamente?", async () => { if (findAndMutateTask(id, (nodes, i) => nodes.splice(i, 1))) { refreshAllDropdowns(); renderTasks(); showNotice("Eliminada"); await saveData(); } }, true); }
