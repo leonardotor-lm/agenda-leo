@@ -487,6 +487,22 @@ function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { 
 function refreshAllDropdowns() {
     if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
 
+    // SANEAMIENTO DE EMERGENCIA: Limpia residuos de texto plano guardados en el almacenamiento histórico
+    if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
+        const sanitized = customContexts.map(c => {
+            if (!c) return null;
+            // Si quedó algún contexto como texto plano, lo transforma en un objeto válido con color por defecto
+            if (typeof c === 'string') return { name: c, color: '#64748b' };
+            // Si ya es un objeto estructurado correctamente, lo conserva
+            if (typeof c === 'object' && c.name) return c;
+            return null;
+        }).filter(c => c !== null);
+        
+        // Mutación segura de la matriz maestra (compatible con declaraciones const y let)
+        customContexts.length = 0; 
+        customContexts.push(...sanitized);
+    }
+
     // 1. Rastreo profundo (Algoritmo Recursivo): extrae datos de tareas y de todas sus subtareas
     function extractDeepValues(nodes, key) {
         let results = [];
@@ -495,7 +511,6 @@ function refreshAllDropdowns() {
                 results.push(t[key].trim());
             }
             if (t.subtasks && Array.isArray(t.subtasks) && t.subtasks.length > 0) {
-                // Llamada recursiva para perforar los niveles inferiores
                 results = results.concat(extractDeepValues(t.subtasks, key)); 
             }
         });
@@ -505,7 +520,7 @@ function refreshAllDropdowns() {
     const dynamicAreas = [...new Set(extractDeepValues(tasks, 'area'))];
     const dynamicContexts = [...new Set(extractDeepValues(tasks, 'context'))];
     
-    // 2. Restauración estructural: se reinyectan los valores perdidos en las variables maestras
+    // 2. Restauración estructural: se reinyectan los valores nuevos como objetos legibles
     if (typeof customAreas !== 'undefined' && Array.isArray(customAreas)) {
         dynamicAreas.forEach(area => {
             if (!customAreas.includes(area)) customAreas.push(area);
@@ -516,7 +531,6 @@ function refreshAllDropdowns() {
         dynamicContexts.forEach(ctx => {
             const exists = customContexts.some(c => (typeof c === 'object' ? c.name : c) === ctx);
             if (!exists) {
-                // Corrección: instanciación estricta como objeto para compatibilidad con la interfaz
                 customContexts.push({ name: ctx, color: '#64748b' }); 
             }
         });
@@ -529,7 +543,7 @@ function refreshAllDropdowns() {
     const staticContexts = (typeof customContexts !== 'undefined' ? customContexts : []).map(c => typeof c === 'object' ? c.name : c);
     const allContexts = [...new Set([...staticContexts, ...dynamicContexts])].sort();
     
-    // 4. Inyección segura en el DOM (verifica que el nodo exista antes de actuar)
+    // 4. Inyección segura en el DOM
     if (typeof populateSelect === 'function') {
         if (document.getElementById('areaInput')) populateSelect('areaInput', allAreas);
         if (document.getElementById('editAreaInput')) populateSelect('editAreaInput', allAreas);
@@ -543,7 +557,7 @@ function refreshAllDropdowns() {
         renderSidebarAreas();
     }
     
-    // 6. Consolidación de datos: guarda los arrays reconstruidos en localStorage (Leo_custom_areas, etc.)
+    // 6. Consolidación y persistencia de los datos ya saneados
     if (typeof saveCategories === 'function') {
         saveCategories();
     }
