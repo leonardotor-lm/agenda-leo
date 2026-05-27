@@ -487,33 +487,64 @@ function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { 
 function refreshAllDropdowns() {
     if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
 
-    // 1. Mapeo dinámico: extracción exhaustiva de valores desde la base de tareas
-    const dynamicAreas = [...new Set(tasks.map(t => t.area))].filter(a => a && a.trim() !== '');
-    const dynamicContexts = [...new Set(tasks.map(t => t.context))].filter(c => c && c.trim() !== '');
+    // 1. Rastreo profundo (Algoritmo Recursivo): extrae datos de tareas y de todas sus subtareas
+    function extractDeepValues(nodes, key) {
+        let results = [];
+        nodes.forEach(t => {
+            if (t[key] && typeof t[key] === 'string' && t[key].trim() !== '') {
+                results.push(t[key].trim());
+            }
+            if (t.subtasks && Array.isArray(t.subtasks) && t.subtasks.length > 0) {
+                // Llamada recursiva para perforar los niveles inferiores
+                results = results.concat(extractDeepValues(t.subtasks, key)); 
+            }
+        });
+        return results;
+    }
+
+    const dynamicAreas = [...new Set(extractDeepValues(tasks, 'area'))];
+    const dynamicContexts = [...new Set(extractDeepValues(tasks, 'context'))];
     
-    // 2. Fusión estricta: se integran los parámetros estáticos con los dinámicos evitando redundancias
+    // 2. Restauración estructural: se reinyectan los valores perdidos en las variables maestras
+    if (typeof customAreas !== 'undefined' && Array.isArray(customAreas)) {
+        dynamicAreas.forEach(area => {
+            if (!customAreas.includes(area)) customAreas.push(area);
+        });
+    }
+    
+    if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
+        dynamicContexts.forEach(ctx => {
+            const exists = customContexts.some(c => (typeof c === 'object' ? c.name : c) === ctx);
+            if (!exists) customContexts.push(ctx); 
+        });
+    }
+
+    // 3. Fusión estricta y ordenamiento alfabético
     const staticAreas = typeof customAreas !== 'undefined' ? customAreas : [];
     const allAreas = [...new Set([...staticAreas, ...dynamicAreas])].sort();
     
     const staticContexts = (typeof customContexts !== 'undefined' ? customContexts : []).map(c => typeof c === 'object' ? c.name : c);
     const allContexts = [...new Set([...staticContexts, ...dynamicContexts])].sort();
     
-    // 3. Inyección en la interfaz de usuario (Ventanas de Creación, Edición y Filtros)
+    // 4. Inyección segura en el DOM (verifica que el nodo exista antes de actuar)
     if (typeof populateSelect === 'function') {
-        populateSelect('areaInput', allAreas);
-        populateSelect('editAreaInput', allAreas);
-        populateSelect('contextInput', allContexts, "Sin contexto", "");
-        populateSelect('editContextInput', allContexts, "Sin contexto", "");
-        // Se preserva la actualización de tu filtro original
-        populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); 
+        if (document.getElementById('areaInput')) populateSelect('areaInput', allAreas);
+        if (document.getElementById('editAreaInput')) populateSelect('editAreaInput', allAreas);
+        if (document.getElementById('contextInput')) populateSelect('contextInput', allContexts, "Sin contexto", "");
+        if (document.getElementById('editContextInput')) populateSelect('editContextInput', allContexts, "Sin contexto", "");
+        if (document.getElementById('filterContext')) populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); 
     }
 
-    // 4. Se preserva el renderizado de tu barra lateral
+    // 5. Renderizado de interfaz periférica
     if (typeof renderSidebarAreas === 'function') {
         renderSidebarAreas();
     }
+    
+    // 6. Consolidación de datos: guarda los arrays reconstruidos en localStorage (Leo_custom_areas, etc.)
+    if (typeof saveCategories === 'function') {
+        saveCategories();
+    }
 }
-// Vinculación explícita al objeto global
 window.refreshAllDropdowns = refreshAllDropdowns;
 function refreshEditDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('editAreaInput', allAreas); populateSelect('editContextInput', allContexts, "Sin contexto", ""); }
 function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
