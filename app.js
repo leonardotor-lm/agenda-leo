@@ -482,7 +482,31 @@ function exportData() { const dataStr = "data:text/json;charset=utf-8," + encode
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
 
 // RENDERING
-function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+function renderSidebarAreas() { 
+    const allAreas = typeof getAllAreasOrdered === 'function' ? getAllAreasOrdered() : []; 
+    const container = document.getElementById('sidebar-areas-list');
+    if (!container) return; // Blindaje contra nodos inexistentes
+
+    container.innerHTML = allAreas.map(area => {
+        let count = 0;
+        function countAreaTasks(nodes) {
+            if (!nodes || !Array.isArray(nodes)) return;
+            nodes.forEach(t => {
+                if (!t.isDeleted && t.status !== 'completed' && t.area === area) count++;
+                if (t.subtasks && Array.isArray(t.subtasks)) countAreaTasks(t.subtasks);
+            });
+        }
+        if (typeof tasks !== 'undefined') countAreaTasks(tasks);
+
+        return `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none">
+            <div class="flex items-center space-x-3 overflow-hidden">
+                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span>
+                <span class="truncate">${area}</span>
+            </div>
+            <span class="text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-2">${count}</span>
+        </button>`;
+    }).join(''); 
+}
 function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) { el.value = currentVal; } else if (defaultLabel !== null) { el.value = defaultValue; } }
 function refreshAllDropdowns() {
     if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
@@ -572,32 +596,145 @@ function updateFilters() { currentFilters = { search: document.getElementById('s
 function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'date-asc'; currentSort = { by: 'date', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
 function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
 
+// Motor analítico independiente: cuantifica las tareas por ventana temporal
+function updateSidebarCounters() {
+    if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
+
+    let counts = { today: 0, tomorrow: 0, week: 0, fortnight: 0, all: 0, trash: 0 };
+    const today = new Date(); 
+    today.setHours(0, 0, 0, 0);
+
+    function countNodes(nodes) {
+        if (!nodes || !Array.isArray(nodes)) return;
+        nodes.forEach(t => {
+            if (t.isDeleted) {
+                counts.trash++;
+            } else if (t.status !== 'completed') {
+                counts.all++;
+                if (t.date) {
+                    try {
+                        const [year, month, day] = t.date.split('-').map(Number);
+                        const tDate = new Date(year, month - 1, day);
+                        const diffDays = Math.round((tDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                        if (diffDays <= 0) counts.today++; 
+                        if (diffDays === 1) counts.tomorrow++;
+                        if (diffDays <= 7) counts.week++;
+                        if (diffDays <= 15) counts.fortnight++;
+                    } catch (e) {
+                        console.warn("Fallo de formato en fecha:", e);
+                    }
+                }
+            }
+            if (t.subtasks) countNodes(t.subtasks);
+        });
+    }
+    
+    countNodes(tasks);
+
+    const updateBadge = (id, count) => {
+        const btn = document.getElementById(id);
+        if (!btn) return; // Prevención estricta de crash si el botón no existe en el HTML
+        
+        if (!btn.classList.contains('justify-between')) {
+            btn.classList.add('justify-between');
+        }
+
+        let badge = btn.querySelector('.nav-badge-counter');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'nav-badge-counter text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-auto';
+            btn.appendChild(badge);
+        }
+        badge.innerText = count;
+    };
+
+    updateBadge('nav-today', counts.today);
+    updateBadge('nav-tomorrow', counts.tomorrow);
+    updateBadge('nav-week', counts.week);
+    updateBadge('nav-fortnight', counts.fortnight);
+    updateBadge('nav-all', counts.all);
+    updateBadge('nav-trash', counts.trash);
+}
+
+// Orquestador de interfaz actualizado
 function updateUI() {
-    const btnBack = document.getElementById('btnBack'); if (navHistory.length > 0) btnBack.classList.remove('hidden'); else btnBack.classList.add('hidden');
+    const btnBack = document.getElementById('btnBack'); if (btnBack && typeof navHistory !== 'undefined' && navHistory.length > 0) btnBack.classList.remove('hidden'); else if (btnBack) btnBack.classList.add('hidden');
     const titleEl = document.getElementById('view-title');
     const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
-    titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+    if (titleEl) titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
     const isTrash = currentState.view === 'trash';
-    ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { const el = document.getElementById(id); if (id === `nav-${currentState.view}`) { el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.remove('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.remove('text-danger-500'); } else { el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.add('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.add('text-danger-500'); } });
-    document.querySelectorAll('.sidebar-area-item').forEach(el => { if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.remove('border-transparent', 'text-navy-300'); } else { el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.add('border-transparent', 'text-navy-300'); } });
-    document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); 
-    if (currentState.view === 'calendar') { document.getElementById('omnibar-container').classList.add('hidden'); document.getElementById('btnAIToggle').classList.remove('text-brand-500', 'bg-navy-700'); document.getElementById('btnAIToggle').classList.add('text-navy-400'); }
-    document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); 
-    document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
-    document.getElementById('btnEmptyTrash').classList.toggle('hidden', !isTrash);
-    document.getElementById('searchWrap').classList.toggle('hidden', isTrash);
-    document.getElementById('filterStatus').classList.toggle('hidden', isTrash);
-    document.getElementById('filterPriority').classList.toggle('hidden', isTrash);
-    document.getElementById('filterContext').classList.toggle('hidden', isTrash);
-    document.getElementById('sortSelect').classList.toggle('hidden', isTrash);
-    document.getElementById('btnBulkMode').classList.toggle('hidden', isTrash);
-    document.getElementById('btnResetFilters').classList.toggle('hidden', isTrash);
-    document.getElementById('btnAIToggle').classList.toggle('hidden', isTrash);
-    document.getElementById('filtersDivider').classList.toggle('hidden', isTrash);
+    
+    ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { 
+        const el = document.getElementById(id); 
+        if (!el) return; // Blindaje crítico: evita el crash si falta un nodo en la maqueta
+        if (id === `nav-${currentState.view}`) { 
+            el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+            el.classList.remove('text-navy-300', 'border-transparent'); 
+            if(id === 'nav-trash') {
+                const svg = el.querySelector('svg');
+                if (svg) svg.classList.remove('text-danger-500'); 
+            }
+        } else { 
+            el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
+            el.classList.add('text-navy-300', 'border-transparent'); 
+            if(id === 'nav-trash') {
+                const svg = el.querySelector('svg');
+                if (svg) svg.classList.add('text-danger-500'); 
+            }
+        } 
+    });
+    
+    document.querySelectorAll('.sidebar-area-item').forEach(el => { 
+        if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { 
+            el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
+            el.classList.remove('border-transparent', 'text-navy-300'); 
+        } else { 
+            el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
+            el.classList.add('border-transparent', 'text-navy-300'); 
+        } 
+    });
+    
+    const toggleHidden = (id, condition) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', condition); };
+    toggleHidden('view-list', currentState.view === 'calendar'); 
+    
+    if (currentState.view === 'calendar') { 
+        const omni = document.getElementById('omnibar-container'); if (omni) omni.classList.add('hidden'); 
+        const aiBtn = document.getElementById('btnAIToggle'); 
+        if (aiBtn) { aiBtn.classList.remove('text-brand-500', 'bg-navy-700'); aiBtn.classList.add('text-navy-400'); }
+    }
+    
+    toggleHidden('view-calendar', currentState.view !== 'calendar'); 
+    toggleHidden('filters-container', currentState.view === 'calendar');
+    toggleHidden('btnEmptyTrash', !isTrash);
+    toggleHidden('searchWrap', isTrash);
+    toggleHidden('filterStatus', isTrash);
+    toggleHidden('filterPriority', isTrash);
+    toggleHidden('filterContext', isTrash);
+    toggleHidden('sortSelect', isTrash);
+    toggleHidden('btnBulkMode', isTrash);
+    toggleHidden('btnResetFilters', isTrash);
+    toggleHidden('btnAIToggle', isTrash);
+    toggleHidden('filtersDivider', isTrash);
+    
     const fab = document.getElementById('mainFab');
-    if (isTrash) fab.classList.add('hidden'); else { fab.classList.remove('hidden'); if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); else fab.classList.remove('translate-y-24', 'opacity-0'); }
-    if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
-    if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
+    if (fab) {
+        if (isTrash) fab.classList.add('hidden'); 
+        else { 
+            fab.classList.remove('hidden'); 
+            if (typeof isBulkMode !== 'undefined' && isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); 
+            else fab.classList.remove('translate-y-24', 'opacity-0'); 
+        }
+    }
+    
+    if (currentState.view === 'calendar' && typeof isBulkMode !== 'undefined' && isBulkMode && typeof toggleBulkMode === 'function') toggleBulkMode();
+    
+    // Ejecución inyectada del motor analítico
+    if (typeof updateSidebarCounters === 'function') updateSidebarCounters();
+
+    // Renderizado final
+    if (currentState.view === 'calendar' && typeof renderCalendar === 'function') renderCalendar(); 
+    else if (typeof renderTasks === 'function') renderTasks();
 }
 
 // TREE AND LIST RENDER LOGIC
