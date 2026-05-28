@@ -482,90 +482,10 @@ function exportData() { const dataStr = "data:text/json;charset=utf-8," + encode
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
 
 // RENDERING
-function renderSidebarAreas() { 
-    const allAreas = typeof getAllAreasOrdered === 'function' ? getAllAreasOrdered() : []; 
-    
-    document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => {
-        // Cálculo de métricas: aislamiento de tareas activas pertinentes al área
-        let count = 0;
-        function countAreaTasks(nodes) {
-            nodes.forEach(t => {
-                if (!t.isDeleted && t.status !== 'completed' && t.area === area) count++;
-                if (t.subtasks && Array.isArray(t.subtasks)) countAreaTasks(t.subtasks);
-            });
-        }
-        if (typeof tasks !== 'undefined' && Array.isArray(tasks)) countAreaTasks(tasks);
-
-        return `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none">
-            <div class="flex items-center space-x-3 overflow-hidden">
-                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span>
-                <span class="truncate">${area}</span>
-            </div>
-            <span class="text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-2">${count}</span>
-        </button>`;
-    }).join(''); 
-}
-window.updateSidebarCounters = function() {
+function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
+function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) { el.value = currentVal; } else if (defaultLabel !== null) { el.value = defaultValue; } }
+function refreshAllDropdowns() {
     if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
-
-    let counts = { today: 0, tomorrow: 0, week: 0, fortnight: 0, all: 0, trash: 0 };
-    const today = new Date(); 
-    today.setHours(0, 0, 0, 0);
-
-    // Rastreo profundo y clasificación categórica según las distancias temporales
-    function countNodes(nodes) {
-        nodes.forEach(t => {
-            if (t.isDeleted) {
-                counts.trash++;
-            } else if (t.status !== 'completed') {
-                counts.all++;
-                if (t.date) {
-                    try {
-                        const [year, month, day] = t.date.split('-').map(Number);
-                        const tDate = new Date(year, month - 1, day);
-                        const diffDays = Math.round((tDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-                        if (diffDays <= 0) counts.today++; // Contempla hoy y tareas vencidas
-                        if (diffDays === 1) counts.tomorrow++;
-                        if (diffDays <= 7) counts.week++;
-                        if (diffDays <= 15) counts.fortnight++;
-                    } catch (e) {
-                        console.warn("Discrepancia en formato de fecha para conteo lateral.", e);
-                    }
-                }
-            }
-            if (t.subtasks && Array.isArray(t.subtasks)) countNodes(t.subtasks);
-        });
-    }
-    
-    countNodes(tasks);
-
-    // Inyección quirúrgica del nodo de texto preservando la integridad del DOM
-    const updateBadge = (id, count) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        
-        // Forzamiento de comportamiento flex para garantizar la alineación periférica
-        if (!btn.classList.contains('justify-between')) {
-            btn.classList.add('justify-between');
-        }
-
-        let badge = btn.querySelector('.nav-badge-counter');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'nav-badge-counter text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-auto';
-            btn.appendChild(badge);
-        }
-        badge.innerText = count;
-    };
-
-    updateBadge('nav-today', counts.today);
-    updateBadge('nav-tomorrow', counts.tomorrow);
-    updateBadge('nav-week', counts.week);
-    updateBadge('nav-fortnight', counts.fortnight);
-    updateBadge('nav-all', counts.all);
-    updateBadge('nav-trash', counts.trash);
-};
 
     // SANEAMIENTO DE EMERGENCIA: Limpia residuos de texto plano guardados en el almacenamiento histórico
     if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
@@ -678,7 +598,6 @@ function updateUI() {
     if (isTrash) fab.classList.add('hidden'); else { fab.classList.remove('hidden'); if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); else fab.classList.remove('translate-y-24', 'opacity-0'); }
     if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
     if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
-if (typeof updateSidebarCounters === 'function') updateSidebarCounters();
 }
 
 // TREE AND LIST RENDER LOGIC
