@@ -678,6 +678,7 @@ function updateUI() {
     if (isTrash) fab.classList.add('hidden'); else { fab.classList.remove('hidden'); if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); else fab.classList.remove('translate-y-24', 'opacity-0'); }
     if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
     if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
+if (typeof updateSidebarCounters === 'function') updateSidebarCounters();
 }
 
 // TREE AND LIST RENDER LOGIC
