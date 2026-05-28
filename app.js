@@ -634,10 +634,11 @@ function updateSidebarCounters() {
 
     const updateBadge = (id, count) => {
         const btn = document.getElementById(id);
-        if (!btn) return; // Prevención estricta de crash si el botón no existe en el HTML
+        if (!btn) return; 
         
-        if (!btn.classList.contains('justify-between')) {
-            btn.classList.add('justify-between');
+        // Intervención correctiva: se remueve la clase conflictiva si quedó fijada en el DOM
+        if (btn.classList.contains('justify-between')) {
+            btn.classList.remove('justify-between');
         }
 
         let badge = btn.querySelector('.nav-badge-counter');
