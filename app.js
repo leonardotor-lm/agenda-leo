@@ -634,12 +634,21 @@ function updateSidebarCounters() {
 
     const updateBadge = (id, count) => {
         const btn = document.getElementById(id);
-        if (!btn) return; // Prevención estricta de crash si el botón no existe en el HTML
+        if (!btn) return; 
         
-        if (!btn.classList.contains('justify-between')) {
-            btn.classList.add('justify-between');
+        // Intervención correctiva: se remueve la clase conflictiva si quedó fijada en el DOM
+        if (btn.classList.contains('justify-between')) {
+            btn.classList.remove('justify-between');
         }
 
+        let badge = btn.querySelector('.nav-badge-counter');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'nav-badge-counter text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-auto';
+            btn.appendChild(badge);
+        }
+        badge.innerText = count;
+    };
         let badge = btn.querySelector('.nav-badge-counter');
         if (!badge) {
             badge = document.createElement('span');
