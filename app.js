@@ -11,46 +11,6 @@ function safeParse(key, fallback) {
     catch (e) { return fallback; }
 }
 
-// INSERCIÓN RÁPIDA DE SUBTAREAS (BLINDAJE GLOBAL)
-async function quickAddSubtask(parentId, event) {
-    if (event) event.stopPropagation(); 
-    
-    const title = prompt("Ingresá el título de la nueva subtarea:");
-    if (!title || title.trim() === "") return;
-    
-    findAndMutateTask(parentId, (nodes, i) => {
-        if (!nodes[i].subtasks) nodes[i].subtasks = [];
-        
-        const newTask = { 
-            id: Date.now(), 
-            name: title.trim(), 
-            area: nodes[i].area || 'Inbox', 
-            context: '', 
-            priority: 'baja', 
-            date: '', // Corrección: la fecha no se hereda
-            startDate: '', // Corrección: la fecha de inicio tampoco se hereda
-            time: '', 
-            notes: '', 
-            reminder: false, 
-            status: 'pending', 
-            attachments: [], 
-            subtasks: [], 
-            recurrenceRule: null 
-        };
-        
-        nodes[i].subtasks.push(newTask);
-        
-        if (typeof expandedStates !== 'undefined') {
-            expandedStates[parentId] = true;
-        }
-    });
-    
-    renderTasks();
-    showNotice("Subtarea rápida creada.");
-    await saveData();
-}
-// Forzamos la exposición al objeto global para garantizar que el HTML la encuentre
-window.quickAddSubtask = quickAddSubtask;
 // Inicialización de la base local
 let tasks = safeParse('leo_agenda_v11', []);
 let calendarDate = new Date();
@@ -360,28 +320,11 @@ async function deleteTaskUniversal(id) { const task = getTaskById(id); if (!task
 // MODALS LIFECYCLE
 function openAddTaskModal() { 
     document.getElementById('taskInput').value = ''; 
-    
-    // 1. ASIGNACIÓN DINÁMICA DE FECHA (Corregida para zona horaria local)
-    const dateInput = document.getElementById('dateInput');
-    if (currentState && currentState.view === 'today') {
-        const today = new Date();
-        dateInput.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    } else if (currentState && currentState.view === 'tomorrow') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        dateInput.value = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + String(tomorrow.getDate()).padStart(2, '0');
-    } else {
-        dateInput.value = ''; 
-    }
-
+    document.getElementById('dateInput').value = ''; 
     document.getElementById('timeInput').value = ''; 
     document.getElementById('notesInput').value = ''; 
     document.getElementById('priorityInput').value = 'baja';
-    
-    // 2. ASIGNACIÓN DINÁMICA DE ÁREA
-    const fallbackArea = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || '');
-    document.getElementById('areaInput').value = (currentState && currentState.selectedArea) ? currentState.selectedArea : fallbackArea; 
-    
+    document.getElementById('areaInput').value = customAreas.includes('Inbox') ? 'Inbox' : (customAreas[0] || 'Inbox'); 
     document.getElementById('contextInput').value = ''; 
     
     currentAttachments = []; 
@@ -396,6 +339,9 @@ function openAddTaskModal() {
     document.getElementById('addTaskModal').classList.remove('hidden'); 
     
     // 2. CORRECCIÓN ARQUITECTÓNICA: Reseteo de estado con el DOM visible.
+    // Al modificar la propiedad 'checked' DESPUÉS de que el nodo es visible en el DOM activo, 
+    // forzamos al motor de renderizado a repintar las clases pseudo-estado de Tailwind (peer-checked).
+    // Si se hace antes (estando oculto), el motor JS actualiza la propiedad pero el CSS omite el repintado.
     const reminderToggle = document.getElementById('reminderToggle');
     if (reminderToggle) {
         reminderToggle.checked = false;
@@ -482,111 +428,9 @@ function exportData() { const dataStr = "data:text/json;charset=utf-8," + encode
 function importData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const importedTasks = JSON.parse(e.target.result); if (Array.isArray(importedTasks)) { tasks = importedTasks; migrateAndNormalizeTasks(); await saveData(); renderTasks(); renderCalendar(); showNotice("Datos importados correctamente"); } } catch (err) { showNotice("Error al leer el archivo"); } }; reader.readAsText(file); }
 
 // RENDERING
-function renderSidebarAreas() { 
-    const allAreas = typeof getAllAreasOrdered === 'function' ? getAllAreasOrdered() : []; 
-    const container = document.getElementById('sidebar-areas-list');
-    if (!container) return; // Blindaje contra nodos inexistentes
-
-    container.innerHTML = allAreas.map(area => {
-        let count = 0;
-        function countAreaTasks(nodes) {
-            if (!nodes || !Array.isArray(nodes)) return;
-            nodes.forEach(t => {
-                if (!t.isDeleted && t.status !== 'completed' && t.area === area) count++;
-                if (t.subtasks && Array.isArray(t.subtasks)) countAreaTasks(t.subtasks);
-            });
-        }
-        if (typeof tasks !== 'undefined') countAreaTasks(tasks);
-
-        return `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none">
-            <div class="flex items-center space-x-3 overflow-hidden">
-                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span>
-                <span class="truncate">${area}</span>
-            </div>
-            <span class="text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-2">${count}</span>
-        </button>`;
-    }).join(''); 
-}
+function renderSidebarAreas() { const allAreas = getAllAreasOrdered(); document.getElementById('sidebar-areas-list').innerHTML = allAreas.map(area => `<button onclick="navigate('area', '${area}')" data-area="${area}" class="sidebar-area-item w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium text-navy-300 transition-all border-r-2 border-transparent hover:bg-navy-700 hover:text-navy-50 focus:outline-none"><span class="w-1.5 h-1.5 rounded-full ${area === 'Inbox' ? 'bg-brand-500' : 'bg-navy-500'}"></span><span class="truncate">${area}</span></button>`).join(''); }
 function populateSelect(id, items, defaultLabel = null, defaultValue = "all") { const el = document.getElementById(id); if (!el) return; const currentVal = el.value; let html = defaultLabel !== null ? `<option value="${defaultValue}">${defaultLabel}</option>` : ''; html += items.map(item => `<option value="${item}">${item}</option>`).join(''); el.innerHTML = html; if (currentVal !== null && Array.from(el.options).some(o => o.value === currentVal)) { el.value = currentVal; } else if (defaultLabel !== null) { el.value = defaultValue; } }
-function refreshAllDropdowns() {
-    if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
-
-    // SANEAMIENTO DE EMERGENCIA: Limpia residuos de texto plano guardados en el almacenamiento histórico
-    if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
-        const sanitized = customContexts.map(c => {
-            if (!c) return null;
-            // Si quedó algún contexto como texto plano, lo transforma en un objeto válido con color por defecto
-            if (typeof c === 'string') return { name: c, color: '#64748b' };
-            // Si ya es un objeto estructurado correctamente, lo conserva
-            if (typeof c === 'object' && c.name) return c;
-            return null;
-        }).filter(c => c !== null);
-        
-        // Mutación segura de la matriz maestra (compatible con declaraciones const y let)
-        customContexts.length = 0; 
-        customContexts.push(...sanitized);
-    }
-
-    // 1. Rastreo profundo (Algoritmo Recursivo): extrae datos de tareas y de todas sus subtareas
-    function extractDeepValues(nodes, key) {
-        let results = [];
-        nodes.forEach(t => {
-            if (t[key] && typeof t[key] === 'string' && t[key].trim() !== '') {
-                results.push(t[key].trim());
-            }
-            if (t.subtasks && Array.isArray(t.subtasks) && t.subtasks.length > 0) {
-                results = results.concat(extractDeepValues(t.subtasks, key)); 
-            }
-        });
-        return results;
-    }
-
-    const dynamicAreas = [...new Set(extractDeepValues(tasks, 'area'))];
-    const dynamicContexts = [...new Set(extractDeepValues(tasks, 'context'))];
-    
-    // 2. Restauración estructural: se reinyectan los valores nuevos como objetos legibles
-    if (typeof customAreas !== 'undefined' && Array.isArray(customAreas)) {
-        dynamicAreas.forEach(area => {
-            if (!customAreas.includes(area)) customAreas.push(area);
-        });
-    }
-    
-    if (typeof customContexts !== 'undefined' && Array.isArray(customContexts)) {
-        dynamicContexts.forEach(ctx => {
-            const exists = customContexts.some(c => (typeof c === 'object' ? c.name : c) === ctx);
-            if (!exists) {
-                customContexts.push({ name: ctx, color: '#64748b' }); 
-            }
-        });
-    }
-
-    // 3. Fusión estricta y ordenamiento alfabético
-    const staticAreas = typeof customAreas !== 'undefined' ? customAreas : [];
-    const allAreas = [...new Set([...staticAreas, ...dynamicAreas])].sort();
-    
-    const staticContexts = (typeof customContexts !== 'undefined' ? customContexts : []).map(c => typeof c === 'object' ? c.name : c);
-    const allContexts = [...new Set([...staticContexts, ...dynamicContexts])].sort();
-    
-    // 4. Inyección segura en el DOM
-    if (typeof populateSelect === 'function') {
-        if (document.getElementById('areaInput')) populateSelect('areaInput', allAreas);
-        if (document.getElementById('editAreaInput')) populateSelect('editAreaInput', allAreas);
-        if (document.getElementById('contextInput')) populateSelect('contextInput', allContexts, "Sin contexto", "");
-        if (document.getElementById('editContextInput')) populateSelect('editContextInput', allContexts, "Sin contexto", "");
-        if (document.getElementById('filterContext')) populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); 
-    }
-
-    // 5. Renderizado de interfaz periférica
-    if (typeof renderSidebarAreas === 'function') {
-        renderSidebarAreas();
-    }
-    
-    // 6. Consolidación y persistencia de los datos ya saneados
-    if (typeof saveCategories === 'function') {
-        saveCategories();
-    }
-}
-window.refreshAllDropdowns = refreshAllDropdowns;
+function refreshAllDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('areaInput', allAreas); populateSelect('contextInput', allContexts, "Sin contexto", ""); populateSelect('filterContext', allContexts, "Contexto (Todos)", "all"); renderSidebarAreas(); }
 function refreshEditDropdowns() { const allAreas = getAllAreasOrdered(); const allContexts = [...new Set([...customContexts.map(c => c.name), ...getUniqueValues(tasks, 'context')])].filter(c => c && c.trim() !== '').sort(); populateSelect('editAreaInput', allAreas); populateSelect('editContextInput', allContexts, "Sin contexto", ""); }
 function updateAddParentDropdown() { const area = document.getElementById('areaInput').value; const select = document.getElementById('parentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.area === area && !n.isDeleted) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
 function updateEditParentDropdown() { const area = document.getElementById('editAreaInput').value; const taskId = editState.id; const select = document.getElementById('editParentInput'); let optionsHtml = '<option value="root">Ninguna (Tarea Principal)</option>'; function collectValidParents(nodes, depth = 0) { nodes.forEach(n => { if (n.id !== taskId && !n.isDeleted && !isDescendant(taskId, n.id) && n.area === area) { const prefix = '— '.repeat(depth); optionsHtml += `<option value="${n.id}">${prefix}${n.name}</option>`; } if (n.subtasks) collectValidParents(n.subtasks, depth + 1); }); } collectValidParents(tasks); const prevValue = select.value || editState.parentId; select.innerHTML = optionsHtml; if (prevValue && Array.from(select.options).some(o => o.value === String(prevValue))) select.value = prevValue; else select.value = 'root'; }
@@ -596,154 +440,32 @@ function updateFilters() { currentFilters = { search: document.getElementById('s
 function resetFilters() { document.getElementById('searchInput').value = ''; document.getElementById('filterStatus').value = 'pending'; document.getElementById('filterPriority').value = 'all'; document.getElementById('filterContext').value = 'all'; document.getElementById('sortSelect').value = 'date-asc'; currentSort = { by: 'date', order: 'asc' }; updateFilters(); showNotice("Filtros restablecidos"); }
 function updateSort() { const val = document.getElementById('sortSelect').value.split('-'); currentSort = { by: val[0], order: val[1] }; renderTasks(); }
 
-// Motor analítico independiente: cuantifica las tareas por ventana temporal
-function updateSidebarCounters() {
-    if (typeof tasks === 'undefined' || !Array.isArray(tasks)) return;
-
-    let counts = { today: 0, tomorrow: 0, week: 0, fortnight: 0, all: 0, trash: 0 };
-    const today = new Date(); 
-    today.setHours(0, 0, 0, 0);
-
-    function countNodes(nodes) {
-        if (!nodes || !Array.isArray(nodes)) return;
-        nodes.forEach(t => {
-            if (t.isDeleted) {
-                counts.trash++;
-            } else if (t.status !== 'completed') {
-                counts.all++;
-                if (t.date) {
-                    try {
-                        const [year, month, day] = t.date.split('-').map(Number);
-                        const tDate = new Date(year, month - 1, day);
-                        const diffDays = Math.round((tDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-                        if (diffDays <= 0) counts.today++; 
-                        if (diffDays === 1) counts.tomorrow++;
-                        if (diffDays <= 7) counts.week++;
-                        if (diffDays <= 15) counts.fortnight++;
-                    } catch (e) {
-                        console.warn("Fallo de formato en fecha:", e);
-                    }
-                }
-            }
-            if (t.subtasks) countNodes(t.subtasks);
-        });
-    }
-    
-    countNodes(tasks);
-
-    const updateBadge = (id, count) => {
-        const btn = document.getElementById(id);
-        if (!btn) return; 
-        
-        // Intervención correctiva: se remueve la clase conflictiva si quedó fijada en el DOM
-        if (btn.classList.contains('justify-between')) {
-            btn.classList.remove('justify-between');
-        }
-
-        let badge = btn.querySelector('.nav-badge-counter');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'nav-badge-counter text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-auto';
-            btn.appendChild(badge);
-        }
-        badge.innerText = count;
-    };
-        let badge = btn.querySelector('.nav-badge-counter');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'nav-badge-counter text-[10px] font-bold text-navy-400 bg-navy-800 px-1.5 py-0.5 rounded-md ml-auto';
-            btn.appendChild(badge);
-        }
-        badge.innerText = count;
-    };
-
-    updateBadge('nav-today', counts.today);
-    updateBadge('nav-tomorrow', counts.tomorrow);
-    updateBadge('nav-week', counts.week);
-    updateBadge('nav-fortnight', counts.fortnight);
-    updateBadge('nav-all', counts.all);
-    updateBadge('nav-trash', counts.trash);
-}
-
-// Orquestador de interfaz actualizado
 function updateUI() {
-    const btnBack = document.getElementById('btnBack'); if (btnBack && typeof navHistory !== 'undefined' && navHistory.length > 0) btnBack.classList.remove('hidden'); else if (btnBack) btnBack.classList.add('hidden');
+    const btnBack = document.getElementById('btnBack'); if (navHistory.length > 0) btnBack.classList.remove('hidden'); else btnBack.classList.add('hidden');
     const titleEl = document.getElementById('view-title');
     const titles = { 'today':'Hoy y atrasadas', 'tomorrow':'Mañana', 'week':'Esta semana', 'fortnight':'Próximos 15 días', 'all':'Todas las tareas', 'calendar':'Calendario', 'focus':'Dependencia específica', 'trash':'Papelera (10 días)' };
-    if (titleEl) titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
+    titleEl.innerText = currentState.view === 'area' ? `Área: ${currentState.selectedArea}` : titles[currentState.view];
     const isTrash = currentState.view === 'trash';
-    
-    ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { 
-        const el = document.getElementById(id); 
-        if (!el) return; // Blindaje crítico: evita el crash si falta un nodo en la maqueta
-        if (id === `nav-${currentState.view}`) { 
-            el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
-            el.classList.remove('text-navy-300', 'border-transparent'); 
-            if(id === 'nav-trash') {
-                const svg = el.querySelector('svg');
-                if (svg) svg.classList.remove('text-danger-500'); 
-            }
-        } else { 
-            el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); 
-            el.classList.add('text-navy-300', 'border-transparent'); 
-            if(id === 'nav-trash') {
-                const svg = el.querySelector('svg');
-                if (svg) svg.classList.add('text-danger-500'); 
-            }
-        } 
-    });
-    
-    document.querySelectorAll('.sidebar-area-item').forEach(el => { 
-        if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { 
-            el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
-            el.classList.remove('border-transparent', 'text-navy-300'); 
-        } else { 
-            el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); 
-            el.classList.add('border-transparent', 'text-navy-300'); 
-        } 
-    });
-    
-    const toggleHidden = (id, condition) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', condition); };
-    toggleHidden('view-list', currentState.view === 'calendar'); 
-    
-    if (currentState.view === 'calendar') { 
-        const omni = document.getElementById('omnibar-container'); if (omni) omni.classList.add('hidden'); 
-        const aiBtn = document.getElementById('btnAIToggle'); 
-        if (aiBtn) { aiBtn.classList.remove('text-brand-500', 'bg-navy-700'); aiBtn.classList.add('text-navy-400'); }
-    }
-    
-    toggleHidden('view-calendar', currentState.view !== 'calendar'); 
-    toggleHidden('filters-container', currentState.view === 'calendar');
-    toggleHidden('btnEmptyTrash', !isTrash);
-    toggleHidden('searchWrap', isTrash);
-    toggleHidden('filterStatus', isTrash);
-    toggleHidden('filterPriority', isTrash);
-    toggleHidden('filterContext', isTrash);
-    toggleHidden('sortSelect', isTrash);
-    toggleHidden('btnBulkMode', isTrash);
-    toggleHidden('btnResetFilters', isTrash);
-    toggleHidden('btnAIToggle', isTrash);
-    toggleHidden('filtersDivider', isTrash);
-    
+    ['nav-today', 'nav-tomorrow', 'nav-week', 'nav-fortnight', 'nav-all', 'nav-calendar', 'nav-trash'].forEach(id => { const el = document.getElementById(id); if (id === `nav-${currentState.view}`) { el.classList.add('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.remove('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.remove('text-danger-500'); } else { el.classList.remove('bg-navy-900', 'text-brand-500', 'border-r-2', 'border-brand-500'); el.classList.add('text-navy-300', 'border-transparent'); if(id === 'nav-trash') el.querySelector('svg').classList.add('text-danger-500'); } });
+    document.querySelectorAll('.sidebar-area-item').forEach(el => { if (currentState.view === 'area' && el.dataset.area === currentState.selectedArea) { el.classList.add('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.remove('border-transparent', 'text-navy-300'); } else { el.classList.remove('border-brand-500', 'bg-navy-900', 'text-brand-500'); el.classList.add('border-transparent', 'text-navy-300'); } });
+    document.getElementById('view-list').classList.toggle('hidden', currentState.view === 'calendar'); 
+    if (currentState.view === 'calendar') { document.getElementById('omnibar-container').classList.add('hidden'); document.getElementById('btnAIToggle').classList.remove('text-brand-500', 'bg-navy-700'); document.getElementById('btnAIToggle').classList.add('text-navy-400'); }
+    document.getElementById('view-calendar').classList.toggle('hidden', currentState.view !== 'calendar'); 
+    document.getElementById('filters-container').classList.toggle('hidden', currentState.view === 'calendar');
+    document.getElementById('btnEmptyTrash').classList.toggle('hidden', !isTrash);
+    document.getElementById('searchWrap').classList.toggle('hidden', isTrash);
+    document.getElementById('filterStatus').classList.toggle('hidden', isTrash);
+    document.getElementById('filterPriority').classList.toggle('hidden', isTrash);
+    document.getElementById('filterContext').classList.toggle('hidden', isTrash);
+    document.getElementById('sortSelect').classList.toggle('hidden', isTrash);
+    document.getElementById('btnBulkMode').classList.toggle('hidden', isTrash);
+    document.getElementById('btnResetFilters').classList.toggle('hidden', isTrash);
+    document.getElementById('btnAIToggle').classList.toggle('hidden', isTrash);
+    document.getElementById('filtersDivider').classList.toggle('hidden', isTrash);
     const fab = document.getElementById('mainFab');
-    if (fab) {
-        if (isTrash) fab.classList.add('hidden'); 
-        else { 
-            fab.classList.remove('hidden'); 
-            if (typeof isBulkMode !== 'undefined' && isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); 
-            else fab.classList.remove('translate-y-24', 'opacity-0'); 
-        }
-    }
-    
-    if (currentState.view === 'calendar' && typeof isBulkMode !== 'undefined' && isBulkMode && typeof toggleBulkMode === 'function') toggleBulkMode();
-    
-    // Ejecución inyectada del motor analítico
-    if (typeof updateSidebarCounters === 'function') updateSidebarCounters();
-
-    // Renderizado final
-    if (currentState.view === 'calendar' && typeof renderCalendar === 'function') renderCalendar(); 
-    else if (typeof renderTasks === 'function') renderTasks();
+    if (isTrash) fab.classList.add('hidden'); else { fab.classList.remove('hidden'); if (isBulkMode) fab.classList.add('translate-y-24', 'opacity-0'); else fab.classList.remove('translate-y-24', 'opacity-0'); }
+    if (currentState.view === 'calendar' && isBulkMode) toggleBulkMode();
+    if (currentState.view === 'calendar') renderCalendar(); else renderTasks();
 }
 
 // TREE AND LIST RENDER LOGIC
@@ -808,44 +530,11 @@ function buildTaskRows(nodes, path = []) {
         const isCompleted = task.status === 'completed';
         const isOverdue = task.date && task.date < todayStr && !isCompleted;
 
-
         // El indicador de "Sin fecha" se muestra en un tono grisáceo neutro (text-navy-400)
-    let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
-    
-    if (task.date) { 
-        const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; 
-        
-        // 1. Intercepción temporal: cálculo de proximidad
-        let relativeDateLabel = formatDateAR(task.date, false); // Fallback por defecto (formato DD/MM)
-        
-        try {
-            // Desensamble estricto para forzar la zona horaria local y evitar desfasajes UTC
-            const [year, month, day] = task.date.split('-').map(Number);
-            const taskD = new Date(year, month - 1, day);
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Se normaliza a la medianoche para una comparación neta
-            
-            const diffTime = taskD.getTime() - today.getTime();
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
-            // 2. Asignación léxica según la ventana de 7 días
-            if (diffDays === 0) {
-                relativeDateLabel = 'hoy';
-            } else if (diffDays === 1) {
-                relativeDateLabel = 'mañana';
-            } else if (diffDays > 1 && diffDays <= 7) {
-                const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-                relativeDateLabel = dayNames[taskD.getDay()];
-            }
-        } catch (e) {
-            console.warn("Fallo en el cálculo de fecha relativa. Se aplicará formato estándar.", e);
-        }
+        let dateDisplayHTML = `<span class="text-navy-400 text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><span class="w-2.5 h-[1.5px] bg-navy-400 inline-block"></span> Sin fecha</span>`;
+        if (task.date) { const dateColorClass = isOverdue ? 'text-danger-500 font-bold' : 'text-brand-500'; dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${formatDateAR(task.date, false)} ${isOverdue ? '(Vencida)' : ''}</span>`; }
 
-        // 3. Inyección en el DOM preservando la evaluación original de '(Vencida)'
-        dateDisplayHTML = `<span class="${dateColorClass} text-[11px] font-semibold flex items-center gap-1.5 tracking-wide"><svg class="w-3.5 h-3.5 mb-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${relativeDateLabel} ${isOverdue ? '(Vencida)' : ''}</span>`; 
-    }
-                const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
+        const recurrenceBadge = task.recurrenceRule ? `<span class="ml-2 flex items-center gap-1 text-brand-500 bg-brand-500/10 border border-brand-500/30 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wide font-bold"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Repite</span>` : '';
 
         let subtasksHtml = (isExpanded && !isTrash) ? buildTaskRows(task.subtasks, [...path, {id: task.id, name: task.name}]) : '';
         const subtaskListHTML = isTrash ? '' : `<div class="subtasks-list" data-parent-id="${task.id}" style="${(hasChildren && !isExpanded) ? 'display: none;' : ''}">${subtasksHtml}</div>`;
@@ -860,18 +549,9 @@ function buildTaskRows(nodes, path = []) {
 
         let actionButtonsHtml = '';
         if (isTrash) { actionButtonsHtml = `<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6"><button onclick="event.stopPropagation(); restoreTask(${task.id})" title="Restaurar" class="p-1 text-emerald-500 hover:text-emerald-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button><button onclick="event.stopPropagation(); hardDeleteTask(${task.id})" title="Eliminar definitivamente" class="p-1 text-danger-500 hover:text-danger-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>`; } 
-        
         else if (!isBulkMode) {
             let statusActionHtml = ''; if (isInProgress) statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'pending')" title="Pausar" class="p-1 text-info-500 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`; else if (!isCompleted) statusActionHtml = `<button onclick="event.stopPropagation(); setTaskStatus(${task.id}, 'in_progress')" title="Marcar en progreso" class="p-1 text-navy-400 hover:text-info-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
-            
-            // Se inyecta el botón de Añadir Subtarea justo antes del botón de Posponer
-            actionButtonsHtml = `<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">
-                ${statusActionHtml}
-                <button onclick="quickAddSubtask(${task.id}, event)" title="Añadir subtarea rápida" class="p-1 text-brand-500 hover:text-brand-400 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>
-                <button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                <button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                <button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-            </div>`.replace(/\n\s+/g, ''); // Se comprime para evitar rupturas de línea en el template literal
+            actionButtonsHtml = `<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity absolute right-full pr-3 bg-gradient-to-l from-navy-800/0 via-navy-800 to-transparent pl-6">${statusActionHtml}<button onclick="openPostponeModal(${task.id}, event)" title="Posponer" class="p-1 text-navy-400 hover:text-brand-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button><button onclick="event.stopPropagation(); openEditModal(${task.id})" title="Editar" class="p-1 text-navy-400 hover:text-navy-50 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button><button onclick="event.stopPropagation(); deleteTaskUniversal(${task.id})" title="Eliminar" class="p-1 text-navy-500 hover:text-danger-500 rounded hover:bg-navy-700 transition-all focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>`;
         }
 
         return `
@@ -922,20 +602,8 @@ function renderTasks() {
         const pruned = pruneTree(tasks);
         const isFlatView = ['today', 'tomorrow', 'week', 'fortnight'].includes(currentState.view) || (currentFilters.search !== '' || currentFilters.priority !== 'all' || currentFilters.context !== 'all' || currentFilters.status !== 'pending');
         nodesToRender = isFlatView ? flattenMatches(pruned) : pruned;
-
-        // Intervención quirúrgica: Ordenamiento cronológico predeterminado para ventanas de corto y mediano plazo
-        if (['week', 'fortnight'].includes(currentState.view)) {
-            nodesToRender.sort((a, b) => {
-                // Las tareas sin fecha asignada se desplazan al final de la lista de renderizado
-                if (!a.date && !b.date) return 0;
-                if (!a.date) return 1;
-                if (!b.date) return -1;
-                
-                // Comparación de cadenas: funcional y exacta dado que las fechas operan bajo estándar ISO (YYYY-MM-DD)
-                return a.date.localeCompare(b.date);
-            });
-        }
     }
+
     if (nodesToRender.length === 0) { list.innerHTML = ''; empty.innerText = currentState.view === 'trash' ? "La papelera está vacía." : "No se encontraron tareas bajo los criterios actuales."; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
     list.innerHTML = `<div id="taskList-root" class="flex flex-col min-h-[50px] pb-4">${buildTaskRows(nodesToRender)}</div>`;
@@ -1008,122 +676,26 @@ window.deleteCustomContext = async function(index) {
     }
 };
 
-window.editCustomContext = function(index) {
+window.editCustomContext = async function(index) {
     const oldCtx = customContexts[index];
-    let tempColor = oldCtx.color || 'gray';
-    
-    // Diccionario de colores seguro para la interfaz
-    const colorHexMap = { 'blue': '#3b82f6', 'purple': '#a855f7', 'green': '#22c55e', 'red': '#ef4444', 'orange': '#f97316', 'gray': '#6b7280', 'pink': '#ec4899', 'teal': '#14b8a6', 'yellow': '#eab308', 'cyan': '#06b6d4', 'indigo': '#6366f1', 'rose': '#f43f5e', 'emerald': '#10b981', 'fuchsia': '#d946ef' };
-    
-    // 1. Purga de modales huérfanos previos (prevención de superposición)
-    const modalId = 'dynamic-edit-context-modal';
-    let existingModal = document.getElementById(modalId);
-    if (existingModal) existingModal.remove();
-    
-    // 2. Construcción del contenedor principal
-    const modal = document.createElement('div');
-    modal.id = modalId;
-    modal.className = 'fixed inset-0 flex items-center justify-center';
-    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)'; // Fondo oscuro translúcido
-    modal.style.zIndex = '9999'; // Garantiza prioridad visual absoluta
-    
-    // 3. Renderizado dinámico de la paleta de colores
-    const renderColors = () => {
-        return Object.keys(colorHexMap).map(c => `
-            <button type="button" 
-            onclick="
-                document.getElementById('${modalId}').dataset.selectedColor = '${c}'; 
-                Array.from(document.querySelectorAll('.color-edit-btn')).forEach(btn => btn.style.boxShadow = ''); 
-                this.style.boxShadow = '0 0 0 2px #0f172a, 0 0 0 4px ${colorHexMap[c]}';
-            "
-            class="color-edit-btn w-6 h-6 rounded-full outline-none focus:outline-none flex-shrink-0 cursor-pointer transition-transform hover:scale-110" 
-            style="background-color: ${colorHexMap[c]}; ${tempColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
-            title="${c}"></button>
-        `).join('');
-    };
-
-    // 4. Inyección del código HTML interno
-    modal.innerHTML = `
-        <div class="bg-navy-800 border border-navy-700 rounded p-5 w-[90%] max-w-sm shadow-2xl">
-            <h3 class="text-navy-50 font-bold mb-4 text-lg">Editar Contexto</h3>
-            
-            <div class="mb-4">
-                <label class="block text-xs font-semibold text-navy-400 mb-1 uppercase tracking-wide">Nombre</label>
-                <input type="text" id="editContextNameInput" value="${oldCtx.name}" class="w-full bg-navy-900 border border-navy-700 text-navy-50 text-sm rounded px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors">
-            </div>
-            
-            <div class="mb-6">
-                <label class="block text-xs font-semibold text-navy-400 mb-2 uppercase tracking-wide">Color visual</label>
-                <div class="flex flex-wrap gap-2.5">
-                    ${renderColors()}
-                </div>
-            </div>
-            
-            <div class="flex justify-end gap-3 border-t border-navy-700 pt-4">
-                <button type="button" id="cancelEditCtxBtn" class="px-4 py-1.5 text-sm font-semibold text-navy-400 hover:text-navy-50 hover:bg-navy-700 rounded transition-colors focus:outline-none">Cancelar</button>
-                <button type="button" id="saveEditCtxBtn" class="px-4 py-1.5 text-sm font-bold bg-brand-500 hover:bg-brand-400 text-white rounded transition-colors focus:outline-none">Guardar Cambios</button>
-            </div>
-        </div>
-    `;
-    
-    modal.dataset.selectedColor = tempColor;
-    document.body.appendChild(modal);
-    
-    // 5. Gestión del foco para optimizar el tipeo inmediato
-    const nameInput = document.getElementById('editContextNameInput');
-    nameInput.focus();
-    nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
-    
-    // 6. Lógica de cancelación
-    document.getElementById('cancelEditCtxBtn').onclick = () => modal.remove();
-    
-    // 7. Lógica de guardado asincrónico y actualización en cascada
-    document.getElementById('saveEditCtxBtn').onclick = async () => {
-        const newNameRaw = nameInput.value.trim();
-        if (!newNameRaw) return; // Validación silenciosa si está vacío
-        
-        let finalName = newNameRaw;
+    const newName = prompt("Editar nombre del contexto:", oldCtx.name);
+    if (newName && newName.trim() !== "" && newName.trim() !== oldCtx.name) {
+        let finalName = newName.trim();
         if (!finalName.startsWith('@')) finalName = '@' + finalName;
-        
-        const selectedColor = modal.dataset.selectedColor || 'gray';
-        
-        // Actualiza las tareas previas si se modificó el nombre
-        if (finalName !== oldCtx.name) {
-            if (typeof cascadeUpdateCategory === 'function') {
-                cascadeUpdateCategory('context', oldCtx.name, finalName);
-            }
-        }
-        
-        // Mutación de la base de datos local
+        cascadeUpdateCategory('context', oldCtx.name, finalName);
         customContexts[index].name = finalName;
-        customContexts[index].color = selectedColor;
-        
-        // Persistencia y actualización de vistas
-        if (typeof saveData === 'function') await saveData();
-        if (typeof renderManageItems === 'function') renderManageItems();
-        if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
-        
-        // Destrucción del modal efímero
-        modal.remove();
-    };
+        await saveData();
+        renderManageItems();
+        if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
+    }
 };
 
 window.addCustomContext = async function() {
-    const input = document.getElementById('newContextInput');
-    if (!input) return;
-    
-    const val = input.value.trim();
+    const val = document.getElementById('newContextInput').value.trim();
     if(val) {
         const name = val.startsWith('@') ? val : '@' + val;
-        
-        // Prevención estricta: asignación de color por defecto si no se seleccionó ninguno
-        const safeColor = (typeof manageSelectedColor !== 'undefined' && manageSelectedColor) ? manageSelectedColor : 'gray';
-        
-        customContexts.push({name: name, color: safeColor});
+        customContexts.push({name: name, color: manageSelectedColor});
         await saveData();
-        
-        // Purga de la variable temporal
-        manageSelectedColor = 'gray'; 
         renderManageItems();
         if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
     }
@@ -1131,86 +703,19 @@ window.addCustomContext = async function() {
 
 window.selectManageColor = function(color) {
     manageSelectedColor = color;
-    
-    // Rescate del estado previo a la destrucción del DOM
-    const inputDOM = document.getElementById('newContextInput');
-    const currentText = inputDOM ? inputDOM.value : '';
-    
     renderManageItems();
-    
-    // Re-inyección del texto para no interrumpir el flujo de escritura
-    const restoredInput = document.getElementById('newContextInput');
-    if (restoredInput) {
-        restoredInput.value = currentText;
-        restoredInput.focus();
-    }
-};
-
-window.addCustomContext = async function() {
-    const input = document.getElementById('newContextInput');
-    if (!input) return;
-    
-    const val = input.value.trim();
-    if(val) {
-        const name = val.startsWith('@') ? val : '@' + val;
-        
-        // Prevención estricta: si el usuario no tocó ningún color, se asigna uno por defecto
-        const safeColor = (typeof manageSelectedColor !== 'undefined' && manageSelectedColor) ? manageSelectedColor : 'gray';
-        
-        customContexts.push({name: name, color: safeColor});
-        await saveData();
-        
-        // Purga de la variable en memoria para que no contamine la creación del siguiente contexto
-        manageSelectedColor = 'gray';
-        renderManageItems();
-        
-        if(typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
-    }
-};
-
-// Controladores globales para la jerarquización manual anexados directamente al objeto window
-// Se omiten las declaraciones "let" a nivel de raíz para erradicar el riesgo de SyntaxError
-window.dragStartArea = function(event, index) {
-    window.draggedAreaIndex = index;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', index);
-};
-
-window.dragOverArea = function(event) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-};
-
-window.dropArea = async function(event, targetIndex) {
-    event.preventDefault();
-    if (typeof window.draggedAreaIndex === 'undefined' || window.draggedAreaIndex === null || window.draggedAreaIndex === targetIndex) return;
-
-    // Mutación quirúrgica de la matriz posicional
-    const areaToMove = customAreas.splice(window.draggedAreaIndex, 1)[0];
-    customAreas.splice(targetIndex, 0, areaToMove);
-    
-    // Purga de la variable temporal en memoria
-    window.draggedAreaIndex = null;
-
-    // Consolidación y renderizado
-    if (typeof saveData === 'function') await saveData();
-    renderManageItems();
-    if (typeof refreshAllDropdowns === 'function') refreshAllDropdowns();
 };
 
 function renderManageItems() {
     const container = document.getElementById('manageModalContent');
-    if (!container) return; // Blindaje contra nodos de interfaz inexistentes
     
+    // Mapeo seguro de colores para evitar fallos del compilador JIT de Tailwind
     const colorHexMap = { 'blue': '#3b82f6', 'purple': '#a855f7', 'green': '#22c55e', 'red': '#ef4444', 'orange': '#f97316', 'gray': '#6b7280', 'pink': '#ec4899', 'teal': '#14b8a6', 'yellow': '#eab308', 'cyan': '#06b6d4', 'indigo': '#6366f1', 'rose': '#f43f5e', 'emerald': '#10b981', 'fuchsia': '#d946ef' };
     
-    // Evaluación segura de la variable de color para evitar ReferenceError si no fue instanciada
-    const currentSelectedColor = typeof manageSelectedColor !== 'undefined' ? manageSelectedColor : null;
-
     let colorSwatches = Object.keys(colorHexMap).map(c => `
         <button onclick="selectManageColor('${c}')" 
                 class="w-5 h-5 rounded-full outline-none focus:outline-none flex-shrink-0" 
-                style="background-color: ${colorHexMap[c]}; ${currentSelectedColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
+                style="background-color: ${colorHexMap[c]}; ${manageSelectedColor === c ? 'box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px ' + colorHexMap[c] + ';' : ''}"
                 title="${c}" type="button"></button>
     `).join('');
 
@@ -1225,19 +730,11 @@ function renderManageItems() {
         
     customAreas.forEach((area, i) => {
         html += `
-        <li draggable="true" 
-            ondragstart="window.dragStartArea(event, ${i})" 
-            ondragover="window.dragOverArea(event)" 
-            ondrop="window.dropArea(event, ${i})"
-            class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700 cursor-move hover:bg-navy-700 transition-colors"
-            title="Arrastrar para reorganizar">
-            <div class="flex items-center gap-2">
-                <span class="text-navy-400 font-bold opacity-50 cursor-grab" aria-hidden="true">&#8942;&#8942;</span>
-                <span class="text-navy-50 text-sm">${area}</span>
-            </div>
+        <li class="flex justify-between items-center p-1.5 bg-navy-800 rounded border border-navy-700">
+            <span class="text-navy-50 text-sm">${area}</span>
             <div class="flex gap-2">
-                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Editar</button>
-                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-900 rounded transition-colors">Borrar</button>
+                <button onclick="editCustomArea(${i})" class="text-brand-400 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Editar</button>
+                <button onclick="deleteCustomArea(${i})" class="text-danger-500 text-xs font-medium px-1.5 py-0.5 hover:bg-navy-700 rounded transition-colors">Borrar</button>
             </div>
         </li>`;
     });
@@ -1398,112 +895,8 @@ function closePostponeModal() { document.getElementById('postponeModal').classLi
 async function postponeAction(type) { let fd = ''; if (type === 'tomorrow') { const tom = new Date(); tom.setDate(tom.getDate() + 1); fd = tom.toISOString().split('T')[0]; } else if (type === 'nextWeek') { const nw = new Date(); nw.setDate(nw.getDate() + 7); fd = nw.toISOString().split('T')[0]; } else if (type === 'custom') { fd = document.getElementById('postponeCustomDate').value; if (!fd) return; } if (postponeState.id === 'bulk') { selectedTaskIds.forEach(taskId => findAndMutateTask(taskId, (nodes, i) => { nodes[i].date = fd; })); toggleBulkMode(); } else { findAndMutateTask(postponeState.id, (nodes, i) => { nodes[i].date = fd; }); } closePostponeModal(); renderTasks(); await saveData(); }
 
 // FILE UPLOAD AND ATTACHMENTS
-window.handleFileUpload = async function(event, mode) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    showNotice(`Subiendo "${file.name}" a Google Drive...`);
-
-    const reader = new FileReader();
-    
-    reader.onload = async function(e) {
-        const base64Content = e.target.result.split(',')[1];
-        
-        try {
-            // Corrección estructural: se alinea el identificador con el parámetro esperado por el servidor
-            const payload = {
-                action: 'uploadFile', 
-                fileName: file.name,
-                mimeType: file.type,
-                fileData: base64Content
-            };
-
-            const response = await fetch(dbUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload),
-                redirect: 'follow'
-            });
-
-            if (!response.ok) throw new Error('Rechazo del servidor HTTP: ' + response.status);
-            
-            const serverResponse = await response.text();
-            
-            if (serverResponse.trim().startsWith('<')) {
-                throw new Error('El servidor devolvió un documento HTML. Verificar permisos.');
-            }
-
-            let finalUrl = serverResponse.trim();
-            
-            try {
-                const parsed = JSON.parse(finalUrl);
-                // El servidor devuelve un objeto con la propiedad 'url', la cual es interceptada aquí
-                finalUrl = parsed.url || parsed.link || parsed.fileUrl || parsed.fileId || finalUrl;
-            } catch (jsonError) {
-                // Silenciamiento del error de parseo si el servidor devuelve texto plano
-            }
-
-            if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-                console.error("Respuesta anómala del servidor:", serverResponse);
-                throw new Error('El servidor no devolvió una URL válida: ' + finalUrl.substring(0, 30));
-            }
-
-            const fileData = {
-                name: file.name,
-                type: file.type,
-                data: finalUrl
-            };
-            
-            currentAttachments.push(fileData);
-            showNotice("Archivo alojado y vinculado correctamente.");
-            
-            if (typeof renderAttachments === 'function') {
-                renderAttachments(mode);
-            }
-            
-        } catch (err) {
-            console.error("Error en la transmisión a Drive:", err);
-            showNotice("Fallo al subir: " + err.message.substring(0, 50));
-        }
-    };
-    
-    reader.onerror = function() {
-        showNotice("Error local de lectura de disco.");
-    };
-
-    reader.readAsDataURL(file);
-    event.target.value = '';
-};
-
-function renderAttachments() {
-    // Iteración simultánea sobre los contenedores de "Crear" y "Editar" sin depender del parámetro 'mode'
-    ['attachmentsList', 'editAttachmentsList'].forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (!container) return; 
-        
-        container.innerHTML = '';
-        
-        currentAttachments.forEach((file, index) => {
-            const div = document.createElement('div');
-            div.className = "flex justify-between items-center bg-navy-800 p-2 rounded text-xs text-navy-50 mb-1 border border-navy-700";
-            
-            // Extracción robusta del enlace histórico o actual
-            const fileUrl = file.data || file.url || file.link || file.fileUrl;
-            const isValidLink = typeof fileUrl === 'string' && (fileUrl.startsWith('http://') || fileUrl.startsWith('https://') || fileUrl.startsWith('data:'));
-            
-            const fileLink = isValidLink 
-                ? `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:underline cursor-pointer truncate mr-2" title="Abrir documento">${file.name}</a>` 
-                : `<span class="truncate mr-2 text-navy-400" title="Registro sin enlace recuperable">${file.name}</span>`;
-
-            div.innerHTML = `
-                ${fileLink}
-                <button type="button" onclick="currentAttachments.splice(${index}, 1); renderAttachments();" class="text-danger-500 font-bold hover:bg-navy-700 px-2 py-1 rounded transition-colors">X</button>
-            `;
-            container.appendChild(div);
-        });
-    });
-}
-window.renderAttachments = renderAttachments;
+async function handleFileUpload(event, mode) { const f = event.target.files[0]; if (!f) return; showNotice("Carga de adjuntos simulada en entorno Vanilla."); event.target.value = ''; }
+function renderAttachments(mode) {}
 
 // STUBS / SIMULATION IA
 function initSpeechRecognition() {} function toggleVoiceCapture() { showNotice("Voz no disponible."); } function toggleAIFilter() { document.getElementById('omnibar-container').classList.toggle('hidden'); }
